@@ -102,3 +102,21 @@ doublons dès qu'un même devis sert à la fois de pièce d'achat et de ligne de
 
 **Ce qui n'est pas tranché.** Le mécanisme d'extraction/validation du contenu d'un document
 (principe 4 du cadrage) n'est pas scopé ici — seule la table et son rattachement le sont.
+
+## 2026-10-01 — Principe 3 (traçabilité) : une intention, pas un vocabulaire unique à reprendre mot pour mot
+
+**Décision.** Le principe 3 du cadrage (chaque donnée indique son origine et son statut : idée,
+hypothèse, document reçu, réponse vérifiée, décision retenue) reste une intention de traçabilité,
+pas un vocabulaire à répliquer tel quel dans chaque table. Chaque domaine garde le sien quand son
+cycle de vie le justifie : `ref_statut_scenario`, `ref_statut_tache`, `ref_type_montant`, et le
+futur statut de faisabilité de #3 (inconnu / à vérifier / confirmé).
+
+**Pourquoi.** Scénario, tâche, montant et faisabilité ont des cycles de vie réellement
+différents ; les forcer dans un vocabulaire commun aurait ajouté une abstraction que l'usage
+actuel ne demande pas. Ce que le principe 3 exige réellement, c'est que chaque donnée importante
+garde sa provenance (`source`, déjà présent partout via `ref_source_donnee`) et un état
+explicite — pas que cet état porte toujours les mêmes mots.
+
+**Ce qui n'est pas tranché.** Si un futur module a besoin d'un état de confiance générique sans
+cycle de vie propre, le vocabulaire à trois états introduit par #3 est le candidat le plus proche
+à réutiliser — à revoir au moment venu, pas anticipé ici.
