@@ -120,3 +120,20 @@ explicite — pas que cet état porte toujours les mêmes mots.
 **Ce qui n'est pas tranché.** Si un futur module a besoin d'un état de confiance générique sans
 cycle de vie propre, le vocabulaire à trois états introduit par #3 est le candidat le plus proche
 à réutiliser — à revoir au moment venu, pas anticipé ici.
+
+## 2026-10-01 — Intervenant : fiche réutilisable, dans le socle
+
+**Décision.** Un intervenant (artisan, fournisseur, architecte, notaire, agence...) a sa propre
+fiche (table `intervenant`, socle #2), réutilisable d'un devis à l'autre et d'un dossier à
+l'autre — pas seulement un nom ressaisi sur chaque devis. Rattachée aux documents
+(`document.intervenant_id`, facultatif) plutôt qu'aux lignes de budget directement.
+
+**Pourquoi.** Dans la perspective où l'application serait un jour vendue, un répertoire
+d'intervenants réutilisable a plus de valeur qu'un champ texte ressaisi à chaque devis. Ça reste
+une table ordinaire du socle V0 (un seul utilisateur, une seule base locale) : rien n'anticipe le
+partage ou le multi-utilisateur de la V2 — même principe que celui déjà appliqué aux tâches et à
+l'isolation entre tenants, ne pas construire avant que l'usage ou l'objectif ne le demande.
+
+**Ce qui n'est pas tranché.** Les valeurs de `ref_type_intervenant` (artisan, fournisseur,
+architecte, notaire, agence, autre) sont provisoires — à ajuster à l'usage, comme les autres
+tables `ref_*`.
