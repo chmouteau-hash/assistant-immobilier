@@ -87,3 +87,18 @@ la sauvegarde pour la rendre lisible, sans que ce soit nécessaire.
 **Conséquence sur le cadrage existant.** Répond à la question ouverte « Format de l'export,
 règles de reprise et de suppression des données » (§Questions ouvertes du cadrage) — pour la
 partie format ; les règles de reprise et de suppression restent à trancher séparément.
+
+## 2026-10-01 — Document : table unique dans le socle, pas une par module
+
+**Décision.** L'entité « Document » du cadrage (type, fichier, provenance, liens au bien, au
+scénario et au poste de budget) est construite une seule fois, dans le socle (issue #2), plutôt
+que dupliquée dans chaque issue qui la consomme. #3 (pièces d'achat) et #4 (devis, factures)
+sont déclarées `blocked-by` #2 sur GitHub en conséquence.
+
+**Pourquoi.** Le cadrage décrit un document comme pouvant toucher le bien, le scénario et le
+poste de budget à la fois — ce n'est pas trois documents séparés selon qui le consulte, mais un
+seul enregistrement avec plusieurs liens. Une table par module aurait empêché ce cas et créé des
+doublons dès qu'un même devis sert à la fois de pièce d'achat et de ligne de budget.
+
+**Ce qui n'est pas tranché.** Le mécanisme d'extraction/validation du contenu d'un document
+(principe 4 du cadrage) n'est pas scopé ici — seule la table et son rattachement le sont.
