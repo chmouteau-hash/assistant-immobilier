@@ -1,0 +1,50 @@
+# Journal des décisions
+
+Un fichier, pas un registre : chaque entrée est courte, datée, et dit ce qui a été tranché et
+pourquoi. Une décision prise en discussion ne reste pas à l'état de brouillon — elle migre ici le
+jour même (principe du canal `.travail/` d'Ergonomia, repris ici en plus simple : pas de dossier
+dédié tant qu'une seule personne décide).
+
+## 2026-10-01 — Base technique : Next.js + SQLite local, pas de serveur distant
+
+**Décision.** La nouvelle base technique utilise Next.js (TypeScript) avec une base **SQLite en
+fichier local** (`data/dossier.sqlite`, exclue du dépôt git), pas de Postgres ni de serveur
+hébergé.
+
+**Pourquoi.** Le prototype précédent (`index.html`, stockage navigateur) avait déjà posé un
+principe explicite : les données du dossier immobilier ne quittent pas le PC, y compris vers le
+dépôt GitHub privé. Une première proposition de base technique (Next.js + Postgres distant)
+contredisait ce principe sans que la contradiction ait été vue avant d'être signalée. Node 24+
+intègre `node:sqlite` en natif : zéro dépendance, zéro compilation (pas de `node-gyp`/Visual
+Studio Build Tools à installer, un frein classique de `better-sqlite3` sous Windows).
+
+**Ce qui n'est pas tranché.** Le modèle change dès qu'un professionnel doit accéder à une partie
+du dossier (principe 7 du cadrage, prévu en V2) — un accès partagé suppose un serveur. Cette
+migration n'est pas encore nécessaire et ne doit pas être anticipée avant d'en avoir besoin.
+
+**Conséquence sur le cadrage existant.** Répond à la question ouverte « Choix du stockage local et
+des sauvegardes avant de saisir de vrais documents » (§Questions ouvertes du cadrage).
+
+## 2026-10-01 — Quatre mécanismes posés dès le premier schéma
+
+**Décision.** Le schéma (`src/lib/db/schema.sql`) pose dès la première version :
+
+1. **Statuts en table de référence** (`ref_statut_scenario`, `ref_source_donnee`,
+   `ref_type_montant`, `ref_action_audit`), jamais figés dans un type TypeScript fermé — ces
+   listes bougeront à l'usage.
+2. **Provenance obligatoire** (colonne `source`) sur toute donnée qui peut être une estimation,
+   un import ou une suggestion — jamais présentée comme un fait certain.
+3. **Journal d'audit en ajout seul** (`audit_evenement`), garanti par un déclencheur SQLite
+   (`RAISE(ABORT, …)` sur `UPDATE`/`DELETE`) — pas par la discipline du code applicatif.
+4. **Montants en centimes (entiers)**, jamais en virgule flottante.
+
+**Pourquoi maintenant et pas plus tard.** Aucun des quatre ne s'ajoute proprement après coup —
+cela demanderait de réécrire les tables et les écritures existantes. Détail et justification
+complète en commentaire de tête de `schema.sql`.
+
+**Ce qui n'a pas été repris d'Ergonomia.** L'isolation entre tenants (RBAC appliqué route par
+route) n'a pas de pendant ici : à ce stade, un seul utilisateur, un seul dossier par base. Le jour
+où plusieurs dossiers coexistent dans la même base ou qu'un professionnel y accède, l'isolation
+devra être posée **en base** (ex. SQLite par dossier plutôt qu'un filtre applicatif par requête)
+— repris du constat fait sur Ergonomia, où le filtre applicatif (sans RLS) est un point de
+vigilance, pas un modèle à reproduire tel quel.

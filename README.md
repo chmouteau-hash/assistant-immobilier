@@ -2,6 +2,32 @@
 
 Projet privé de Christophe pour suivre son projet immobilier, de la recherche d’un bien à la clôture des travaux.
 
+## Nouvelle base technique (en cours de remplacement de la démonstration 0.1)
+
+Une vraie base applicative (Next.js + TypeScript) remplace progressivement la démonstration
+`index.html` ci-dessous. Même principe de confidentialité : **aucun serveur distant**, la base de
+données (`data/dossier.sqlite`) reste un fichier sur ce PC, exclue du dépôt git.
+
+Prérequis : [Node.js](https://nodejs.org/) version 24 ou supérieure (nécessaire pour `node:sqlite`,
+intégré à Node — aucune installation de base de données séparée).
+
+```bash
+npm install
+npm run dev       # démarre l'application sur http://localhost:3000
+npm run typecheck # vérifie les types TypeScript
+npm run lint      # vérifie le style du code
+npm run build     # construit la version de production
+```
+
+Ce que couvre cette première version : créer un dossier, y comparer plusieurs scénarios (aucun
+n'écrase l'autre), suivre un budget par scénario (en centimes, jamais en virgule flottante), et
+changer le statut d'un scénario avec un motif obligatoire — visible ensuite dans son historique.
+Détails techniques et raisons des choix : [DECISIONS.md](DECISIONS.md) et les commentaires de
+[`src/lib/db/schema.sql`](src/lib/db/schema.sql).
+
+**La démonstration `index.html` reste disponible** le temps que cette base couvre au moins les
+deux parcours décrits dans le cadrage (§« Démonstration et retours ») ; elle sera alors retirée.
+
 ## Essayer la démonstration locale (0.1)
 
 1. Dans GitHub, cliquez sur **Code → Open with GitHub Desktop** et clonez ce dépôt sur votre PC. Un téléchargement ZIP est également possible, mais ne facilite pas les mises à jour.
