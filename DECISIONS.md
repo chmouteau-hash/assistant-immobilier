@@ -66,3 +66,24 @@ reconsidérer une fois que l'usage aura montré si cette distinction manque.
 
 **Chaque tâche n'apparaît que dans une seule colonne** (Aujourd'hui avant À débloquer avant À
 explorer) : une tâche bloquée ET en retard ne doit pas compter double sur l'accueil.
+
+## 2026-10-01 — Sauvegarde et export lisible : deux fonctions séparées
+
+**Décision.** La sauvegarde/restauration (issue #2) et l'export lisible (clôture de dossier,
+issue #4 ; remontées vers GitHub, issue #5) sont deux fonctions distinctes, pas un format unique :
+
+1. **Sauvegarde/restauration** : copie du fichier `data/dossier.sqlite` tel quel. Pas de
+   sérialisation JSON — la base est déjà un fichier unique, la copier directement évite tout
+   risque de perte en re-sérialisant et n'impose aucun format à concevoir.
+2. **Export lisible** : document Markdown généré à la demande (clôture de dossier, remontée
+   expurgée vers une issue GitHub), à but de lecture et de partage. Jamais utilisé pour
+   restaurer — un export lisible est par nature partiel.
+
+**Pourquoi.** Les deux besoins ont des contraintes opposées : la sauvegarde doit être fidèle à
+100 % mais peut rester illisible hors de l'application ; l'export lisible doit être compréhensible
+hors contexte mais peut être partiel. Chercher un format unique pour les deux aurait complexifié
+la sauvegarde pour la rendre lisible, sans que ce soit nécessaire.
+
+**Conséquence sur le cadrage existant.** Répond à la question ouverte « Format de l'export,
+règles de reprise et de suppression des données » (§Questions ouvertes du cadrage) — pour la
+partie format ; les règles de reprise et de suppression restent à trancher séparément.
