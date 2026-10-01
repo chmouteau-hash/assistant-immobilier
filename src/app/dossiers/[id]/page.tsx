@@ -10,9 +10,12 @@ import {
   listerSourcesDonnee,
   listerTypesMontant,
 } from "@/lib/dossiers";
+import { listerTachesDossier, listerStatutsTache } from "@/lib/taches";
 import { ErreurApplicative } from "@/lib/erreurs";
 import { ScenarioCard } from "./ScenarioCard";
 import { FormulaireScenario } from "./FormulaireScenario";
+import { FormulaireTache } from "./FormulaireTache";
+import { TacheItem } from "@/components/TacheItem";
 
 // Voir le commentaire équivalent dans `dossiers/page.tsx` — même raison, cette page lit aussi
 // directement la base locale.
@@ -33,6 +36,8 @@ export default async function PageDossier({ params }: { params: Promise<{ id: st
   const statuts = listerStatutsScenario();
   const sources = listerSourcesDonnee();
   const typesMontant = listerTypesMontant();
+  const taches = listerTachesDossier(id);
+  const statutsTache = listerStatutsTache();
 
   return (
     <main className="mx-auto flex max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
@@ -68,6 +73,22 @@ export default async function PageDossier({ params }: { params: Promise<{ id: st
           ))}
         </div>
         <FormulaireScenario dossierId={id} />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="font-medium text-neutral-700">
+          Tâches{taches.length > 0 && ` (${taches.length})`}
+        </h2>
+        {taches.length === 0 ? (
+          <p className="text-neutral-500">Aucune tâche pour l&apos;instant.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {taches.map((tache) => (
+              <TacheItem key={tache.id} tache={tache} statuts={statutsTache} />
+            ))}
+          </ul>
+        )}
+        <FormulaireTache dossierId={id} scenarios={scenarios} />
       </section>
     </main>
   );

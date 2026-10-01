@@ -48,3 +48,21 @@ où plusieurs dossiers coexistent dans la même base ou qu'un professionnel y ac
 devra être posée **en base** (ex. SQLite par dossier plutôt qu'un filtre applicatif par requête)
 — repris du constat fait sur Ergonomia, où le filtre applicatif (sans RLS) est un point de
 vigilance, pas un modèle à reproduire tel quel.
+
+## 2026-10-01 — Tâches : priorité 3 du cadrage, sans dépendances pour l'instant
+
+**Décision.** Ajout d'une table `tache` (description, échéance facultative, responsable, statut,
+rattachée à un dossier et, facultativement, à un scénario) et d'une page d'accueil qui classe les
+tâches non faites en trois colonnes : **Aujourd'hui** (échéance dépassée ou du jour), **À
+débloquer** (statut `bloque`), **À explorer** (le reste) — reprend le principe 5 du cadrage au mot
+près.
+
+**Ce qui a été volontairement laissé de côté.** Le cadrage liste aussi des **dépendances** entre
+tâches (« Tâche / événement : […] dépendances […] »). Non implémenté ici : une dépendance peut se
+vouloir simple (« fait avant ») ou complexe (graphe, blocage automatique), et le choisir sans
+usage réel reviendrait à deviner. Pour l'instant, le statut `bloque` sert de substitut manuel —
+Christophe indique qu'une tâche attend quelque chose, sans que le système sache quoi. À
+reconsidérer une fois que l'usage aura montré si cette distinction manque.
+
+**Chaque tâche n'apparaît que dans une seule colonne** (Aujourd'hui avant À débloquer avant À
+explorer) : une tâche bloquée ET en retard ne doit pas compter double sur l'accueil.

@@ -8,6 +8,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { creerDossier, creerScenario, changerStatutScenario, ajouterLigneBudget } from "@/lib/dossiers";
+import { creerTache, changerStatutTache } from "@/lib/taches";
 import { parserMontant } from "@/lib/montant";
 import { ErreurApplicative } from "@/lib/erreurs";
 
@@ -62,6 +63,48 @@ export async function actionChangerStatut(
       motif: String(donnees.get("motif") ?? ""),
     });
     revalidatePath(`/dossiers/${dossierId}`);
+    return { erreur: null };
+  } catch (erreur) {
+    if (erreur instanceof ErreurApplicative) return { erreur: erreur.message };
+    throw erreur;
+  }
+}
+
+export async function actionCreerTache(
+  _etatPrecedent: EtatFormulaire,
+  donnees: FormData,
+): Promise<EtatFormulaire> {
+  const dossierId = String(donnees.get("dossierId") ?? "");
+  const scenarioId = String(donnees.get("scenarioId") ?? "");
+  try {
+    creerTache({
+      dossierId,
+      scenarioId: scenarioId === "" ? null : scenarioId,
+      description: String(donnees.get("description") ?? ""),
+      echeance: String(donnees.get("echeance") ?? ""),
+      responsable: String(donnees.get("responsable") ?? ""),
+    });
+    revalidatePath(`/dossiers/${dossierId}`);
+    revalidatePath("/");
+    return { erreur: null };
+  } catch (erreur) {
+    if (erreur instanceof ErreurApplicative) return { erreur: erreur.message };
+    throw erreur;
+  }
+}
+
+export async function actionChangerStatutTache(
+  _etatPrecedent: EtatFormulaire,
+  donnees: FormData,
+): Promise<EtatFormulaire> {
+  const dossierId = String(donnees.get("dossierId") ?? "");
+  try {
+    changerStatutTache({
+      tacheId: String(donnees.get("tacheId") ?? ""),
+      nouveauStatut: String(donnees.get("statut") ?? ""),
+    });
+    revalidatePath(`/dossiers/${dossierId}`);
+    revalidatePath("/");
     return { erreur: null };
   } catch (erreur) {
     if (erreur instanceof ErreurApplicative) return { erreur: erreur.message };
