@@ -59,6 +59,26 @@ export function listerDependances(acteur: Acteur, dossierId: string): Dependance
   return dependancesDossier(dossierId);
 }
 
+// Garde-fous de saisie, communs à la création et à la correction d'une action.
+
+function descriptionExigee(saisie: string): string {
+  const description = saisie.trim();
+  if (description === "") throw invalide("La description de l'action est obligatoire.");
+  return description;
+}
+
+function exigerEcheanceValide(echeance: string | null | undefined): void {
+  if (echeance && !/^\d{4}-\d{2}-\d{2}$/.test(echeance)) {
+    throw invalide("L'échéance doit être une date au format AAAA-MM-JJ, ou laissée vide (inconnue).");
+  }
+}
+
+function exigerScenarioDuDossier(scenarioId: string | null | undefined, dossierId: string): void {
+  if (!scenarioId) return;
+  const s = obtenirBase().prepare(`SELECT dossier_id FROM scenario WHERE id = ?`).get(scenarioId) as { dossier_id: string } | undefined;
+  if (!s || s.dossier_id !== dossierId) throw invalide("Le scénario indiqué n'appartient pas à ce dossier.");
+}
+
 export function creerTache(
   acteur: Acteur,
   params: {
@@ -73,16 +93,10 @@ export function creerTache(
   },
 ): Tache {
   exiger(acteur, params.dossierId, "ecrire", "taches");
-  const description = params.description.trim();
-  if (description === "") throw invalide("La description de l'action est obligatoire.");
-  if (params.echeance && !/^\d{4}-\d{2}-\d{2}$/.test(params.echeance)) {
-    throw invalide("L'échéance doit être une date au format AAAA-MM-JJ, ou laissée vide (inconnue).");
-  }
+  const description = descriptionExigee(params.description);
+  exigerEcheanceValide(params.echeance);
+  exigerScenarioDuDossier(params.scenarioId, params.dossierId);
   const db = obtenirBase();
-  if (params.scenarioId) {
-    const s = db.prepare(`SELECT dossier_id FROM scenario WHERE id = ?`).get(params.scenarioId) as { dossier_id: string } | undefined;
-    if (!s || s.dossier_id !== params.dossierId) throw invalide("Le scénario indiqué n'appartient pas à ce dossier.");
-  }
   const dependDeIds = [...new Set(params.dependDeIds ?? [])].filter((x) => x !== "");
   for (const dep of dependDeIds) {
     const t = db.prepare(`SELECT dossier_id FROM tache WHERE id = ?`).get(dep) as { dossier_id: string } | undefined;
@@ -109,6 +123,56 @@ export function creerTache(
     }
     enregistrerEvenement(tx, { nomEntite: "tache", entiteId: id, action: "creation", acteurId: acteur.personneId, dossierId: params.dossierId });
     return lireBrute(id);
+  });
+}
+
+/**
+ * Corrige une action après sa création. Un champ absent (`undefined`) reste inchangé ; un champ
+ * vide est effacé : l'échéance redevient alors inconnue. Seuls les champs changés sont tracés.
+ */
+export function modifierTache(
+  acteur: Acteur,
+  params: { tacheId: string; description?: string; echeance?: string | null; responsable?: string | null; scenarioId?: string | null; estJalon?: boolean },
+): Tache {
+  const avant = lireBrute(params.tacheId);
+  exiger(acteur, avant.dossierId, "ecrire", "taches");
+  const apres = {
+    description: params.description === undefined ? avant.description : descriptionExigee(params.description),
+    echeance: params.echeance === undefined ? avant.echeance : params.echeance || null,
+    responsable: params.responsable === undefined ? avant.responsable : params.responsable?.trim() || null,
+    scenarioId: params.scenarioId === undefined ? avant.scenarioId : params.scenarioId || null,
+    estJalon: params.estJalon ?? avant.estJalon,
+  };
+  exigerEcheanceValide(apres.echeance);
+  if (apres.scenarioId !== avant.scenarioId) exigerScenarioDuDossier(apres.scenarioId, avant.dossierId);
+
+  const changements = [
+    { champ: "description", avant: avant.description, apres: apres.description },
+    { champ: "echeance", avant: avant.echeance, apres: apres.echeance },
+    { champ: "responsable", avant: avant.responsable, apres: apres.responsable },
+    { champ: "scenario_id", avant: avant.scenarioId, apres: apres.scenarioId },
+    { champ: "est_jalon", avant: avant.estJalon ? 1 : 0, apres: apres.estJalon ? 1 : 0 },
+  ].filter((c) => c.avant !== c.apres);
+  if (changements.length === 0) return avant;
+
+  return transaction((db) => {
+    db.prepare(`UPDATE tache SET description = ?, echeance = ?, responsable = ?, scenario_id = ?, est_jalon = ? WHERE id = ?`).run(
+      apres.description,
+      apres.echeance,
+      apres.responsable,
+      apres.scenarioId,
+      apres.estJalon ? 1 : 0,
+      params.tacheId,
+    );
+    enregistrerEvenement(db, {
+      nomEntite: "tache",
+      entiteId: params.tacheId,
+      action: "modification",
+      acteurId: acteur.personneId,
+      dossierId: avant.dossierId,
+      changements,
+    });
+    return lireBrute(params.tacheId);
   });
 }
 

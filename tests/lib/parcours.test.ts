@@ -10,7 +10,7 @@ import { creerDossier, creerScenario, changerStatutScenario, listerDecisions, co
 import { creerLieu, creerBatiment, creerPiece, modifierSurfacePiece } from "@/lib/structure";
 import { creerIdee, changerStatutIdee } from "@/lib/idees";
 import { creerPoste, ajouterLigne, syntheseScenario, comparaisonDossier, listerLignes } from "@/lib/budget";
-import { creerTache, ajouterDependance, retirerDependance, listerDependances, changerStatutTache, classementDossier, timelineDossier } from "@/lib/taches";
+import { creerTache, modifierTache, ajouterDependance, retirerDependance, listerDependances, changerStatutTache, classementDossier, timelineDossier } from "@/lib/taches";
 import { inviterPersonne } from "@/lib/personnes";
 import { deposerDocument, proposerExtraction, validerExtraction, listerExtractions } from "@/lib/documents";
 import { demanderAssistant, construireContexte, listerEchanges } from "@/lib/ia";
@@ -174,6 +174,46 @@ describe("parcours pilote", () => {
     const c = classementDossier(moi, d.id);
     expect(c.aExplorer.map((t) => t.id)).toContain(devis.id);
     expect(c.aDebloquer.map((t) => ({ id: t.id, statut: t.statut }))).toEqual([{ id: commande.id, statut: "en_cours" }]);
+  });
+
+  it("une action se corrige après sa création, et la correction est tracée", () => {
+    const d = creerDossier(moi, { nom: "Pilote" });
+    const autre = creerDossier(moi, { nom: "Autre dossier" });
+    const s = creerScenario(moi, { dossierId: d.id, nom: "Rénover" });
+    const ailleurs = creerScenario(moi, { dossierId: autre.id, nom: "Ailleurs" });
+    const t = creerTache(moi, { dossierId: d.id, description: "Demander le devi" });
+    expect(classementDossier(moi, d.id).aExplorer.map((x) => x.id)).toEqual([t.id]);
+
+    // Une action créée sans échéance peut en recevoir une : elle change alors de colonne.
+    const corrigee = modifierTache(moi, { tacheId: t.id, description: " Demander le devis ", echeance: "2020-01-01", responsable: "moi", scenarioId: s.id, estJalon: true });
+    expect(corrigee).toMatchObject({ description: "Demander le devis", echeance: "2020-01-01", responsable: "moi", scenarioId: s.id, estJalon: true, statut: "a_faire" });
+    expect(classementDossier(moi, d.id).aujourdhui.map((x) => x.id)).toEqual([t.id]);
+
+    // Seuls les champs changés sont tracés ; une saisie identique ne trace rien.
+    const traces = () => journalAudit(moi, d.id).filter((e) => e.entiteId === t.id && e.action === "modification");
+    expect(traces().map((e) => e.changements)).toEqual([
+      [
+        { champ: "description", avant: "Demander le devi", apres: "Demander le devis" },
+        { champ: "echeance", avant: null, apres: "2020-01-01" },
+        { champ: "responsable", avant: null, apres: "moi" },
+        { champ: "scenario_id", avant: null, apres: s.id },
+        { champ: "est_jalon", avant: 0, apres: 1 },
+      ],
+    ]);
+    modifierTache(moi, { tacheId: t.id, description: "Demander le devis", echeance: "2020-01-01", responsable: "moi", scenarioId: s.id, estJalon: true });
+    expect(traces()).toHaveLength(1);
+
+    // Un champ absent reste inchangé ; un champ vide est effacé. L'échéance redevient alors
+    // inconnue, jamais une date inventée.
+    expect(modifierTache(moi, { tacheId: t.id, responsable: "courtier" })).toMatchObject({ description: "Demander le devis", echeance: "2020-01-01", responsable: "courtier", estJalon: true });
+    expect(modifierTache(moi, { tacheId: t.id, echeance: "", responsable: "", scenarioId: "", estJalon: false })).toMatchObject({ echeance: null, responsable: null, scenarioId: null, estJalon: false });
+
+    // Mêmes garde-fous qu'à la création, même droit.
+    expect(() => modifierTache(moi, { tacheId: t.id, description: "  " })).toThrow(/obligatoire/);
+    expect(() => modifierTache(moi, { tacheId: t.id, echeance: "01/01/2027" })).toThrow(/AAAA-MM-JJ/);
+    expect(() => modifierTache(moi, { tacheId: t.id, scenarioId: ailleurs.id })).toThrow(/n'appartient pas/);
+    const invite = inviterPersonne(moi, { dossierId: d.id, nom: "Ami", role: "lecteur" });
+    expect(() => modifierTache({ personneId: invite.personneId, nom: "Ami" }, { tacheId: t.id, description: "x" })).toThrow(ErreurApplicative);
   });
 
   it("sans IA tout fonctionne ; l'assistant ne reçoit que le périmètre autorisé et ne modifie rien", async () => {
