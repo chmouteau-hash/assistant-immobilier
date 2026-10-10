@@ -1,9 +1,10 @@
 name: CI
 
-# Minimale, volontairement : typecheck + lint + build. Rien de la machinerie de gouvernance
+# Minimale, volontairement : typecheck + lint + tests + build. Rien de la machinerie de gouvernance
 # documentaire d'Ergonomia (pas de spec ACTIVE/PROPOSITION, pas de traçabilité exigence↔code) —
 # disproportionnée pour un dossier personnel à un seul utilisateur. À durcir seulement sur un
-# déclencheur réel (un second contributeur, un premier abonné) — voir DECISIONS.md.
+# déclencheur réel (un second contributeur, un premier abonné) — voir DECISIONS.md, entrée du
+# 2026-10-10.
 
 on:
   push:
