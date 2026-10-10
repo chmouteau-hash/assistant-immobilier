@@ -10,7 +10,8 @@ import { creerDossier, creerScenario, changerStatutScenario, listerDecisions, co
 import { creerLieu, creerBatiment, creerPiece, modifierSurfacePiece } from "@/lib/structure";
 import { creerIdee, changerStatutIdee } from "@/lib/idees";
 import { creerPoste, ajouterLigne, syntheseScenario, comparaisonDossier, listerLignes } from "@/lib/budget";
-import { creerTache, ajouterDependance, changerStatutTache, classementDossier, timelineDossier } from "@/lib/taches";
+import { creerTache, ajouterDependance, retirerDependance, listerDependances, changerStatutTache, classementDossier, timelineDossier } from "@/lib/taches";
+import { inviterPersonne } from "@/lib/personnes";
 import { deposerDocument, proposerExtraction, validerExtraction, listerExtractions } from "@/lib/documents";
 import { demanderAssistant, construireContexte, listerEchanges } from "@/lib/ia";
 import { ErreurApplicative } from "@/lib/erreurs";
@@ -145,6 +146,34 @@ describe("parcours pilote", () => {
     const t = timelineDossier(moi, d.id);
     expect(t.datees.map((e) => e.action.id)).toEqual([commande.id]);
     expect(t.sansDate.map((e) => e.action.id).sort()).toEqual([devis.id, jalon.id].sort());
+  });
+
+  it("une dépendance posée par erreur se retire, une action faite se rouvre", () => {
+    const d = creerDossier(moi, { nom: "Pilote" });
+    const devis = creerTache(moi, { dossierId: d.id, description: "Obtenir le devis toiture" });
+    const commande = creerTache(moi, { dossierId: d.id, description: "Commander la toiture", dependDeIds: [devis.id] });
+    const pose = creerTache(moi, { dossierId: d.id, description: "Poser la toiture", dependDeIds: [devis.id] });
+
+    // Retirer : même droit que poser, tracé, sans effet si la dépendance n'existe plus.
+    const invite = inviterPersonne(moi, { dossierId: d.id, nom: "Ami", role: "lecteur" });
+    const lecteur: Acteur = { personneId: invite.personneId, nom: "Ami" };
+    expect(() => retirerDependance(lecteur, { tacheId: pose.id, dependDeId: devis.id })).toThrow(ErreurApplicative);
+    retirerDependance(moi, { tacheId: pose.id, dependDeId: devis.id });
+    retirerDependance(moi, { tacheId: pose.id, dependDeId: devis.id });
+    expect(listerDependances(moi, d.id)).toEqual([{ actionId: commande.id, dependDeId: devis.id }]);
+    expect(changerStatutTache(moi, { tacheId: pose.id, nouveauStatut: "en_cours" }).statut).toBe("en_cours");
+    const retraits = journalAudit(moi, d.id).filter((e) => e.entiteId === pose.id && e.action === "modification");
+    expect(retraits.map((e) => e.changements)).toEqual([[{ champ: "depend_de", avant: devis.id, apres: null }]]);
+
+    // Rouvrir : une action faite par erreur revient dans la liste du jour ; celle qui en dépend
+    // repasse d'elle-même dans « à débloquer », sans que son statut soit touché.
+    changerStatutTache(moi, { tacheId: devis.id, nouveauStatut: "fait" });
+    changerStatutTache(moi, { tacheId: commande.id, nouveauStatut: "en_cours" });
+    expect(classementDossier(moi, d.id).aDebloquer).toEqual([]);
+    changerStatutTache(moi, { tacheId: devis.id, nouveauStatut: "a_faire" });
+    const c = classementDossier(moi, d.id);
+    expect(c.aExplorer.map((t) => t.id)).toContain(devis.id);
+    expect(c.aDebloquer.map((t) => ({ id: t.id, statut: t.statut }))).toEqual([{ id: commande.id, statut: "en_cours" }]);
   });
 
   it("sans IA tout fonctionne ; l'assistant ne reçoit que le périmètre autorisé et ne modifie rien", async () => {

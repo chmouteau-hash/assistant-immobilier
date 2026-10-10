@@ -135,6 +135,25 @@ export function ajouterDependance(acteur: Acteur, params: { tacheId: string; dep
   });
 }
 
+/** Retire « `tacheId` dépend de `dependDeId` » : même droit et même trace que pour la poser. */
+export function retirerDependance(acteur: Acteur, params: { tacheId: string; dependDeId: string }): void {
+  const tache = lireBrute(params.tacheId);
+  exiger(acteur, tache.dossierId, "ecrire", "taches");
+  const existantes = dependancesDossier(tache.dossierId);
+  if (!existantes.some((d) => d.actionId === params.tacheId && d.dependDeId === params.dependDeId)) return;
+  transaction((db) => {
+    db.prepare(`DELETE FROM dependance_tache WHERE tache_id = ? AND depend_de_id = ?`).run(params.tacheId, params.dependDeId);
+    enregistrerEvenement(db, {
+      nomEntite: "tache",
+      entiteId: params.tacheId,
+      action: "modification",
+      acteurId: acteur.personneId,
+      dossierId: tache.dossierId,
+      changements: [{ champ: "depend_de", avant: params.dependDeId, apres: null }],
+    });
+  });
+}
+
 export function changerStatutTache(acteur: Acteur, params: { tacheId: string; nouveauStatut: string }): Tache {
   const avant = lireBrute(params.tacheId);
   exiger(acteur, avant.dossierId, "ecrire", "taches");

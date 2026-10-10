@@ -22,7 +22,7 @@ référence (`ref_*`), modifiables sans toucher au code. Schéma exécutable : `
 | **Document / Photo** | nom_original, type_document ∈ ref_type_document, mime, taille_octets, sha256, chemin_relatif (oui) ; date_document (non) ; note ; depose_par | source (import) ; rattachements : lieu, bâtiment, pièce, scénario, poste, idée, action | n extractions |
 | **Extraction de document** | document_id, champ ∈ {montant_centimes, date, fournisseur, poste, type_montant} ; valeur_proposee ; valeur_validee ; statut ∈ ref_statut_extraction (proposée, validée, corrigée, rejetée) ; validee_par, validee_le | source (saisie ou suggestion_ia) ; confiance (à confirmer → connu à la validation) | → document |
 | **Action (Tâche) / Jalon** | description (oui) ; echeance (non, jamais inventée) ; responsable (texte) ; responsable_personne_id ; statut ∈ ref_statut_tache ; est_jalon ; scenario_id | source | n dépendances, documents |
-| **Dépendance** | tache_id dépend de depend_de_id (CHECK ≠ ; cycles refusés par le domaine) | — | → actions |
+| **Dépendance** | tache_id dépend de depend_de_id (CHECK ≠ ; cycles refusés par le domaine ; se pose et se retire, tracé au journal d'audit) | — | → actions |
 | **Décision** | choix, motif (oui) ; alternatives_ecartees ; conditions_ouvertes ; decide_par ; date_decision ; scenario_id ou idee_id | — | créée par les transitions retenue/écartée |
 | **Source (référence externe)** | titre (oui) ; organisme ; url ; date_source ; date_consultation ; note | — | réservée aux références citées (table posée, interface à venir) |
 | **Échange IA** | fournisseur, question, perimetre (JSON), reponse (JSON ReponseIA), modele, acteur_id | — | → dossier |

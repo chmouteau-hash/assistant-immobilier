@@ -274,6 +274,12 @@ export async function actionAjouterDependance(_e: EtatFormulaire, fd: FormData):
   });
 }
 
+export async function actionRetirerDependance(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    taches.retirerDependance(acteur, { tacheId: texte(fd, "tacheId"), dependDeId: texte(fd, "dependDeId") });
+  });
+}
+
 export async function actionChangerStatutTache(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     taches.changerStatutTache(acteur, { tacheId: texte(fd, "tacheId"), nouveauStatut: texte(fd, "statut") });
