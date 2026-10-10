@@ -1,4 +1,4 @@
-import { obtenirActeurCourant } from "@/lib/acteur-courant";
+import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerParticipations, listerPersonnesInvitables } from "@/lib/personnes";
 import { listerReference, libelle } from "@/lib/references";
@@ -26,7 +26,7 @@ function CasesPerimetre({ coches = [] as string[] }) {
 
 export default async function PagePersonnes({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const acteur = await obtenirActeurCourant();
+  const acteur = await obtenirActeurPourSection(id, "personnes");
   const participations = listerParticipations(acteur, id);
   const roles = listerReference("ref_role");
   const peutGerer = autorise(acteur, id, "gerer_droits", "droits");

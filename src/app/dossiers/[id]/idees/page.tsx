@@ -1,4 +1,4 @@
-import { obtenirActeurCourant } from "@/lib/acteur-courant";
+import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerIdees } from "@/lib/idees";
 import { listerScenarios } from "@/lib/dossiers";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PageIdees({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const acteur = await obtenirActeurCourant();
+  const acteur = await obtenirActeurPourSection(id, "idees");
   const idees = listerIdees(acteur, id);
   const statuts = listerReference("ref_statut_idee");
   const sources = listerReference("ref_source_donnee");

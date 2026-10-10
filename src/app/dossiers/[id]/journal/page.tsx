@@ -1,4 +1,4 @@
-import { obtenirActeurCourant } from "@/lib/acteur-courant";
+import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { journalAudit } from "@/lib/dossiers";
 import { listerToutesPersonnes } from "@/lib/personnes";
 import { Section, Vide, formaterDateHeure } from "@/components/ui";
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PageJournal({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const acteur = await obtenirActeurCourant();
+  const acteur = await obtenirActeurPourSection(id, "droits");
   const journal = journalAudit(acteur, id);
   const personnes = listerToutesPersonnes();
   const nom = (pid: string | null) => personnes.find((p) => p.id === pid)?.nom ?? pid ?? "—";

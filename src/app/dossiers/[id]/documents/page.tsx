@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { obtenirActeurCourant } from "@/lib/acteur-courant";
+import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerDocuments } from "@/lib/documents";
 import { listerScenarios } from "@/lib/dossiers";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PageDocuments({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const acteur = await obtenirActeurCourant();
+  const acteur = await obtenirActeurPourSection(id, "documents");
   const documents = listerDocuments(acteur, id);
   const types = listerReference("ref_type_document");
   const peutEcrire = autorise(acteur, id, "ecrire", "documents");
