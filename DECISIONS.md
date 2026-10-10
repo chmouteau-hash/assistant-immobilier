@@ -295,3 +295,19 @@ la liste du jour ne classe que les actions non faites, et sa liste de statut dis
 
 **Ce qui n'est pas tranché.** Modifier la description, l'échéance ou le responsable d'une action
 (issue #22) ; afficher aussi les actions faites sur l'accueil.
+
+## 2026-10-10 — Actions : une action se corrige après sa création
+
+**Décision.** Tranche le premier point laissé ouvert par l'entrée précédente. La description,
+l'échéance, le responsable, le scénario et la marque « jalon » d'une action se modifient depuis
+l'écran Actions du dossier, avec le même droit que pour la créer (écrire les actions) et les mêmes
+garde-fous : description obligatoire, échéance au format AAAA-MM-JJ ou vide, scénario du même
+dossier. Seuls les champs changés sont tracés au journal d'audit, avec la valeur d'avant et celle
+d'après ; aucun motif n'est demandé. Vider l'échéance la rend de nouveau inconnue.
+
+**Pourquoi.** Une action créée sans échéance ne pouvait jamais en recevoir une, et une faute de
+frappe restait. Le critère « suivre tâches, responsables, échéances » de l'issue #1 n'était donc
+pas tenu (constat de l'issue #22).
+
+**Ce qui n'est pas tranché.** Supprimer une action, ou la marquer abandonnée ; les mêmes
+corrections sur les autres objets (lieu, bâtiment, pièce, idée, scénario, poste : issue #22).

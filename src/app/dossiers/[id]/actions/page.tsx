@@ -18,7 +18,10 @@ export default async function PageActions({ params }: { params: Promise<{ id: st
   const classement = classementDossier(acteur, id);
   const timeline = timelineDossier(acteur, id);
   const statuts = listerReference("ref_statut_tache");
-  const scenarios = autorise(acteur, id, "lire", "scenarios") ? listerScenarios(acteur, id) : [];
+  const voitScenarios = autorise(acteur, id, "lire", "scenarios");
+  const scenarios = voitScenarios ? listerScenarios(acteur, id) : [];
+  // Sans droit de lire les scénarios, le rattachement d'une action n'est ni montré ni modifiable.
+  const scenariosProposes = voitScenarios ? scenarios : undefined;
   const peutEcrire = autorise(acteur, id, "ecrire", "taches");
   const nom = (tid: string) => taches.find((t) => t.id === tid)?.description ?? "?";
   // Les colonnes de la liste du jour ne classent que les actions non faites : sans cette liste,
@@ -43,7 +46,7 @@ export default async function PageActions({ params }: { params: Promise<{ id: st
               ) : (
                 <ul className="flex flex-col gap-2">
                   {classement[cle].map((t) => (
-                    <TacheItem key={t.id} tache={t} statuts={statuts} peutModifier={peutEcrire} />
+                    <TacheItem key={t.id} tache={t} statuts={statuts} peutModifier={peutEcrire} corrigeable scenarios={scenariosProposes} />
                   ))}
                 </ul>
               )}
@@ -55,7 +58,7 @@ export default async function PageActions({ params }: { params: Promise<{ id: st
             <summary className="cursor-pointer text-neutral-600">Actions faites ({faites.length})</summary>
             <ul className="mt-2 flex flex-col gap-2">
               {faites.map((t) => (
-                <TacheItem key={t.id} tache={t} statuts={statuts} peutModifier={peutEcrire} />
+                <TacheItem key={t.id} tache={t} statuts={statuts} peutModifier={peutEcrire} corrigeable scenarios={scenariosProposes} />
               ))}
             </ul>
           </details>

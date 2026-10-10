@@ -268,6 +268,20 @@ export async function actionCreerTache(_e: EtatFormulaire, fd: FormData): Promis
   });
 }
 
+export async function actionModifierTache(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    taches.modifierTache(acteur, {
+      tacheId: texte(fd, "tacheId"),
+      description: texte(fd, "description"),
+      echeance: texte(fd, "echeance"),
+      responsable: texte(fd, "responsable"),
+      // La liste des scénarios n'est proposée qu'à qui peut les lire : sans elle, on ne touche pas au rattachement.
+      scenarioId: fd.has("scenarioId") ? texte(fd, "scenarioId") : undefined,
+      estJalon: fd.get("estJalon") === "on",
+    });
+  });
+}
+
 export async function actionAjouterDependance(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     taches.ajouterDependance(acteur, { tacheId: texte(fd, "tacheId"), dependDeId: texte(fd, "dependDeId") });
