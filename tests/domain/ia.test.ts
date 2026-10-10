@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { detecterQuestionsManquantes, FournisseurReglesLocales } from "@/domain/ia/questions-manquantes";
-import type { ContexteAutorise } from "@/domain/ia/types";
+import { libelleFournisseur, type ContexteAutorise } from "@/domain/ia/types";
 
 const MAINTENANT = "2026-10-09T10:00:00.000Z";
+
+describe("nom affiché d'un fournisseur", () => {
+  it("un libellé pour chaque fournisseur connu, le code tel quel pour un inconnu", () => {
+    expect(libelleFournisseur("regles_locales")).toBe("Règles locales");
+    expect(libelleFournisseur("anthropic")).toBe("Modèle distant (Claude)");
+    expect(libelleFournisseur(new FournisseurReglesLocales().nom)).toBe("Règles locales");
+    expect(libelleFournisseur("autre_fournisseur")).toBe("autre_fournisseur");
+  });
+});
 
 describe("règles locales (assistant sans modèle)", () => {
   it("ne regarde que les sections présentes dans le contexte", () => {

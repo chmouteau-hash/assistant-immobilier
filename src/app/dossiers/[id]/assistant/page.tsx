@@ -3,7 +3,7 @@ import { autorise } from "@/lib/acces";
 import { obtenirDossier } from "@/lib/dossiers";
 import { listerEchanges, perimetreEffectif } from "@/lib/ia";
 import { LIBELLES_SECTION, SECTIONS } from "@/domain/droits";
-import { SECTIONS_NON_TRANSMISSIBLES } from "@/domain/ia/types";
+import { SECTIONS_NON_TRANSMISSIBLES, libelleFournisseur } from "@/domain/ia/types";
 import { actionConfigurerIA, actionDemanderAssistant } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { Champ, Pastille, Section, Vide, classeSaisie, formaterDateHeure } from "@/components/ui";
@@ -24,7 +24,7 @@ export default async function PageAssistant({ params }: { params: Promise<{ id: 
     <div className="flex flex-col gap-8">
       <Section titre="Assistant IA (facultatif)" sousTitre="Désactivé par défaut. Il ne reçoit que les sections cochées, sous forme d'agrégats : jamais de nom, d'adresse ni de fichier. Il n'écrit rien dans le dossier.">
         <p className="text-sm">
-          État : {dossier.iaActivee ? <Pastille ton="ia">activé · fournisseur « {dossier.iaFournisseur} »</Pastille> : <Pastille>désactivé</Pastille>}
+          État : {dossier.iaActivee ? <Pastille ton="ia">activé · fournisseur « {libelleFournisseur(dossier.iaFournisseur)} »</Pastille> : <Pastille>désactivé</Pastille>}
           {dossier.iaActivee && (
             <span className="ml-2 text-neutral-500">
               sections transmises pour vous : {effectif.length === 0 ? "aucune" : effectif.map((s) => LIBELLES_SECTION[s]).join(", ")}
@@ -80,7 +80,7 @@ export default async function PageAssistant({ params }: { params: Promise<{ id: 
                 <strong className="text-neutral-800">{e.question}</strong>
               </span>
               <span>
-                {formaterDateHeure(e.createdAt)} · {e.fournisseur}
+                {formaterDateHeure(e.createdAt)} · {libelleFournisseur(e.fournisseur)}
                 {e.modele && ` (${e.modele})`} · sections : {e.perimetre.map((s) => LIBELLES_SECTION[s]).join(", ")}
               </span>
             </header>

@@ -39,6 +39,16 @@ export type ReponseIA = {
   avertissement: string;
 };
 
+/** Nom affiché d'un fournisseur. Le code (`regles_locales`, `anthropic`) reste ce qui est enregistré. */
+export const LIBELLES_FOURNISSEUR: Record<string, string> = {
+  regles_locales: "Règles locales",
+  anthropic: "Modèle distant (Claude)",
+};
+
+export function libelleFournisseur(code: string): string {
+  return LIBELLES_FOURNISSEUR[code] ?? code;
+}
+
 /** Sections JAMAIS transmises à un fournisseur, quoi que coche le propriétaire. */
 export const SECTIONS_NON_TRANSMISSIBLES: readonly Section[] = ["droits", "ia", "personnes"];
 

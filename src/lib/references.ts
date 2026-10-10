@@ -19,6 +19,7 @@ const TABLES = [
   "ref_type_document",
   "ref_statut_hypothese",
   "ref_statut_ligne",
+  "ref_statut_extraction",
 ] as const;
 export type TableReference = (typeof TABLES)[number];
 

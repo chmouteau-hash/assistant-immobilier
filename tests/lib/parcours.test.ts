@@ -13,6 +13,7 @@ import { creerPoste, ajouterLigne, syntheseScenario, comparaisonDossier, listerL
 import { creerTache, modifierTache, ajouterDependance, retirerDependance, listerDependances, changerStatutTache, classementDossier, timelineDossier } from "@/lib/taches";
 import { inviterPersonne } from "@/lib/personnes";
 import { deposerDocument, proposerExtraction, validerExtraction, listerExtractions } from "@/lib/documents";
+import { listerReference, libelle } from "@/lib/references";
 import { demanderAssistant, construireContexte, listerEchanges } from "@/lib/ia";
 import { ErreurApplicative } from "@/lib/erreurs";
 import type { Acteur } from "@/lib/acces";
@@ -115,6 +116,9 @@ describe("parcours pilote", () => {
     const { extractions, ligne } = validerExtraction(moi, { documentId: doc.id, corrections: { montant_centimes: "12 435,67" } });
     expect(extractions.find((e) => e.champ === "montant_centimes")).toMatchObject({ statut: "corrigee", valeurValidee: "12 435,67", confiance: "connu" });
     expect(extractions.find((e) => e.champ === "date")).toMatchObject({ statut: "validee" });
+    // L'écran affiche le libellé de la table de référence, jamais le code du statut.
+    const statutsExtraction = listerReference("ref_statut_extraction");
+    expect(extractions.map((e) => libelle(statutsExtraction, e.statut)).sort()).toEqual(expect.arrayContaining(["Corrigée puis validée", "Validée"]));
     expect(ligne).toMatchObject({ montantCentimes: 1_243_567, typeMontant: "facture", source: "import", confiance: "connu", documentId: doc.id, fournisseur: "Couvreur X", poste: "Toiture" });
     expect(syntheseScenario(moi, s.id).postes[0]).toMatchObject({ nom: "Toiture", statut: "facture", referenceCentimes: 1_243_567 });
 
