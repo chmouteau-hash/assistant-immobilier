@@ -88,6 +88,15 @@ la sauvegarde pour la rendre lisible, sans que ce soit nécessaire.
 règles de reprise et de suppression des données » (§Questions ouvertes du cadrage) — pour la
 partie format ; les règles de reprise et de suppression restent à trancher séparément.
 
+**Précisé le 2026-10-10 — le point 1 ne se limite plus au fichier de base.** Les documents
+déposés sont des fichiers sous `data/fichiers/`, hors de la base : copier `dossier.sqlite` seul
+les perdrait. La sauvegarde implémentée (`scripts/sauvegarde.mjs`, `scripts/restauration.mjs`,
+procédure dans `docs/07-sauvegarde-restauration.md`) copie donc la base par `VACUUM INTO`
+(instantané cohérent), les fichiers déposés et un manifeste avec somme de contrôle. Le principe
+de la décision reste intact : aucune sérialisation JSON de la base, aucun format à concevoir, et
+la sauvegarde ne sert qu'à restaurer. Pour l'export complet d'un dossier, voir l'entrée du
+2026-10-09.
+
 ## 2026-10-01 — Document : table unique dans le socle, pas une par module
 
 **Décision.** L'entité « Document » du cadrage (type, fichier, provenance, liens au bien, au
