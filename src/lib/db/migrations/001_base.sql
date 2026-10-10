@@ -16,7 +16,7 @@
 --    tombe pas juste sur une somme de lignes, et un budget comparé entre scénarios doit tomber
 --    juste.
 
-PRAGMA foreign_keys = ON;
+-- (PRAGMA foreign_keys géré par client.ts : hors transaction, avant les migrations)
 
 -- 1. Références -------------------------------------------------------------------------------
 

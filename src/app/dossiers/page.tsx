@@ -1,41 +1,61 @@
 import Link from "next/link";
+import { obtenirActeurCourant } from "@/lib/acteur-courant";
 import { listerDossiers } from "@/lib/dossiers";
-import { FormulaireDossier } from "./FormulaireDossier";
+import { listerReference, libelle } from "@/lib/references";
+import { actionCreerDossier } from "./actions";
+import { FormulaireAction } from "@/components/FormulaireAction";
+import { Champ, Select, classeSaisie } from "@/components/ui";
 
-// Sans ça, Next.js ne voit aucune dépendance dynamique (pas de cookies, pas de `fetch` non mis en
-// cache) et PRÉ-RENDT cette page une fois pour toutes au `build` — elle sert alors indéfiniment
-// la photo du contenu de `data/dossier.sqlite` prise à ce moment-là, même après un redémarrage
-// avec une base différente. Constaté : un dossier créé après le build restait invisible, et un
-// lien vers un dossier créé avant mais depuis supprimé menait à un 404. Toute page qui lit la
-// base locale doit porter cette ligne.
 export const dynamic = "force-dynamic";
 
-export default function PageDossiers() {
-  const dossiers = listerDossiers();
+export default async function PageDossiers() {
+  const acteur = await obtenirActeurCourant();
+  const dossiers = listerDossiers(acteur);
+  const types = listerReference("ref_type_projet");
+  const stades = listerReference("ref_stade");
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
+      <Link href="/" className="text-sm text-neutral-500 hover:underline">
+        ← Accueil
+      </Link>
       <h1 className="text-xl font-semibold">Mes dossiers</h1>
+      <p className="text-sm text-neutral-500">Vous voyez les dossiers auxquels <strong>{acteur.nom}</strong> participe.</p>
 
       {dossiers.length === 0 ? (
         <p className="text-neutral-500">Aucun dossier pour l&apos;instant.</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {dossiers.map((dossier) => (
-            <li key={dossier.id}>
-              <Link
-                href={`/dossiers/${dossier.id}`}
-                className="block rounded-lg border border-neutral-200 p-3 hover:border-neutral-400"
-              >
-                <span className="font-medium">{dossier.nom}</span>
-                {dossier.stade && <span className="ml-2 text-sm text-neutral-500">· {dossier.stade}</span>}
+          {dossiers.map((d) => (
+            <li key={d.id}>
+              <Link href={`/dossiers/${d.id}`} className="block rounded-lg border border-neutral-200 bg-white p-3 hover:border-neutral-400">
+                <span className="font-medium">{d.nom}</span>
+                <span className="ml-2 text-sm text-neutral-500">
+                  {libelle(types, d.typeProjet)} · {libelle(stades, d.stade)}
+                </span>
               </Link>
             </li>
           ))}
         </ul>
       )}
 
-      <FormulaireDossier />
+      <FormulaireAction action={actionCreerDossier} bouton="Créer le dossier" titre="Nouveau dossier">
+        <p className="text-xs text-neutral-500">Seul le nom est obligatoire : tout le reste peut rester « à renseigner » et se compléter au fil du projet.</p>
+        <Champ label="Nom">
+          <input name="nom" required className={classeSaisie} placeholder="ex. Lieu à acheter pour y habiter" />
+        </Champ>
+        <div className="flex flex-wrap gap-3">
+          <Champ label="Type de projet (facultatif)">
+            <Select name="typeProjet" options={types} vide="— à renseigner —" />
+          </Champ>
+          <Champ label="Stade de départ (facultatif)">
+            <Select name="stade" options={stades} vide="— à renseigner —" />
+          </Champ>
+        </div>
+        <Champ label="Objectif (facultatif)">
+          <input name="objectif" className={classeSaisie} />
+        </Champ>
+      </FormulaireAction>
     </main>
   );
 }

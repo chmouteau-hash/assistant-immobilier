@@ -66,3 +66,72 @@ reconsidérer une fois que l'usage aura montré si cette distinction manque.
 
 **Chaque tâche n'apparaît que dans une seule colonne** (Aujourd'hui avant À débloquer avant À
 explorer) : une tâche bloquée ET en retard ne doit pas compter double sur l'accueil.
+
+## 2026-10-09 — V1 testable : six priorités, droits côté serveur, IA séparée
+
+**Décision.** Livraison de la V1 testable décrite dans le cadrage « architecte » : dossier
+flexible (type, stade, personnes, lieux, bâtiments, pièces, idées), provenance sur chaque donnée
+sensible, actions avec dépendances et timeline, budget par poste et scénario, comparaison prudente,
+documents avec extraction validée, assistant IA optionnel. Le tout reste **local et mono-poste**
+(décision du 2026-10-01 inchangée).
+
+**Ce qui a été posé malgré l'absence d'un second utilisateur.** Le modèle `personne` /
+`participation` (rôle, périmètre, révocation) et le contrôle `exiger(acteur, dossier, action,
+section)` dans toute la couche `lib`. Ce n'est pas l'anticipation d'un serveur : c'est la seule
+façon de **tester le rôle d'un professionnel** (ce qu'il voit, ce qu'il ne voit pas) avant d'en
+inviter un vrai, et d'écrire les tests de droits demandés. L'acteur courant est l'utilisateur local
+ou un acteur **simulé** par cookie, étiqueté comme tel dans l'interface. Le jour de l'hébergement,
+seul `src/lib/acteur-courant.ts` change.
+
+**Provenance : deux axes, pas un.** `source` (d'où vient la valeur) et `confiance` (à quel point on
+s'y fie) sont indépendants mais contraints (`src/domain/provenance.ts`) : une estimation n'est
+jamais « connue », une suggestion de l'IA reste « à confirmer », une valeur absente est « à
+renseigner » sans source. La base redit ces règles en `CHECK`.
+
+**Budget : postes puis lignes.** Un poste sans ligne est « à renseigner » et rend l'inconnu
+visible ; la référence d'un poste est la nature la plus avancée (facture > engagement > devis >
+estimation) ; un total qui contient un poste à renseigner est marqué partiel et la comparaison
+refuse de classer. Marge d'imprévus : paramètre du dossier (pour-mille entier), pas une norme.
+
+**Dépendances entre actions : posées.** Revient sur la réserve du 2026-10-01 : la V1 implémente la
+forme simple « B dépend de A » avec refus des cycles, blocage du passage à fait/en cours, et
+classement « à débloquer » prioritaire. Choix fait parce que la liste du jour sans dépendances
+mettait en « aujourd'hui » des actions impossibles à faire.
+
+**IA : fournisseur « règles locales » d'abord.** Avant de payer un modèle et d'envoyer des données
+hors du PC, un fournisseur déterministe signale ce qui manque (surfaces, postes, hypothèses,
+extractions en attente…) avec le même contrat de réponse sourcée. Le fournisseur Anthropic existe
+(SDK officiel, sortie structurée) mais n'est proposé que si `ANTHROPIC_API_KEY` est définie. Trois
+sections ne sont jamais transmises : personnes, droits, IA.
+
+**Dépendances ajoutées.** `vitest`, `@anthropic-ai/sdk`, `zod` — justifiées dans le README.
+
+**Non tranché (voir docs/08).** Nom du produit ; premier test (recherche de bien, construction,
+les deux) ; informations obligatoires à la création (V1 : le nom seul) ; premier pack
+professionnel ; partie de l'IA prioritaire ; séparation éditeur / structure de projet ; montants et
+personnes de la simulation de financement.
+
+## 2026-10-09 — Export, suppression, lignes écartées, téléphone
+
+**Décision.** Même journée, après la V1 : quatre compléments issus de la liste d'améliorations.
+
+1. **Export complet** d'un dossier en archive ZIP (`src/lib/export.ts`, archiveur maison
+   `src/lib/zip.ts` sans dépendance, entrées stockées) : JSON table par table, fichiers originaux,
+   journal d'audit. Propriétaire seulement (nouvelle action `exporter`), chaque export journalisé.
+   L'import d'un export n'est pas fait : la remise en base passe par la restauration de sauvegarde.
+2. **Suppression définitive** d'un dossier (propriétaire, nom retapé, motif). Le journal d'audit du
+   dossier est purgé **dans la même transaction**, en levant temporairement le déclencheur d'ajout
+   seul : ces événements contiennent des valeurs personnelles (adresses, montants) et l'effacement
+   doit être complet. Il reste une seule trace, sans lien ni contenu : date, acteur, motif, nombre
+   d'événements purgés. C'est la seule exception à l'ajout seul, et elle est explicite dans le code.
+3. **Statut par ligne de montant** (migration 003) : `active` / `ecartee`. Une ligne écartée reste
+   visible et tracée mais n'entre dans aucune somme. Lève la limite « deux devis concurrents
+   s'additionnent ». Toute modification de ligne (montant, nature, provenance, statut) exige un
+   motif et trace avant/après.
+4. **Test sur téléphone** : serveur à l'écoute sur le réseau local (`dev:reseau`), adresses IPv4 du
+   PC déclarées automatiquement dans `allowedDevOrigins`, manifeste pour l'écran d'accueil. Pas de
+   mode hors ligne, pas d'exposition hors du Wi-Fi de confiance.
+
+**Pourquoi maintenant.** Export et suppression sont des prérequis RGPD à toute ouverture à un tiers ;
+les faire avant l'hébergement évite de les concevoir sous contrainte. Le statut par ligne corrige
+une limite que le pilote aurait rencontrée dès le premier devis concurrent.

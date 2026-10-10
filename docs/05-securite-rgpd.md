@@ -1,0 +1,30 @@
+# 5. Sécurité et RGPD — checklist V1
+
+État au 2026-10-09. La V1 est **locale, mono-poste** : la personne concernée et le responsable de
+traitement sont la même personne (Christophe). Cette checklist prépare l'ouverture à d'autres
+utilisateurs ; elle ne la couvre pas. Les sources officielles n'ont **pas été consultées** pendant
+la rédaction : chaque point réglementaire est marqué [À vérifier] avec l'endroit où vérifier.
+
+| Point | État V1 | Source officielle | Statut |
+| --- | --- | --- | --- |
+| **Données collectées et finalités** : identité du dossier, personnes (nom, profession, courriel facultatif), lieux (adresse si connue), photos de bâtiments/pièces, montants, documents (devis, factures), actions, échanges IA | Finalité unique : suivi d'un projet immobilier par son porteur. Minimisation : aucun champ obligatoire hors le nom du dossier ; pas de date de naissance, pas de pièce d'identité | CNIL, « Les principes clés » (https://www.cnil.fr) | [À vérifier] formulation de la finalité dans une notice si ouverture à des tiers |
+| **Base légale** | Usage personnel : hors champ du RGPD tant qu'il est strictement personnel (art. 2.2.c). Dès qu'un professionnel ou un tiers accède, ou qu'un éditeur héberge : exécution d'un contrat (art. 6.1.b) pour l'abonné ; intérêt légitime ou consentement pour les invités | Légifrance / EUR-Lex, RGPD art. 2 et 6 (https://www.legifrance.gouv.fr) | [À vérifier] |
+| **Durée de conservation** | Non limitée en V1 (dossier personnel) ; à définir par type : documents d'achat (longue), devis non retenus (courte), échanges IA (courte) | CNIL, « Durées de conservation » | [À vérifier] |
+| **Droit d'accès et portabilité** | Export complet du dossier en une archive zip (JSON table par table + fichiers originaux + journal), réservé au propriétaire, journalisé (Vue d'ensemble → Vos données) | RGPD art. 15 et 20 | OK ; [À vérifier] si un format imposé apparaît (interopérabilité) |
+| **Droit de rectification** | Toute donnée tracée se modifie avec provenance et audit : surface, adresse, et depuis la V1.1 chaque ligne de budget (montant, nature, provenance, statut) avec motif obligatoire | RGPD art. 16 | OK en pratique ; [À vérifier] si tiers |
+| **Droit d'effacement** | Suppression définitive d'un dossier par son propriétaire (nom retapé, motif) : données en cascade, fichiers effacés du disque, journal d'audit du dossier purgé dans la même transaction. Il reste une trace sans contenu ni lien (date, acteur, motif, nombre d'événements purgés) | RGPD art. 17 ; CNIL sur la conservation des journaux | OK ; [À vérifier] que la trace résiduelle (sans donnée personnelle) est conforme à la politique de journaux retenue |
+| **Sous-traitants et hébergement** | Aucun en V1 (tout local). Fournisseur IA distant **optionnel**, désactivé par défaut, activé par dossier ; données transmises : agrégats sans nom, adresse ni fichier | Conditions du fournisseur (Anthropic) : conservation, localisation ; RGPD art. 28 | [À vérifier] contrat de sous-traitance et durée de rétention avant usage sur données réelles |
+| **Transferts hors UE** | Aucun sans IA distante. Avec : à qualifier | RGPD chap. V | [À vérifier] |
+| **Chiffrement en transit** | Local (localhost) : sans objet. Appel au fournisseur IA : HTTPS (SDK) | — | OK |
+| **Chiffrement au repos** | Pas de chiffrement applicatif ; s'appuyer sur le chiffrement du disque Windows (BitLocker). Sauvegardes à conserver sur support chiffré | CNIL, « Sécurité : chiffrer » | [Recommandation] activer BitLocker ; [À vérifier] exigence si hébergement |
+| **Contrôle d'accès** | Rôles et périmètres, appliqués côté serveur, refus journalisés ; un dossier n'expose jamais ses données à un autre. V1 : pas d'authentification (mono-poste) | — | OK pour la V1 locale ; authentification requise avant toute exposition réseau |
+| **Journalisation** | Journal d'audit en ajout seul (acteur, action, motif, avant/après) ; refus d'accès ; requêtes IA (périmètre, fournisseur). Pas de contenu de fichier dans le journal | CNIL, recommandation sur la journalisation | [À vérifier] durée de conservation des journaux (ordre de grandeur 6 mois à 1 an selon la CNIL — à confirmer) |
+| **Photos de domicile** | Stockées localement, nommées par identifiant, servies après contrôle des droits, jamais transmises à l'IA en V1 ; classées par pièce/bâtiment. Un professionnel ne les voit que si « documents » est dans son périmètre | — | [Recommandation] prévoir un flou/recadrage avant tout partage ; [À vérifier] si des tiers (voisins) apparaissent |
+| **Données de santé (HDS)** | Aucune par conception. Un diagnostic amiante/plomb n'est pas une donnée de santé de personne ; une mention de handicap pour l'aménagement le serait | ASIP/ANS, certification HDS ; CNIL « données de santé » | [À vérifier] si un tel champ apparaît : ne pas le collecter, ou qualifier |
+| **Secrets** | Aucun en dur ; `.env.local` ignoré par git ; `ANTHROPIC_API_KEY` lue uniquement si un dossier le demande | — | OK |
+| **Sauvegarde / restauration** | Procédure documentée et scriptée (docs/07) ; manifeste avec somme de contrôle | — | OK ; [Recommandation] tester une restauration par trimestre |
+| **Exposition réseau** | `next dev` écoute sur localhost par défaut ; ne pas exposer avec `-H 0.0.0.0` sans authentification | — | [Recommandation] |
+
+**Points à traiter avant toute ouverture à un tiers** (ordre conseillé) : authentification ; export
+complet ; suppression d'un dossier avec politique de journaux ; notice d'information et base légale ;
+contrat avec le fournisseur IA ; chiffrement au repos côté serveur ; décision HDS formelle.
