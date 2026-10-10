@@ -215,3 +215,22 @@ personnes de la simulation de financement.
 **Pourquoi maintenant.** Export et suppression sont des prérequis RGPD à toute ouverture à un tiers ;
 les faire avant l'hébergement évite de les concevoir sous contrainte. Le statut par ligne corrige
 une limite que le pilote aurait rencontrée dès le premier devis concurrent.
+
+## 2026-10-10 — Stade du dossier : mettre en avant ou reléguer, pas des écrans par étape
+
+**Décision.** L'application reste organisée par objets (lieux, scénarios, idées, budget, actions,
+documents, journal, personnes, assistant). Le stade du dossier ne crée pas d'écrans par étape : il
+sert à mettre en avant ou à reléguer des sections. Au stade « travaux », la recherche et l'achat ne
+sont pas au premier plan. C'est le sens donné à « sauter une étape » dans l'issue #3.
+
+**Pourquoi.** Le cadrage demande qu'une rénovation de chambre puisse « sauter les étapes d'achat et
+de recherche », et décrit sa recette « sans écrans d'achat inutiles » : il vise ce que l'écran
+montre, pas un parcours imposé. Des écrans par étape obligeraient à réorganiser toute la navigation
+de la V1, alors qu'un même objet sert à plusieurs étapes (un document peut toucher un lieu, un
+scénario et un poste de budget). La mise en avant se vérifie en recette à moindre coût.
+
+**Conséquence.** Le bloc 4 de l'issue #3 porte ce travail, avec la contrainte de `dossier.stade`
+vers `ref_stade`, aujourd'hui absente : la colonne est du texte, même si l'écran propose une liste.
+
+**Ce qui n'est pas tranché.** Quelles sections sont reléguées à quel stade ; si « reléguer » veut
+dire masquer ou seulement replier ; ce qu'affiche un dossier sans stade (le stade reste facultatif).
