@@ -234,3 +234,23 @@ vers `ref_stade`, aujourd'hui absente : la colonne est du texte, même si l'écr
 
 **Ce qui n'est pas tranché.** Quelles sections sont reléguées à quel stade ; si « reléguer » veut
 dire masquer ou seulement replier ; ce qu'affiche un dossier sans stade (le stade reste facultatif).
+
+## 2026-10-10 — Budget : une facture partielle ne fait pas baisser le total
+
+**Décision.** Tant qu'un poste n'est pas marqué « soldé », son montant de référence est le plus
+élevé entre le montant engagé ou devisé et le total facturé. Une fois le poste soldé, la référence
+est le total facturé. Précise la règle du 2026-10-09 (« la référence d'un poste est la nature la
+plus avancée »), qui reste vraie pour un poste soldé.
+
+**Pourquoi.** Essai du 2026-10-10 sur `synthetiserScenario` : un poste portant un devis de 10 000 €
+voit sa référence tomber à 3 000 € dès une première facture de 3 000 €, et le total du scénario
+avec. La règle ne distingue pas une facture finale d'un acompte : le budget affiché baisse alors que
+7 000 € restent à venir. Garder le plus élevé évite cette baisse ; le passage à « soldé » laisse
+visible une facture finale inférieure au devis.
+
+**Conséquence.** Le bloc 2 de l'issue #4 porte ce travail : notion de poste soldé, nouvelle règle de
+référence, tests. « Soldé » (plus aucune facture attendue) se distingue du statut « payé » existant
+(les paiements couvrent les factures reçues).
+
+**Ce qui n'est pas tranché.** Comment un poste devient « soldé » (action manuelle avec motif, ou
+automatique) ; le cas d'un poste facturé sans devis ni engagement, qui n'a qu'une estimation.
