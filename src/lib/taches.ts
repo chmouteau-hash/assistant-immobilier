@@ -1,148 +1,99 @@
-// Accès aux tâches — priorité 3 du cadrage (« Faire avancer le projet »), ce qui alimente la vue
-// d'accueil « Aujourd'hui / À débloquer / À explorer » (principe 5).
+// Actions, jalons, dépendances — priorité 3 (« actions, responsables, dates, dépendances,
+// timeline, liste du jour »). Le classement et la timeline sont calculés par
+// `src/domain/planning.ts` (pur) ; ce module lit la base et contrôle les droits.
 
 import { randomUUID } from "node:crypto";
-import { obtenirBase, transaction } from "./db/client";
+import { obtenirBase, transaction, versObjets } from "./db/client";
 import { enregistrerEvenement } from "./db/audit";
-import { invalide, introuvable } from "./erreurs";
-import { obtenirDossier } from "./dossiers";
-import type { Reference } from "./dossiers";
+import { dossiersAccessibles, exiger, type Acteur } from "./acces";
+import { interdit, invalide } from "./erreurs";
+import {
+  classerPourAccueil,
+  construireTimeline,
+  creeraitUnCycle,
+  prerequisBloquants,
+  type ActionPlanifiee,
+  type Dependance,
+} from "../domain/planning";
 
-export type Tache = {
-  id: string;
+export type Tache = ActionPlanifiee & {
   dossierId: string;
-  scenarioId: string | null;
-  description: string;
-  echeance: string | null; // ISO YYYY-MM-DD, ou null si inconnue
-  responsable: string | null;
-  statut: string;
+  responsablePersonneId: string | null;
   source: string;
   createdAt: string;
 };
 
-/** Une tâche vue depuis l'accueil, tous dossiers confondus — porte le nom du dossier d'origine. */
-export type TacheAvecDossier = Tache & { dossierNom: string };
+export type TacheAvecDossier = Tache & { dossierNom: string; prerequisBloquants: string[] };
 
-export function listerStatutsTache(): Reference[] {
-  const db = obtenirBase();
-  const lignes = db
-    .prepare(`SELECT code, libelle FROM ref_statut_tache WHERE is_active = 1 ORDER BY ordre`)
-    .all() as Array<{ code: string; libelle: string }>;
-  return lignes.map((l) => ({ code: l.code, libelle: l.libelle }));
+const COLONNES = `id, dossier_id, scenario_id, description, echeance, responsable, responsable_personne_id, statut, est_jalon, source, created_at`;
+
+type TacheBrute = Omit<Tache, "estJalon"> & { estJalon: number };
+
+function hydrater(lignes: unknown[]): Tache[] {
+  return versObjets<TacheBrute>(lignes).map((t) => ({ ...t, estJalon: t.estJalon === 1 }));
 }
 
-function ligneVersTache(ligne: {
-  id: string;
-  dossier_id: string;
-  scenario_id: string | null;
-  description: string;
-  echeance: string | null;
-  responsable: string | null;
-  statut: string;
-  source: string;
-  created_at: string;
-}): Tache {
-  return {
-    id: ligne.id,
-    dossierId: ligne.dossier_id,
-    scenarioId: ligne.scenario_id,
-    description: ligne.description,
-    echeance: ligne.echeance,
-    responsable: ligne.responsable,
-    statut: ligne.statut,
-    source: ligne.source,
-    createdAt: ligne.created_at,
-  };
+function lireBrute(id: string): Tache {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES} FROM tache WHERE id = ?`).get(id);
+  if (!ligne) throw interdit();
+  return hydrater([ligne])[0];
 }
 
-const COLONNES_TACHE = `id, dossier_id, scenario_id, description, echeance, responsable, statut, source, created_at`;
-
-export function listerTachesDossier(dossierId: string): Tache[] {
-  const db = obtenirBase();
-  const lignes = db
-    .prepare(
-      `SELECT ${COLONNES_TACHE} FROM tache WHERE dossier_id = ?
-       ORDER BY (echeance IS NULL), echeance, created_at`,
-    )
-    .all(dossierId) as Parameters<typeof ligneVersTache>[0][];
-  return lignes.map(ligneVersTache);
+function dependancesDossier(dossierId: string): Dependance[] {
+  return versObjets<{ tacheId: string; dependDeId: string }>(
+    obtenirBase()
+      .prepare(`SELECT d.tache_id, d.depend_de_id FROM dependance_tache d JOIN tache t ON t.id = d.tache_id WHERE t.dossier_id = ?`)
+      .all(dossierId),
+  ).map((d) => ({ actionId: d.tacheId, dependDeId: d.dependDeId }));
 }
 
-export function obtenirTache(id: string): Tache {
-  const db = obtenirBase();
-  const ligne = db.prepare(`SELECT ${COLONNES_TACHE} FROM tache WHERE id = ?`).get(id) as
-    | Parameters<typeof ligneVersTache>[0]
-    | undefined;
-  if (!ligne) throw introuvable("Tâche");
-  return ligneVersTache(ligne);
+export function listerTaches(acteur: Acteur, dossierId: string): Tache[] {
+  exiger(acteur, dossierId, "lire", "taches");
+  return hydrater(
+    obtenirBase().prepare(`SELECT ${COLONNES} FROM tache WHERE dossier_id = ? ORDER BY (echeance IS NULL), echeance, created_at`).all(dossierId),
+  );
 }
 
-/**
- * Tâches de TOUS les dossiers, classées pour l'accueil :
- * - `aujourdhui` : échéance connue, dépassée ou du jour, pas encore faite ;
- * - `aDebloquer` : statut `bloque`, quelle que soit l'échéance ;
- * - `aExplorer` : le reste des tâches non faites (pas d'échéance, ou échéance future).
- *
- * Une tâche n'apparaît que dans UNE catégorie (la première qui s'applique, dans cet ordre) —
- * sinon une tâche bloquée et en retard compterait deux fois dans l'accueil.
- */
-export function listerTachesPourAccueil(): {
-  aujourdhui: TacheAvecDossier[];
-  aDebloquer: TacheAvecDossier[];
-  aExplorer: TacheAvecDossier[];
-} {
-  const db = obtenirBase();
-  const lignes = db
-    .prepare(
-      `SELECT t.id, t.dossier_id, t.scenario_id, t.description, t.echeance, t.responsable,
-              t.statut, t.source, t.created_at, d.nom AS dossier_nom
-       FROM tache t JOIN dossier d ON d.id = t.dossier_id
-       WHERE t.statut != 'fait'
-       ORDER BY (t.echeance IS NULL), t.echeance, t.created_at`,
-    )
-    .all() as Array<Parameters<typeof ligneVersTache>[0] & { dossier_nom: string }>;
-
-  const aujourdhuiISO = new Date().toISOString().slice(0, 10);
-  const aujourdhui: TacheAvecDossier[] = [];
-  const aDebloquer: TacheAvecDossier[] = [];
-  const aExplorer: TacheAvecDossier[] = [];
-
-  for (const ligne of lignes) {
-    const tache = { ...ligneVersTache(ligne), dossierNom: ligne.dossier_nom };
-    if (tache.echeance !== null && tache.echeance <= aujourdhuiISO) {
-      aujourdhui.push(tache);
-    } else if (tache.statut === "bloque") {
-      aDebloquer.push(tache);
-    } else {
-      aExplorer.push(tache);
-    }
-  }
-
-  return { aujourdhui, aDebloquer, aExplorer };
+export function listerDependances(acteur: Acteur, dossierId: string): Dependance[] {
+  exiger(acteur, dossierId, "lire", "taches");
+  return dependancesDossier(dossierId);
 }
 
-export function creerTache(params: {
-  dossierId: string;
-  scenarioId?: string | null;
-  description: string;
-  echeance?: string | null;
-  responsable?: string | null;
-}): Tache {
+export function creerTache(
+  acteur: Acteur,
+  params: {
+    dossierId: string;
+    scenarioId?: string | null;
+    description: string;
+    echeance?: string | null;
+    responsable?: string | null;
+    responsablePersonneId?: string | null;
+    estJalon?: boolean;
+    dependDeIds?: string[];
+  },
+): Tache {
+  exiger(acteur, params.dossierId, "ecrire", "taches");
   const description = params.description.trim();
-  if (description === "") throw invalide("La description de la tâche est obligatoire.");
-  obtenirDossier(params.dossierId);
-
-  if (params.echeance) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(params.echeance)) {
-      throw invalide("L'échéance doit être une date au format AAAA-MM-JJ, ou laissée vide.");
-    }
+  if (description === "") throw invalide("La description de l'action est obligatoire.");
+  if (params.echeance && !/^\d{4}-\d{2}-\d{2}$/.test(params.echeance)) {
+    throw invalide("L'échéance doit être une date au format AAAA-MM-JJ, ou laissée vide (inconnue).");
+  }
+  const db = obtenirBase();
+  if (params.scenarioId) {
+    const s = db.prepare(`SELECT dossier_id FROM scenario WHERE id = ?`).get(params.scenarioId) as { dossier_id: string } | undefined;
+    if (!s || s.dossier_id !== params.dossierId) throw invalide("Le scénario indiqué n'appartient pas à ce dossier.");
+  }
+  const dependDeIds = [...new Set(params.dependDeIds ?? [])].filter((x) => x !== "");
+  for (const dep of dependDeIds) {
+    const t = db.prepare(`SELECT dossier_id FROM tache WHERE id = ?`).get(dep) as { dossier_id: string } | undefined;
+    if (!t || t.dossier_id !== params.dossierId) throw invalide("Un prérequis indiqué n'appartient pas à ce dossier.");
   }
 
-  return transaction((db) => {
+  return transaction((tx) => {
     const id = randomUUID();
-    db.prepare(
-      `INSERT INTO tache (id, dossier_id, scenario_id, description, echeance, responsable)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+    tx.prepare(
+      `INSERT INTO tache (id, dossier_id, scenario_id, description, echeance, responsable, responsable_personne_id, est_jalon)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       params.dossierId,
@@ -150,24 +101,101 @@ export function creerTache(params: {
       description,
       params.echeance || null,
       params.responsable?.trim() || null,
+      params.responsablePersonneId || null,
+      params.estJalon ? 1 : 0,
     );
-    enregistrerEvenement(db, { nomEntite: "tache", entiteId: id, action: "creation" });
-    return obtenirTache(id);
+    for (const dep of dependDeIds) {
+      tx.prepare(`INSERT INTO dependance_tache (tache_id, depend_de_id) VALUES (?, ?)`).run(id, dep);
+    }
+    enregistrerEvenement(tx, { nomEntite: "tache", entiteId: id, action: "creation", acteurId: acteur.personneId, dossierId: params.dossierId });
+    return lireBrute(id);
   });
 }
 
-export function changerStatutTache(params: { tacheId: string; nouveauStatut: string }): Tache {
-  const avant = obtenirTache(params.tacheId);
-  if (avant.statut === params.nouveauStatut) return avant;
+export function ajouterDependance(acteur: Acteur, params: { tacheId: string; dependDeId: string }): void {
+  const tache = lireBrute(params.tacheId);
+  exiger(acteur, tache.dossierId, "ecrire", "taches");
+  const prerequis = lireBrute(params.dependDeId);
+  if (prerequis.dossierId !== tache.dossierId) throw invalide("Les deux actions doivent appartenir au même dossier.");
+  const existantes = dependancesDossier(tache.dossierId);
+  if (existantes.some((d) => d.actionId === params.tacheId && d.dependDeId === params.dependDeId)) return;
+  if (creeraitUnCycle(existantes, params.tacheId, params.dependDeId)) {
+    throw invalide("Cette dépendance créerait un cycle : les deux actions s'attendraient mutuellement.");
+  }
+  transaction((db) => {
+    db.prepare(`INSERT INTO dependance_tache (tache_id, depend_de_id) VALUES (?, ?)`).run(params.tacheId, params.dependDeId);
+    enregistrerEvenement(db, {
+      nomEntite: "tache",
+      entiteId: params.tacheId,
+      action: "modification",
+      acteurId: acteur.personneId,
+      dossierId: tache.dossierId,
+      changements: [{ champ: "depend_de", avant: null, apres: params.dependDeId }],
+    });
+  });
+}
 
+export function changerStatutTache(acteur: Acteur, params: { tacheId: string; nouveauStatut: string }): Tache {
+  const avant = lireBrute(params.tacheId);
+  exiger(acteur, avant.dossierId, "ecrire", "taches");
+  if (avant.statut === params.nouveauStatut) return avant;
+  if (params.nouveauStatut === "fait" || params.nouveauStatut === "en_cours") {
+    const bloquants = prerequisBloquants(params.tacheId, listerTachesBrutes(avant.dossierId), dependancesDossier(avant.dossierId));
+    if (bloquants.length > 0) {
+      throw invalide(`Cette action attend ${bloquants.length} prérequis non fait(s) : terminez-les d'abord ou retirez la dépendance.`);
+    }
+  }
   return transaction((db) => {
     db.prepare(`UPDATE tache SET statut = ? WHERE id = ?`).run(params.nouveauStatut, params.tacheId);
     enregistrerEvenement(db, {
       nomEntite: "tache",
       entiteId: params.tacheId,
       action: "transition_statut",
+      acteurId: acteur.personneId,
+      dossierId: avant.dossierId,
       changements: [{ champ: "statut", avant: avant.statut, apres: params.nouveauStatut }],
     });
-    return obtenirTache(params.tacheId);
+    return lireBrute(params.tacheId);
   });
 }
+
+function listerTachesBrutes(dossierId: string): Tache[] {
+  return hydrater(obtenirBase().prepare(`SELECT ${COLONNES} FROM tache WHERE dossier_id = ?`).all(dossierId));
+}
+
+function aujourdhuiISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Liste du jour, tous les dossiers ACCESSIBLES à l'acteur (section « taches » lisible). */
+export function listerTachesPourAccueil(acteur: Acteur): ReturnType<typeof classerPourAccueil<TacheAvecDossier>> {
+  const db = obtenirBase();
+  const toutes: TacheAvecDossier[] = [];
+  const deps: Dependance[] = [];
+  for (const dossierId of dossiersAccessibles(acteur)) {
+    try {
+      exiger(acteur, dossierId, "lire", "taches");
+    } catch {
+      continue; // professionnel sans la section « taches » : on passe
+    }
+    const nom = (db.prepare(`SELECT nom FROM dossier WHERE id = ?`).get(dossierId) as { nom: string }).nom;
+    const taches = listerTachesBrutes(dossierId);
+    const dependances = dependancesDossier(dossierId);
+    deps.push(...dependances);
+    for (const t of taches) {
+      toutes.push({ ...t, dossierNom: nom, prerequisBloquants: prerequisBloquants(t.id, taches, dependances) });
+    }
+  }
+  return classerPourAccueil(toutes, deps, aujourdhuiISO());
+}
+
+export function timelineDossier(acteur: Acteur, dossierId: string) {
+  exiger(acteur, dossierId, "lire", "taches");
+  return construireTimeline(listerTachesBrutes(dossierId), dependancesDossier(dossierId), aujourdhuiISO());
+}
+
+export function classementDossier(acteur: Acteur, dossierId: string) {
+  exiger(acteur, dossierId, "lire", "taches");
+  return classerPourAccueil(listerTachesBrutes(dossierId), dependancesDossier(dossierId), aujourdhuiISO());
+}
+

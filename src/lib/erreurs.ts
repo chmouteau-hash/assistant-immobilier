@@ -1,15 +1,7 @@
-// Enveloppe d'erreur uniforme — reprend le principe d'Ergonomia (`backend-server/src/error.rs`) :
-// un seul type d'erreur applicative, qui sait se traduire en réponse, avec un code STABLE
-// (utilisable par le code, pas seulement affiché) distinct du message (destiné à l'utilisateur).
-//
-// Pourquoi ça compte même dans une appli locale sans vrais "clients" API : le jour où un écran
-// doit distinguer "ce champ est invalide" d'"aucun scénario retenu pour comparer", un message
-// texte seul oblige à comparer des chaînes. Un code le permet sans fragilité.
+// Enveloppe d'erreur uniforme : un seul type d'erreur applicative, avec un code STABLE
+// (utilisable par le code) distinct du message (destiné à l'utilisateur).
 
-export type CodeErreur =
-  | "NOT_FOUND"
-  | "VALIDATION"
-  | "CONFLIT";
+export type CodeErreur = "NOT_FOUND" | "VALIDATION" | "CONFLIT" | "INTERDIT" | "IA_INDISPONIBLE";
 
 export class ErreurApplicative extends Error {
   readonly code: CodeErreur;
@@ -27,4 +19,12 @@ export function introuvable(quoi: string): ErreurApplicative {
 
 export function invalide(message: string): ErreurApplicative {
   return new ErreurApplicative("VALIDATION", message);
+}
+
+/**
+ * Accès refusé. Le message ne précise jamais si la ressource existe : pour un acteur non
+ * autorisé, un dossier inconnu et un dossier interdit se présentent de la même façon.
+ */
+export function interdit(): ErreurApplicative {
+  return new ErreurApplicative("INTERDIT", "Accès refusé à cette ressource.");
 }
