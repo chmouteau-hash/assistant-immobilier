@@ -277,3 +277,21 @@ tranchée est consignée ici le jour même.
 
 **Ce qui n'est pas tranché.** La forme à prendre le jour du déclencheur : celle d'Ergonomia telle
 quelle, ou une version allégée.
+
+## 2026-10-10 — Actions : une dépendance se retire, une action faite se rouvre
+
+**Décision.** Deux compléments à la règle « B dépend de A » du 2026-10-09, venus du test pilote
+(issue #21) :
+
+1. Une dépendance se retire comme elle se pose : même droit (écrire les actions), même trace au
+   journal d'audit, sans motif. Retirer une dépendance qui n'existe plus est sans effet.
+2. Une action faite se rouvre en changeant son statut, depuis la liste « Actions faites » de
+   l'écran Actions. Rien n'est répercuté sur les actions qui en dépendent : celles qui ne sont pas
+   faites repassent d'elles-mêmes dans « À débloquer », celles qui sont faites le restent.
+
+**Pourquoi.** Une dépendance posée par erreur bloquait une action sans recours, alors que le
+message de refus proposait déjà de la retirer. Une action passée à « Faite » par erreur le restait :
+la liste du jour ne classe que les actions non faites, et sa liste de statut disparaissait avec elle.
+
+**Ce qui n'est pas tranché.** Modifier la description, l'échéance ou le responsable d'une action
+(issue #22) ; afficher aussi les actions faites sur l'accueil.

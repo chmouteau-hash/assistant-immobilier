@@ -3,7 +3,7 @@ import { autorise } from "@/lib/acces";
 import { listerTaches, listerDependances, classementDossier, timelineDossier } from "@/lib/taches";
 import { listerScenarios } from "@/lib/dossiers";
 import { listerReference } from "@/lib/references";
-import { actionCreerTache, actionAjouterDependance } from "../../actions";
+import { actionCreerTache, actionAjouterDependance, actionRetirerDependance } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { TacheItem } from "@/components/TacheItem";
 import { Champ, Pastille, Section, Vide, classeSaisie, formaterDate } from "@/components/ui";
@@ -21,6 +21,9 @@ export default async function PageActions({ params }: { params: Promise<{ id: st
   const scenarios = autorise(acteur, id, "lire", "scenarios") ? listerScenarios(acteur, id) : [];
   const peutEcrire = autorise(acteur, id, "ecrire", "taches");
   const nom = (tid: string) => taches.find((t) => t.id === tid)?.description ?? "?";
+  // Les colonnes de la liste du jour ne classent que les actions non faites : sans cette liste,
+  // une action passée à « Faite » par erreur n'avait plus de liste « Statut » pour être rouverte.
+  const faites = taches.filter((t) => t.statut === "fait");
 
   return (
     <div className="flex flex-col gap-8">
@@ -47,6 +50,16 @@ export default async function PageActions({ params }: { params: Promise<{ id: st
             </div>
           ))}
         </div>
+        {faites.length > 0 && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-neutral-600">Actions faites ({faites.length})</summary>
+            <ul className="mt-2 flex flex-col gap-2">
+              {faites.map((t) => (
+                <TacheItem key={t.id} tache={t} statuts={statuts} peutModifier={peutEcrire} />
+              ))}
+            </ul>
+          </details>
+        )}
       </Section>
 
       <Section titre="Timeline" sousTitre="Les actions sans échéance restent à part : aucune date n'est inventée.">
@@ -67,7 +80,14 @@ export default async function PageActions({ params }: { params: Promise<{ id: st
         )}
         {timeline.sansDate.length > 0 && (
           <p className="text-sm text-neutral-500">
-            Sans date connue : {timeline.sansDate.map((e) => e.action.description).join(" · ")}
+            Sans date connue :{" "}
+            {timeline.sansDate.map((e, i) => (
+              <span key={e.action.id}>
+                {i > 0 && " · "}
+                {e.action.description}
+                {e.action.statut === "fait" && <> <Pastille ton="ok">fait</Pastille></>}
+              </span>
+            ))}
           </p>
         )}
       </Section>
@@ -76,10 +96,19 @@ export default async function PageActions({ params }: { params: Promise<{ id: st
         {dependances.length === 0 ? (
           <Vide>Aucune dépendance.</Vide>
         ) : (
-          <ul className="list-disc pl-5 text-sm">
+          <ul className="flex flex-col text-sm">
             {dependances.map((d) => (
-              <li key={`${d.actionId}-${d.dependDeId}`}>
-                {nom(d.actionId)} <span className="text-neutral-500">dépend de</span> {nom(d.dependDeId)}
+              <li key={`${d.actionId}-${d.dependDeId}`} className="flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 py-1">
+                <span>
+                  {nom(d.actionId)} <span className="text-neutral-500">dépend de</span> {nom(d.dependDeId)}
+                </span>
+                {peutEcrire && (
+                  <FormulaireAction action={actionRetirerDependance} bouton="Retirer" compact>
+                    <input type="hidden" name="dossierId" value={id} />
+                    <input type="hidden" name="tacheId" value={d.actionId} />
+                    <input type="hidden" name="dependDeId" value={d.dependDeId} />
+                  </FormulaireAction>
+                )}
               </li>
             ))}
           </ul>
