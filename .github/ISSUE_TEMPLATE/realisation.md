@@ -2,7 +2,7 @@
 name: Réalisation
 about: Décrire un travail à réaliser, avec ce qui est déjà livré et ce qui reste
 title: ""
-labels: []
+labels: ["réalisation"]
 assignees: []
 ---
 

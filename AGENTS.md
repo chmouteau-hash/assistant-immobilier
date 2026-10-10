@@ -22,3 +22,11 @@ d'utilisation garde son propre modèle (`retour_utilisateur.md`).
 - Une case « Reste à réaliser » se coche quand la PR qui livre le point est fusionnée.
 - Une grosse issue se découpe en blocs numérotés, dans l'ordre conseillé.
 - Aucune donnée personnelle dans une issue : ni adresse, ni coordonnées, ni montant réel.
+
+Trois étiquettes disent la nature de l'issue. Comme le modèle, elles ne se posent pas toutes seules
+en ligne de commande : ajouter `--label` à `gh issue create`.
+
+- `réalisation` : issue au modèle « Réalisation ».
+- `retour` : issue au modèle « Retour d'utilisation ».
+- `idée` : piste non engagée ; s'ajoute à `retour` quand le retour est une idée.
+- Pas d'étiquette d'avancement : les cases à cocher le disent déjà.

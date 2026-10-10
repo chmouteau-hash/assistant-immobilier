@@ -2,7 +2,7 @@
 name: Retour d'utilisation
 about: Signaler un bug, un manque, une idée ou une question pendant l'essai
 title: "[Retour] "
-labels: []
+labels: ["retour"]
 assignees: []
 ---
 
