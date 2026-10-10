@@ -15,9 +15,14 @@ export function Champ({ label, children, large = false }: { label: string; child
 
 export const classeSaisie = "min-h-10 rounded border border-neutral-300 bg-white px-2 py-1.5";
 
+// La `key` recrée la liste quand la valeur enregistrée change. Sans elle, React garde le choix de
+// départ du premier affichage puis remet le formulaire à zéro après chaque action : la liste
+// réaffichait l'ancienne valeur après un enregistrement réussi (issue #16). Toute liste écrite à la
+// main avec un `defaultValue` tiré d'une donnée doit porter la même `key`.
 export function Select({ name, options, defaultValue, vide, required }: { name: string; options: Reference[]; defaultValue?: string; vide?: string; required?: boolean }) {
+  const valeurDeDepart = defaultValue ?? (vide !== undefined ? "" : undefined);
   return (
-    <select name={name} defaultValue={defaultValue ?? (vide !== undefined ? "" : undefined)} className={classeSaisie} required={required}>
+    <select key={valeurDeDepart} name={name} defaultValue={valeurDeDepart} className={classeSaisie} required={required}>
       {vide !== undefined && <option value="">{vide}</option>}
       {options.map((o) => (
         <option key={o.code} value={o.code}>

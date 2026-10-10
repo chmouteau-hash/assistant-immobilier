@@ -57,7 +57,7 @@ export default async function PageIdees({ params }: { params: Promise<{ id: stri
                       <input type="hidden" name="dossierId" value={id} />
                       <input type="hidden" name="ideeId" value={i.id} />
                       <Champ label="Scénario">
-                        <select name="scenarioId" defaultValue={i.scenarioId ?? ""} className={classeSaisie}>
+                        <select key={i.scenarioId ?? ""} name="scenarioId" defaultValue={i.scenarioId ?? ""} className={classeSaisie}>
                           <option value="">— aucun —</option>
                           {scenarios.map((s) => (
                             <option key={s.id} value={s.id}>

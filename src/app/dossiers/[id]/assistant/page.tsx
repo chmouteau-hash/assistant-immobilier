@@ -38,7 +38,7 @@ export default async function PageAssistant({ params }: { params: Promise<{ id: 
               <input type="checkbox" name="activee" defaultChecked={dossier.iaActivee} /> Activer l&apos;assistant pour ce dossier
             </label>
             <Champ label="Fournisseur">
-              <select name="fournisseur" defaultValue={dossier.iaFournisseur} className={classeSaisie}>
+              <select key={dossier.iaFournisseur} name="fournisseur" defaultValue={dossier.iaFournisseur} className={classeSaisie}>
                 <option value="regles_locales">Règles locales — sans réseau, déterministe, signale ce qui manque</option>
                 <option value="anthropic" disabled={!distantDisponible}>
                   Modèle distant (Claude){distantDisponible ? "" : " — ANTHROPIC_API_KEY absente"}

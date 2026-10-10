@@ -53,7 +53,7 @@ export default async function Accueil() {
             Vous agissez en tant que <strong>{acteur.nom}</strong>
             {acteur.simule && <span className="ml-1 rounded bg-amber-100 px-1.5 text-xs text-amber-800">simulation</span>}
           </span>
-          <select name="personneId" defaultValue={acteur.simule ? acteur.personneId : ""} className={classeSaisie}>
+          <select key={acteur.simule ? acteur.personneId : ""} name="personneId" defaultValue={acteur.simule ? acteur.personneId : ""} className={classeSaisie}>
             <option value="">— utilisateur local —</option>
             {personnes
               .filter((p) => !p.estUtilisateurLocal)
