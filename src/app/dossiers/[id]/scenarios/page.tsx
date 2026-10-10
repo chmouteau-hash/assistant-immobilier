@@ -30,7 +30,7 @@ export default async function PageScenarios({ params }: { params: Promise<{ id: 
             <Vide>Il faut au moins deux scénarios pour comparer.</Vide>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
+              <table className="w-full min-w-[640px] text-sm [&_td]:pr-3 [&_th]:pr-3">
                 <thead className="text-left text-xs text-neutral-500">
                   <tr>
                     <th className="py-1">Scénario</th>

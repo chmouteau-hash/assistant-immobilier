@@ -18,3 +18,13 @@ export function formaterSurface(centiemes: number): string {
   const dec = String(reste).padStart(2, "0").replace(/0$/, "");
   return `${entiere},${dec} m²`;
 }
+
+/**
+ * Taille d'un fichier, dans l'unité qui la rend lisible : 127 → "127 octets" ; 1536 → "2 Ko" ;
+ * 1 572 864 → "1,5 Mo" (affichage seul). Un fichier qui existe n'affiche jamais « 0 Ko ».
+ */
+export function formaterTaille(octets: number): string {
+  if (octets < 1024) return `${octets} octet${octets > 1 ? "s" : ""}`;
+  if (octets < 1024 * 1024) return `${Math.round(octets / 1024)} Ko`;
+  return `${(Math.round((octets / (1024 * 1024)) * 10) / 10).toLocaleString("fr-FR")} Mo`;
+}

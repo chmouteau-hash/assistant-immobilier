@@ -6,6 +6,7 @@ import { obtenirDossierPourNavigation } from "@/lib/dossiers";
 import { sectionsVisibles, autorise } from "@/lib/acces";
 import { ErreurApplicative } from "@/lib/erreurs";
 import { LIBELLES_SECTION, type Section } from "@/domain/droits";
+import { libelleFournisseur } from "@/domain/ia/types";
 import { Pastille } from "@/components/ui";
 import { NavDossier } from "@/components/NavDossier";
 
@@ -49,7 +50,7 @@ export default async function LayoutDossier({ children, params }: { children: Re
         <p className="text-xs text-neutral-500">
           {acteur.nom}
           {acteur.simule && <Pastille ton="attention">simulation</Pastille>} · IA :{" "}
-          {dossier.iaActivee ? <Pastille ton="ia">activée ({dossier.iaFournisseur})</Pastille> : <Pastille>désactivée</Pastille>}
+          {dossier.iaActivee ? <Pastille ton="ia">activée ({libelleFournisseur(dossier.iaFournisseur)})</Pastille> : <Pastille>désactivée</Pastille>}
         </p>
       </div>
       <NavDossier

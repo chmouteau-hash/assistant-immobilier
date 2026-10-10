@@ -33,6 +33,18 @@ describe("comparerScenarios", () => {
     expect(c.lignes.find((l) => l.nom === "Neuf")!.rangCout).toBe(1);
   });
 
+  it("distingue un scénario sans aucun poste d'un scénario aux postes à renseigner", () => {
+    const toiture: LigneMontant = { posteId: "R-toit", typeMontant: "devis", montantCentimes: 100, source: "saisie", confiance: "connu" };
+    const grosOeuvre: LigneMontant = { posteId: "N-gros", typeMontant: "devis", montantCentimes: 50, source: "saisie", confiance: "connu" };
+
+    const melange = comparerScenarios([element("V", "Extension", postes, []), element("R", "Rénovation", postes, [toiture]), element("N", "Neuf", postes, [grosOeuvre])]);
+    expect(melange.reserve).toBe("Totaux non comparables : Extension n'a aucun poste ; Rénovation a des postes à renseigner.");
+
+    const vides = comparerScenarios([element("V", "Extension", postes, []), element("W", "Surélévation", postes, [])]);
+    expect(vides.reserve).toBe("Totaux non comparables : Extension, Surélévation n'ont aucun poste.");
+    expect(vides.comparable).toBe(false);
+  });
+
   it("classe et calcule l'écart quand tout est complet", () => {
     const c = comparerScenarios([
       element("R", "Rénovation", postes, [

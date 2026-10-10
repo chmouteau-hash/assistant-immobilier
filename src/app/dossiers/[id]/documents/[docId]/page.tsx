@@ -33,6 +33,7 @@ export default async function PageDocument({ params }: { params: Promise<{ id: s
   if (document.dossierId !== id) notFound();
   const extractions = listerExtractions(acteur, docId);
   const types = listerReference("ref_type_document");
+  const statutsExtraction = listerReference("ref_statut_extraction");
   const typesMontant = listerReference("ref_type_montant").filter((t) => t.code !== "estimation");
   const peutEcrire = autorise(acteur, id, "ecrire", "documents");
   const peutBudget = autorise(acteur, id, "ecrire", "budget");
@@ -68,7 +69,7 @@ export default async function PageDocument({ params }: { params: Promise<{ id: s
                 <span className="font-medium">{e.valeurValidee ?? "—"}</span>
                 {e.statut === "corrigee" && <span className="text-xs text-neutral-400">(proposé : {e.valeurProposee})</span>}
                 <EtiquetteSourceConfiance source={e.source} confiance={e.confiance} />
-                <Pastille ton={e.statut === "rejetee" ? "neutre" : "ok"}>{e.statut}</Pastille>
+                <Pastille ton={e.statut === "rejetee" ? "neutre" : "ok"}>{libelle(statutsExtraction, e.statut)}</Pastille>
               </li>
             ))}
           </ul>

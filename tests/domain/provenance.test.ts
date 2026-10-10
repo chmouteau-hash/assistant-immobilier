@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { aRenseigner, confianceParDefaut, estUnFait, etiquetteProvenance, validerValeurTracee } from "@/domain/provenance";
-import { formaterSurface, parserSurface } from "@/domain/mesure";
+import { formaterSurface, formaterTaille, parserSurface } from "@/domain/mesure";
 import { formaterMontant, parserMontant } from "@/lib/montant";
 
 describe("validerValeurTracee", () => {
@@ -79,5 +79,17 @@ describe("montants et surfaces en entiers", () => {
     expect(formaterSurface(9250)).toBe("92,5 m²");
     expect(formaterSurface(9205)).toBe("92,05 m²");
     expect(formaterSurface(9200)).toBe("92 m²");
+  });
+  it("taille d'un fichier : jamais « 0 Ko » pour un fichier qui existe", () => {
+    expect(formaterTaille(0)).toBe("0 octet");
+    expect(formaterTaille(1)).toBe("1 octet");
+    expect(formaterTaille(127)).toBe("127 octets");
+    expect(formaterTaille(1023)).toBe("1023 octets");
+    expect(formaterTaille(1024)).toBe("1 Ko");
+    expect(formaterTaille(1536)).toBe("2 Ko");
+    expect(formaterTaille(1024 * 1024 - 1)).toBe("1024 Ko");
+    expect(formaterTaille(1024 * 1024)).toBe("1 Mo");
+    expect(formaterTaille(1.5 * 1024 * 1024)).toBe("1,5 Mo");
+    expect(formaterTaille(20 * 1024 * 1024)).toBe("20 Mo");
   });
 });

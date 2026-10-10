@@ -11,6 +11,7 @@ import { listerReference, libelle } from "@/lib/references";
 import { actionDeposerDocument } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { Champ, Pastille, Section, Select, Vide, classeSaisie, formaterDate } from "@/components/ui";
+import { formaterTaille } from "@/domain/mesure";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function PageDocuments({ params }: { params: Promise<{ id: 
                 </Link>
                 <Pastille>{libelle(types, d.typeDocument)}</Pastille>
                 <p className="text-xs text-neutral-500">
-                  {d.dateDocument ? `daté du ${formaterDate(d.dateDocument)}` : "date du document : à renseigner"} · déposé le {formaterDate(d.createdAt)} · {Math.round(d.tailleOctets / 1024)} Ko
+                  {d.dateDocument ? `daté du ${formaterDate(d.dateDocument)}` : "date du document : à renseigner"} · déposé le {formaterDate(d.createdAt)} · {formaterTaille(d.tailleOctets)}
                   {d.scenarioId && ` · ${scenarios.find((s) => s.id === d.scenarioId)?.nom ?? "scénario"}`}
                   {d.posteId && ` · poste ${postes.find((p) => p.id === d.posteId)?.nom ?? ""}`}
                   {d.pieceId && ` · ${pieces.find((p) => p.id === d.pieceId)?.nom ?? "pièce"}`}

@@ -18,7 +18,7 @@ export default async function PageJournal({ params }: { params: Promise<{ id: st
         <Vide>Aucun événement.</Vide>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-xs">
+          <table className="w-full min-w-[720px] text-xs [&_td]:pr-3 [&_th]:pr-3">
             <thead className="text-left text-neutral-500">
               <tr>
                 <th className="py-1">Quand</th>

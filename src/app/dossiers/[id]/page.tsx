@@ -36,6 +36,7 @@ export default async function PageVueEnsemble({ params }: { params: Promise<{ id
   const dossier = obtenirDossier(acteur, id);
   const types = listerReference("ref_type_projet");
   const stades = listerReference("ref_stade");
+  const statutsScenario = listerReference("ref_statut_scenario");
   const peutEcrire = autorise(acteur, id, "ecrire", "identite");
   const peutExporter = autorise(acteur, id, "exporter", "identite");
   const peutSupprimer = autorise(acteur, id, "supprimer_dossier", "identite");
@@ -94,7 +95,7 @@ export default async function PageVueEnsemble({ params }: { params: Promise<{ id
                 <li key={l.scenarioId} className="rounded border border-neutral-200 bg-white p-3 text-sm">
                   <div className="flex items-baseline justify-between">
                     <span className="font-medium">{l.nom}</span>
-                    <Pastille>{l.statut}</Pastille>
+                    <Pastille>{libelle(statutsScenario, l.statut)}</Pastille>
                   </div>
                   <p className="mt-1">
                     {l.synthese.totalReferenceCentimes === null ? (

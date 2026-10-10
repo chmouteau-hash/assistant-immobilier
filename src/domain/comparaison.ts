@@ -52,9 +52,14 @@ export function comparerScenarios(elements: ElementsComparaison[]): Comparaison 
   if (elements.length < 2) {
     reserve = "Il faut au moins deux scénarios pour comparer.";
   } else if (incomplets.length > 0) {
-    reserve = `Totaux non comparables : ${incomplets.map((e) => e.nom).join(", ")} ${
-      incomplets.length > 1 ? "ont" : "a"
-    } des postes à renseigner.`;
+    // Un scénario sans aucun poste n'a pas « des postes à renseigner » : on le dit autrement.
+    const noms = (liste: ElementsComparaison[]) => liste.map((e) => e.nom).join(", ");
+    const sansPoste = incomplets.filter((e) => e.synthese.nbPostes === 0);
+    const aRenseigner = incomplets.filter((e) => e.synthese.nbPostes > 0);
+    const raisons: string[] = [];
+    if (sansPoste.length > 0) raisons.push(`${noms(sansPoste)} ${sansPoste.length > 1 ? "n'ont" : "n'a"} aucun poste`);
+    if (aRenseigner.length > 0) raisons.push(`${noms(aRenseigner)} ${aRenseigner.length > 1 ? "ont" : "a"} des postes à renseigner`);
+    reserve = `Totaux non comparables : ${raisons.join(" ; ")}.`;
   } else if (elements.some((e) => e.synthese.nbPostesSurEstimation > 0)) {
     reserve = "Comparaison indicative : certains postes reposent encore sur des estimations.";
   }
