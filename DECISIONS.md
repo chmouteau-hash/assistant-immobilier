@@ -254,3 +254,26 @@ référence, tests. « Soldé » (plus aucune facture attendue) se distingue du 
 
 **Ce qui n'est pas tranché.** Comment un poste devient « soldé » (action manuelle avec motif, ou
 automatique) ; le cas d'un poste facturé sans devis ni engagement, qui n'a qu'une estimation.
+
+## 2026-10-10 — Ni specs ni exigences numérotées tant qu'une seule personne décide
+
+**Décision.** Le dépôt ne reprend pas la gouvernance documentaire d'Ergonomia : pas de
+spécifications à statut (PROPOSITION, ACTIVE), pas d'exigences numérotées (`EXG-*`), pas de
+traçabilité entre exigence et code. En tiennent lieu : le cadrage pour le besoin, ce journal pour
+les règles tranchées, les sections « Reste à réaliser » et « Recette » des issues pour ce qui est
+à faire et à vérifier, les tests pour le contrôle automatique. À durcir sur un déclencheur réel :
+un second contributeur, ou un premier abonné.
+
+**Pourquoi.** Specs et exigences numérotées servent à se coordonner : leur valeur croît avec le
+nombre de personnes et avec ce qu'une erreur coûte à quelqu'un d'autre. Ici, une seule personne
+décide, développe et utilise. Le choix date du 2026-10-01 : il est écrit en tête de
+`.github/workflows/ci.yml`, qui renvoyait à ce journal sans qu'aucune entrée ne le porte. Il est
+confirmé le 2026-10-10 après comparaison avec Ergonomia (trois personnes, produit en service).
+
+**Conséquence.** Les ajouter plus tard ne change pas le comportement de l'application : numéroter
+les règles déjà écrites, citer ces numéros dans les tests, ajouter un contrôle à la CI. Le coût
+serait le rattrapage des règles restées dans le code seul ; il reste faible tant qu'une règle
+tranchée est consignée ici le jour même.
+
+**Ce qui n'est pas tranché.** La forme à prendre le jour du déclencheur : celle d'Ergonomia telle
+quelle, ou une version allégée.
