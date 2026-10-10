@@ -1,4 +1,4 @@
-import { obtenirActeurCourant } from "@/lib/acteur-courant";
+import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerScenarios, listerHypotheses, listerDecisions, historiqueScenario } from "@/lib/dossiers";
 import { comparaisonDossier } from "@/lib/budget";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PageScenarios({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const acteur = await obtenirActeurCourant();
+  const acteur = await obtenirActeurPourSection(id, "scenarios");
   const scenarios = listerScenarios(acteur, id);
   const hypotheses = listerHypotheses(acteur, id);
   const decisions = listerDecisions(acteur, id);

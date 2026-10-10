@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { obtenirActeurCourant } from "@/lib/acteur-courant";
+import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerScenarios } from "@/lib/dossiers";
 import { listerPostes, listerLignes, syntheseScenario } from "@/lib/budget";
@@ -27,7 +27,7 @@ function Montant({ centimes }: { centimes: number | null }) {
 
 export default async function PageBudget({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const acteur = await obtenirActeurCourant();
+  const acteur = await obtenirActeurPourSection(id, "budget");
   const scenarios = autorise(acteur, id, "lire", "scenarios") ? listerScenarios(acteur, id) : [];
   const postes = listerPostes(acteur, id);
   const lignes = listerLignes(acteur, id);

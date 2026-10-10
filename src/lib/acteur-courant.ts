@@ -7,8 +7,11 @@
 // le reste reçoit un `Acteur` en paramètre.
 
 import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
 import { obtenirBase, versObjet } from "./db/client";
-import type { Acteur } from "./acces";
+import { exiger, type Acteur } from "./acces";
+import { ErreurApplicative } from "./erreurs";
+import type { Section } from "../domain/droits";
 
 export const COOKIE_ACTEUR = "acteur_simule";
 
@@ -31,4 +34,21 @@ export async function obtenirActeurCourant(): Promise<Acteur & { simule: boolean
     .get(simuleId) as Record<string, unknown> | undefined;
   if (!ligne) return { ...local, simule: false }; // cookie obsolète : on retombe sur le local
   return { ...versObjet<Acteur>(ligne), simule: true };
+}
+
+/**
+ * Acteur courant d'une page de section. Si la section lui est interdite, `exiger` journalise le
+ * refus, puis la page répond « introuvable » : un dossier inconnu, un dossier interdit et une
+ * section interdite se présentent de la même façon. Sans ce rattrapage, l'erreur `INTERDIT` levée
+ * par la première lecture remontait telle quelle : erreur serveur 500 (issue #20).
+ */
+export async function obtenirActeurPourSection(dossierId: string, section: Section): Promise<Acteur & { simule: boolean }> {
+  const acteur = await obtenirActeurCourant();
+  try {
+    exiger(acteur, dossierId, "lire", section);
+  } catch (erreur) {
+    if (erreur instanceof ErreurApplicative) notFound();
+    throw erreur;
+  }
+  return acteur;
 }

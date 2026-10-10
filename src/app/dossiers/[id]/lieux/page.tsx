@@ -1,4 +1,4 @@
-import { obtenirActeurCourant } from "@/lib/acteur-courant";
+import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerLieux, listerBatiments, listerPieces } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PageLieux({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const acteur = await obtenirActeurCourant();
+  const acteur = await obtenirActeurPourSection(id, "lieux");
   const lieux = listerLieux(acteur, id);
   const batiments = listerBatiments(acteur, id);
   const pieces = listerPieces(acteur, id);

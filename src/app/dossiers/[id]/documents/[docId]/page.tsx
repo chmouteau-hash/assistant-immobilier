@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { obtenirActeurCourant } from "@/lib/acteur-courant";
+import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { obtenirDocument, listerExtractions, type ChampExtraction } from "@/lib/documents";
 import { ErreurApplicative } from "@/lib/erreurs";
@@ -22,7 +22,7 @@ const ORDRE: ChampExtraction[] = ["montant_centimes", "date", "fournisseur", "po
 
 export default async function PageDocument({ params }: { params: Promise<{ id: string; docId: string }> }) {
   const { id, docId } = await params;
-  const acteur = await obtenirActeurCourant();
+  const acteur = await obtenirActeurPourSection(id, "documents");
   let document;
   try {
     document = obtenirDocument(acteur, docId);
