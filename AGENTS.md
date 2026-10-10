@@ -7,3 +7,18 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Issues GitHub : structure et cases à cocher
+
+Une issue de réalisation suit le modèle `.github/ISSUE_TEMPLATE/realisation.md` : Objectif, Déjà
+livré, Reste à réaliser, Recette, Hors périmètre. Le modèle ne s'applique pas tout seul en ligne de
+commande : reprendre cette structure à chaque création ou réécriture d'issue avec `gh`. Un retour
+d'utilisation garde son propre modèle (`retour_utilisateur.md`).
+
+- Chaque point est une case : `- [x]` pour ce qui est livré, `- [ ]` pour ce qui reste. La syntaxe
+  est stricte (`[x]`, sans espace) : sinon GitHub affiche du texte au lieu d'une case.
+- Une case « Déjà livré » se coche sur preuve : le point a été lu dans le code ou essayé, jamais
+  supposé.
+- Une case « Reste à réaliser » se coche quand la PR qui livre le point est fusionnée.
+- Une grosse issue se découpe en blocs numérotés, dans l'ordre conseillé.
+- Aucune donnée personnelle dans une issue : ni adresse, ni coordonnées, ni montant réel.
