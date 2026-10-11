@@ -16,6 +16,7 @@ import { deposerDocument, proposerExtraction, validerExtraction, listerExtractio
 import { listerReference, libelle } from "@/lib/references";
 import { demanderAssistant, construireContexte, listerEchanges } from "@/lib/ia";
 import { ErreurApplicative } from "@/lib/erreurs";
+import { REPONSES_CONFIANCE, REPONSES_SOURCE } from "@/domain/provenance";
 import type { Acteur } from "@/lib/acces";
 
 const moi: Acteur = { personneId: "utilisateur-local", nom: "Utilisateur local" };
@@ -42,7 +43,7 @@ describe("parcours pilote", () => {
     expect(() => modifierSurfacePiece(moi, { pieceId: piece.id, surfaceCentiemes: 4500, surfaceSource: "estimation", surfaceConfiance: "connu" })).toThrow(/estimation/);
     const estimee = modifierSurfacePiece(moi, { pieceId: piece.id, surfaceCentiemes: 4500, surfaceSource: "estimation" });
     expect(estimee.surface).toMatchObject({ valeur: 4500, source: "estimation", confiance: "estime" });
-    expect(() => modifierSurfacePiece(moi, { pieceId: piece.id, surfaceCentiemes: 4500 })).toThrow(/source/);
+    expect(() => modifierSurfacePiece(moi, { pieceId: piece.id, surfaceCentiemes: 4500 })).toThrow(/d'où vient/);
   });
 
   it("un bâtiment créé sans lieu se rattache ensuite, change de lieu, et chaque fois c'est tracé", () => {
@@ -79,6 +80,11 @@ describe("parcours pilote", () => {
     const invite = inviterPersonne(moi, { dossierId: d.id, nom: "Ami", role: "lecteur" });
     expect(() => rattacherBatiment({ personneId: invite.personneId, nom: "Ami" }, { batimentId: bat.id, lieuId: terrain.id })).toThrow(ErreurApplicative);
     expect(listerBatiments(moi, d.id).find((b) => b.id === bat.id)?.lieuId).toBe(bien.id);
+  });
+
+  it("chaque code des tables « source » et « confiance » a sa réponse en clair", () => {
+    for (const r of listerReference("ref_source_donnee")) expect((REPONSES_SOURCE as Record<string, string>)[r.code]).toBeTruthy();
+    for (const r of listerReference("ref_confiance")) expect((REPONSES_CONFIANCE as Record<string, string>)[r.code]).toBeTruthy();
   });
 
   it("deux scénarios se comparent sans s'écraser, la comparaison reste prudente", () => {

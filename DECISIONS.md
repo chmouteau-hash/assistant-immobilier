@@ -362,3 +362,29 @@ corriger depuis l'écran.
 
 **Ce qui n'est pas tranché.** Détacher un bâtiment de tout lieu depuis l'écran ; corriger le nom,
 le type ou l'état d'un lieu, d'un bâtiment ou d'une pièce, et les retirer (issue #22).
+
+## 2026-10-11 — Provenance : deux questions en clair, un seul nom par origine
+
+**Décision.** Quatre règles d'affichage venues de l'issue #15. Les deux axes du 2026-10-09 (source
+et confiance) ne changent pas, ni leurs codes, ni les règles qui les lient.
+
+1. Dans les formulaires, les deux champs sont des questions : « D'où vient cette information ? » et
+   « En êtes-vous sûr ? ». Chaque choix est une réponse en clair (« Je l'ai saisie moi-même »,
+   « Oui, c'est connu »).
+2. Un seul nom par origine et par niveau de certitude, défini dans `src/domain/provenance.ts` :
+   la pastille l'affiche, et la réponse proposée le reprend. Un test le vérifie.
+3. Un document importé s'appelle « document importé », plus « pièce importée » : une pièce est
+   aussi une salle. La saisie s'appelle « saisie ».
+4. Sur l'écran Lieux, les deux questions n'apparaissent qu'une fois la valeur saisie.
+
+**Pourquoi.** Retour du test pilote : « Source » et « Confiance » « ne me parlent pas trop », et
+leurs choix par défaut (« si renseigné », « par défaut selon la source ») ne se comprenaient pas
+sans connaître la règle. La pastille et la liste donnaient deux noms à la même origine (« saisie
+utilisateur » et « Saisie manuelle », « pièce importée » et « Document importé »).
+
+**Conséquence.** Les libellés des tables `ref_source_donnee` et `ref_confiance` ne sont plus
+affichés : ces tables fournissent les codes proposés et leur ordre, le domaine fournit les mots.
+
+**Ce qui n'est pas tranché.** Aligner les libellés de ces deux tables sur le domaine par une
+migration, qui modifierait la base existante ; préremplir les deux réponses avec la provenance
+actuelle quand on modifie une adresse ou une surface.

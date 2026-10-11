@@ -6,7 +6,7 @@ import { listerBatiments } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { actionCreerIdee, actionChangerStatutIdee, actionRattacherIdee } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
-import { Champ, Pastille, Section, Select, Vide, classeSaisie } from "@/components/ui";
+import { Champ, Pastille, QuestionSource, Section, Select, Vide, classeSaisie } from "@/components/ui";
 import { LIBELLES_SOURCE } from "@/domain/provenance";
 
 export const dynamic = "force-dynamic";
@@ -80,9 +80,7 @@ export default async function PageIdees({ params }: { params: Promise<{ id: stri
               <Champ label="Titre" large>
                 <input name="titre" required className={classeSaisie} placeholder="ex. Piscine intérieure" />
               </Champ>
-              <Champ label="Origine">
-                <Select name="source" options={sources} defaultValue="saisie" />
-              </Champ>
+              <QuestionSource name="source" sources={sources} defaultValue="saisie" question="D'où vient cette idée ?" />
               <Champ label="Scénario">
                 <select name="scenarioId" className={classeSaisie} defaultValue="">
                   <option value="">— aucun —</option>

@@ -15,9 +15,12 @@ export type Source = (typeof SOURCES)[number];
 export const CONFIANCES = ["connu", "estime", "a_confirmer", "a_renseigner"] as const;
 export type Confiance = (typeof CONFIANCES)[number];
 
+// Un seul nom par origine et par niveau de certitude, sur toute l'application (issue #15). La
+// pastille affiche le nom court ; les formulaires posent une question, et chaque réponse proposée
+// reprend ce nom. « Document importé », pas « pièce » : une pièce est aussi une salle.
 export const LIBELLES_SOURCE: Record<Source, string> = {
-  saisie: "saisie utilisateur",
-  import: "pièce importée",
+  saisie: "saisie",
+  import: "document importé",
   estimation: "estimation",
   source_externe: "source externe",
   suggestion_ia: "suggestion de l'IA",
@@ -29,6 +32,26 @@ export const LIBELLES_CONFIANCE: Record<Confiance, string> = {
   a_confirmer: "à confirmer",
   a_renseigner: "à renseigner",
 };
+
+export const QUESTION_SOURCE = "D'où vient cette information ?";
+export const REPONSES_SOURCE: Record<Source, string> = {
+  saisie: "Je l'ai saisie moi-même",
+  import: "Elle vient d'un document importé",
+  estimation: "C'est une estimation",
+  source_externe: "Elle vient d'une source externe (annonce, professionnel)",
+  suggestion_ia: "C'est une suggestion de l'IA",
+};
+
+export const QUESTION_CONFIANCE = "En êtes-vous sûr ?";
+export const REPONSES_CONFIANCE: Record<Confiance, string> = {
+  connu: "Oui, c'est connu",
+  estime: "Non, c'est estimé",
+  a_confirmer: "Pas encore, c'est à confirmer",
+  a_renseigner: "Je ne la connais pas : à renseigner",
+};
+
+/** Choix proposé quand on ne répond pas à la seconde question : voir `confianceParDefaut`. */
+export const REPONSE_HABITUELLE = "— réponse habituelle pour cette origine —";
 
 /**
  * Une valeur accompagnée de sa provenance. `valeur: null` signifie explicitement « à renseigner »
@@ -113,7 +136,7 @@ export function validerValeurTracee<T>(v: ValeurTracee<T>): ResultatValidation {
 }
 
 /**
- * Étiquette d'affichage, toujours complète : « 92 m² — source : pièce importée, statut : connu ».
+ * Étiquette d'affichage, toujours complète : « 92 m² — source : document importé, statut : connu ».
  * `formater` transforme la valeur brute en texte (montant, surface, date…). Une valeur absente
  * s'affiche « À renseigner », jamais « 0 ».
  */

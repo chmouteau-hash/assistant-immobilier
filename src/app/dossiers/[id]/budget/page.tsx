@@ -8,7 +8,8 @@ import { listerReference, libelle } from "@/lib/references";
 import { formaterMontant } from "@/lib/montant";
 import { actionCreerPoste, actionAjouterLigne, actionModifierLigne } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
-import { Champ, EtiquetteSourceConfiance, Pastille, Section, Select, Vide, classeSaisie, formaterDate } from "@/components/ui";
+import { REPONSE_HABITUELLE } from "@/domain/provenance";
+import { Champ, EtiquetteSourceConfiance, Pastille, QuestionConfiance, QuestionSource, Section, Select, Vide, classeSaisie, formaterDate } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -144,12 +145,8 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
                             <Champ label="Nature">
                               <Select name="typeMontant" options={types} defaultValue={l.typeMontant} />
                             </Champ>
-                            <Champ label="Source">
-                              <Select name="source" options={sources} defaultValue={l.source} />
-                            </Champ>
-                            <Champ label="Confiance">
-                              <Select name="confiance" options={confiances} defaultValue={l.confiance} />
-                            </Champ>
+                            <QuestionSource name="source" sources={sources} defaultValue={l.source} />
+                            <QuestionConfiance name="confiance" confiances={confiances} defaultValue={l.confiance} />
                             <Champ label="Fournisseur">
                               <input name="fournisseur" defaultValue={l.fournisseur ?? ""} className={classeSaisie} />
                             </Champ>
@@ -212,12 +209,8 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
                       <Champ label="Nature">
                         <Select name="typeMontant" options={types} />
                       </Champ>
-                      <Champ label="Source">
-                        <Select name="source" options={sources} defaultValue="estimation" />
-                      </Champ>
-                      <Champ label="Confiance">
-                        <Select name="confiance" options={confiances} vide="— par défaut selon la source —" />
-                      </Champ>
+                      <QuestionSource name="source" sources={sources} defaultValue="estimation" />
+                      <QuestionConfiance name="confiance" confiances={confiances} vide={REPONSE_HABITUELLE} />
                     </div>
                     <div className="flex flex-wrap gap-3">
                       <Champ label="Fournisseur">

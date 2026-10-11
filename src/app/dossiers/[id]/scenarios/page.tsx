@@ -6,7 +6,7 @@ import { listerReference, libelle } from "@/lib/references";
 import { formaterMontant } from "@/lib/montant";
 import { actionCreerScenario, actionChangerStatutScenario, actionAjouterHypothese, actionChangerStatutHypothese } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
-import { Champ, Pastille, Section, Select, Vide, classeSaisie, formaterDateHeure } from "@/components/ui";
+import { Champ, Pastille, Section, Select, Vide, classeSaisie, formaterDateHeure, reponsesSource } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +74,7 @@ export default async function PageScenarios({ params }: { params: Promise<{ id: 
             const siennes = hypotheses.filter((h) => h.scenarioId === s.id);
             const historique = historiqueScenario(acteur, s.id);
             return (
-              <article key={s.id} className="flex flex-col gap-3 rounded border border-neutral-200 bg-white p-3 text-sm">
+              <article key={s.id} className="flex min-w-0 flex-col gap-3 rounded border border-neutral-200 bg-white p-3 text-sm">
                 <header className="flex items-baseline justify-between gap-2">
                   <h3 className="font-semibold">{s.nom}</h3>
                   <Pastille ton={s.statut === "retenue" ? "ok" : "neutre"}>{libelle(statuts, s.statut)}</Pastille>
@@ -108,7 +108,7 @@ export default async function PageScenarios({ params }: { params: Promise<{ id: 
                       <input type="hidden" name="dossierId" value={id} />
                       <input type="hidden" name="scenarioId" value={s.id} />
                       <input name="enonce" required placeholder="Hypothèse à valider" className={`${classeSaisie} flex-1`} />
-                      <Select name="source" options={sources} defaultValue="saisie" />
+                      <Select name="source" options={reponsesSource(sources)} defaultValue="saisie" />
                     </FormulaireAction>
                   )}
                 </div>

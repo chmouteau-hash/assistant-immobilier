@@ -5,7 +5,8 @@ import { listerReference, libelle } from "@/lib/references";
 import { formaterSurface } from "@/domain/mesure";
 import { actionCreerLieu, actionCreerBatiment, actionCreerPiece, actionModifierSurface, actionModifierAdresse, actionRattacherBatiment } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
-import { Champ, Pastille, Provenance, Section, Select, Vide, classeSaisie } from "@/components/ui";
+import { REPONSE_HABITUELLE } from "@/domain/provenance";
+import { Champ, Pastille, Provenance, QuestionConfiance, QuestionSource, Section, Select, Vide, classeSaisie } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -27,15 +28,13 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
   const peutEcrire = autorise(acteur, id, "ecrire", "lieux");
   const sansLieu = batiments.filter((b) => !lieux.some((l) => l.id === b.lieuId));
 
+  // Les deux questions n'apparaissent qu'une fois la valeur saisie : tant que le champ marqué
+  // `valeur-tracee` est vide dans son groupe, une règle CSS les masque (issue #15).
   const champsProvenance = (prefixe: string) => (
-    <>
-      <Champ label="Source">
-        <Select name={`${prefixe}Source`} options={sources} vide="— si renseigné —" />
-      </Champ>
-      <Champ label="Confiance">
-        <Select name={`${prefixe}Confiance`} options={confiances} vide="— par défaut selon la source —" />
-      </Champ>
-    </>
+    <div className="contents group-has-[.valeur-tracee:placeholder-shown]:hidden">
+      <QuestionSource name={`${prefixe}Source`} sources={sources} vide="— à choisir —" />
+      <QuestionConfiance name={`${prefixe}Confiance`} confiances={confiances} vide={REPONSE_HABITUELLE} />
+    </div>
   );
 
   // Sans `lieuId`, le bâtiment est créé hors de tout lieu : proposé seulement quand le dossier
@@ -123,13 +122,13 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                   {p.usage && <span className="text-neutral-500"> ({p.usage})</span>} — surface : <Provenance valeur={p.surface} formater={formaterSurface} />
                 </span>
                 {peutEcrire && (
-                  <details>
+                  <details className="max-w-full min-w-0">
                     <summary className="cursor-pointer text-xs text-neutral-500">Surface</summary>
-                    <FormulaireAction action={actionModifierSurface} bouton="Enregistrer" compact className="mt-1">
+                    <FormulaireAction action={actionModifierSurface} bouton="Enregistrer" compact className="group mt-1">
                       <input type="hidden" name="dossierId" value={id} />
                       <input type="hidden" name="pieceId" value={p.id} />
                       <Champ label="m² (vide = à renseigner)">
-                        <input name="surface" className={`${classeSaisie} w-24`} placeholder="92,5" />
+                        <input name="surface" className={`${classeSaisie} valeur-tracee w-24`} placeholder="92,5" />
                       </Champ>
                       {champsProvenance("surface")}
                       <Champ label="Motif">
@@ -143,7 +142,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
           </ul>
         )}
         {peutEcrire && (
-          <FormulaireAction action={actionCreerPiece} bouton="Ajouter" compact className="mt-2">
+          <FormulaireAction action={actionCreerPiece} bouton="Ajouter" compact className="group mt-2">
             <input type="hidden" name="dossierId" value={id} />
             <input type="hidden" name="batimentId" value={b.id} />
             <Champ label="Nouvelle pièce / espace" large>
@@ -153,7 +152,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
               <input name="usage" className={`${classeSaisie} w-28`} />
             </Champ>
             <Champ label="m²">
-              <input name="surface" className={`${classeSaisie} w-20`} />
+              <input name="surface" className={`${classeSaisie} valeur-tracee w-20`} placeholder="12,5" />
             </Champ>
             {champsProvenance("surface")}
           </FormulaireAction>
@@ -185,11 +184,11 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                 {peutEcrire && (
                   <details className="mt-2">
                     <summary className="cursor-pointer text-xs text-neutral-500">Modifier l&apos;adresse</summary>
-                    <FormulaireAction action={actionModifierAdresse} bouton="Enregistrer" compact className="mt-2">
+                    <FormulaireAction action={actionModifierAdresse} bouton="Enregistrer" compact className="group mt-2">
                       <input type="hidden" name="dossierId" value={id} />
                       <input type="hidden" name="lieuId" value={l.id} />
                       <Champ label="Adresse (vide = à renseigner)" large>
-                        <input name="adresse" defaultValue={l.adresse.valeur ?? ""} className={classeSaisie} />
+                        <input name="adresse" defaultValue={l.adresse.valeur ?? ""} className={`${classeSaisie} valeur-tracee`} placeholder=" " />
                       </Champ>
                       {champsProvenance("adresse")}
                       <Champ label="Motif">
@@ -225,9 +224,9 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                 <Select name="typeLieu" options={typesLieu} />
               </Champ>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="group flex flex-wrap gap-3">
               <Champ label="Adresse (facultatif)" large>
-                <input name="adresse" className={classeSaisie} />
+                <input name="adresse" className={`${classeSaisie} valeur-tracee`} placeholder=" " />
               </Champ>
               {champsProvenance("adresse")}
               <Champ label="Parcelle (facultatif)">
