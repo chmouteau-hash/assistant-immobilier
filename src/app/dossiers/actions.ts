@@ -199,6 +199,24 @@ export async function actionModifierSurface(_e: EtatFormulaire, fd: FormData): P
   });
 }
 
+export async function actionRetirerLieu(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.retirerLieu(acteur, { lieuId: texte(fd, "lieuId") });
+  });
+}
+
+export async function actionRetirerBatiment(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.retirerBatiment(acteur, { batimentId: texte(fd, "batimentId") });
+  });
+}
+
+export async function actionRetirerPiece(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.retirerPiece(acteur, { pieceId: texte(fd, "pieceId") });
+  });
+}
+
 // --- Idées ---------------------------------------------------------------------------------------------------
 
 export async function actionCreerIdee(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {

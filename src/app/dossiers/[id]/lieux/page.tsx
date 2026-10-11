@@ -1,6 +1,6 @@
 import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
-import { listerLieux, listerBatiments, listerPieces, type Batiment } from "@/lib/structure";
+import { listerLieux, listerBatiments, listerPieces, objetsNonVides, type Batiment } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterSurface } from "@/domain/mesure";
 import {
@@ -13,6 +13,9 @@ import {
   actionModifierLieu,
   actionModifierBatiment,
   actionModifierPiece,
+  actionRetirerLieu,
+  actionRetirerBatiment,
+  actionRetirerPiece,
 } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { REPONSE_HABITUELLE } from "@/domain/provenance";
@@ -28,6 +31,16 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // ont pas sont montrés à part, avec de quoi les y rattacher. Chaque carte porte un formulaire
 // « Corriger » : une faute de frappe ne se rattrapait qu'en supprimant le dossier (issue #22).
 // L'adresse et la surface gardent leur propre formulaire, parce qu'elles portent une provenance.
+// Chaque carte porte aussi « Retirer », qui n'offre son bouton que pour un objet vide.
+
+// Ce qui se fait aujourd'hui pour vider un objet, dit sous la phrase de refus. Une idée, un poste
+// de budget et un document se rattachent à leur création et n'ont pas encore de quoi changer.
+const POUR_VIDER = {
+  lieu: "Un bâtiment se déplace avec « Changer de lieu ». Un document rattaché ne se détache pas encore.",
+  batiment: "Une pièce se déplace avec « Corriger ». Une idée, un poste de budget ou un document rattaché ne se détache pas encore.",
+  piece: "Une idée ou un document rattaché ne se détache pas encore.",
+};
+
 export default async function PageLieux({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const acteur = await obtenirActeurPourSection(id, "lieux");
@@ -40,6 +53,26 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
   const peutEcrire = autorise(acteur, id, "ecrire", "lieux");
   const sansLieu = batiments.filter((b) => !lieux.some((l) => l.id === b.lieuId));
   const choixBatiments = batiments.map((b) => ({ code: b.id, libelle: b.nom }));
+  const nonVides = peutEcrire ? objetsNonVides(acteur, id) : {};
+
+  // Un objet non vide montre la phrase que le serveur opposerait à une demande directe, à la place
+  // du bouton.
+  const blocRetrait = (niveau: keyof typeof POUR_VIDER, action: typeof actionRetirerLieu, champ: string, objetId: string, titre: string) => (
+    <details className="max-w-full min-w-0">
+      <summary className="cursor-pointer text-xs text-neutral-500">{titre}</summary>
+      {nonVides[objetId] ? (
+        <p className="mt-1 text-xs text-neutral-600">
+          {nonVides[objetId]} {POUR_VIDER[niveau]}
+        </p>
+      ) : (
+        <FormulaireAction action={action} bouton="Retirer définitivement" compact className="mt-1">
+          <input type="hidden" name="dossierId" value={id} />
+          <input type="hidden" name={champ} value={objetId} />
+          <p className="w-full text-xs text-neutral-600">Le retrait est définitif. Il reste inscrit au journal d&apos;audit, avec ce qui avait été saisi.</p>
+        </FormulaireAction>
+      )}
+    </details>
+  );
 
   // Les deux questions n'apparaissent qu'une fois la valeur saisie : tant que le champ marqué
   // `valeur-tracee` est vide dans son groupe, une règle CSS les masque (issue #15).
@@ -147,6 +180,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
             {formulaireRattachement(b, "Déplacer")}
           </details>
         )}
+        {peutEcrire && <div className="mt-1">{blocRetrait("batiment", actionRetirerBatiment, "batimentId", b.id, "Retirer le bâtiment")}</div>}
         <p className="mt-2 text-xs font-medium text-neutral-500">Pièces et espaces</p>
         {siennes.length === 0 ? (
           <p className="text-xs text-neutral-400">Aucune pièce.</p>
@@ -192,6 +226,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                         </Champ>
                       </FormulaireAction>
                     </details>
+                    {blocRetrait("piece", actionRetirerPiece, "pieceId", p.id, "Retirer")}
                   </div>
                 )}
               </li>
@@ -275,6 +310,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                     </FormulaireAction>
                   </details>
                 )}
+                {peutEcrire && <div className="mt-1">{blocRetrait("lieu", actionRetirerLieu, "lieuId", l.id, "Retirer le lieu")}</div>}
                 <div className="mt-3 flex flex-col gap-3 border-l-2 border-neutral-200 pl-3">
                   <p className="text-xs font-medium text-neutral-500">
                     {siens.length === 0 ? "Aucun bâtiment dans ce lieu." : siens.length === 1 ? "1 bâtiment dans ce lieu" : `${siens.length} bâtiments dans ce lieu`}

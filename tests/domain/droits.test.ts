@@ -49,6 +49,21 @@ describe("peut", () => {
     expect(sectionsLisibles(participations, "notaire")).toEqual(["lieux", "documents"]);
   });
 
+  it("qui écrit les lieux lit aussi les idées, le budget et les documents", () => {
+    // Le refus de retirer un objet non vide nomme ce qui y est rattaché (lib/structure.ts) : la
+    // phrase ne doit rien apprendre à quelqu'un qui ne pourrait pas le lire ailleurs.
+    const roles: Participation[] = [
+      { personneId: "proprietaire", role: "proprietaire", perimetre: [], revoqueeLe: null },
+      { personneId: "contributeur", role: "contributeur", perimetre: [], revoqueeLe: null },
+      { personneId: "lecteur", role: "lecteur", perimetre: [], revoqueeLe: null },
+      { personneId: "pro-lieux", role: "professionnel", perimetre: ["lieux"], revoqueeLe: null },
+      { personneId: "pro-tout", role: "professionnel", perimetre: [...SECTIONS], revoqueeLe: null },
+    ];
+    const ecrivent = roles.filter((p) => peut(roles, p.personneId, "ecrire", "lieux")).map((p) => p.personneId);
+    expect(ecrivent).toEqual(["proprietaire", "contributeur"]);
+    for (const id of ecrivent) for (const s of ["idees", "budget", "documents"] as const) expect(peut(roles, id, "lire", s)).toBe(true);
+  });
+
   it("un accès révoqué ne vaut plus rien", () => {
     expect(peut(participations, "ancien-artisan", "lire", "budget")).toBe(false);
   });

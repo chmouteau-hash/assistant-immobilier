@@ -412,3 +412,36 @@ restait : la seule façon de rattraper une saisie était de supprimer le dossier
 l'écart, et sort de ce qui y est rattaché (le schéma prévoit déjà qu'un bâtiment supprimé emporte
 ses pièces, et qu'un lieu supprimé laisse ses bâtiments sans lieu) ; les mêmes corrections sur une
 idée, un scénario et un poste.
+
+## 2026-10-11 — Lieux : un lieu, un bâtiment et une pièce ne se retirent que vides
+
+**Décision.** Tranche le point « retirer » laissé ouvert par l'entrée précédente, pour l'issue #22.
+Christophe a choisi entre trois options : supprimer seulement un objet vide (retenue), supprimer
+l'objet avec ce qu'il contient, ou le mettre à l'écart comme une ligne de budget.
+
+1. Retirer un lieu, un bâtiment ou une pièce est une suppression définitive, permise seulement quand
+   l'objet est vide : aucun bâtiment ni document rattaché à un lieu ; aucune pièce, idée, poste de
+   budget ni document rattaché à un bâtiment ; aucune idée ni document rattaché à une pièce.
+2. Rien n'est emporté ni détaché en silence. Le schéma laisserait faire (un bâtiment supprimé
+   emporte ses pièces ; idées, postes et documents perdent leur rattachement) : la règle est tenue
+   dans `src/lib/structure.ts`. Le refus nomme ce qui est encore rattaché ; il n'apprend rien à
+   personne, parce que les deux rôles qui écrivent les lieux lisent aussi les idées, le budget et
+   les documents (un test le garde).
+3. Même droit qu'à la création (écrire les lieux), sans motif ni nom à retaper : un objet vide ne
+   coûte que sa propre saisie. Le retrait est tracé au journal d'audit, action « suppression », avec
+   ce que l'objet contenait : chaque champ rempli, sa valeur d'avant, puis rien.
+4. L'écran Lieux porte « Retirer » sur chaque carte. Pour un objet non vide, il affiche la phrase
+   de refus à la place du bouton.
+
+**Pourquoi.** Un objet créé pour essayer restait dans le dossier : la seule suppression était celle
+du dossier entier. Supprimer un objet avec son contenu ferait payer cher une erreur de clic. La mise
+à l'écart demandait une migration de la base, et de définir ce qu'un lieu écarté ne compte plus.
+
+**Conséquences.** L'adresse d'un lieu retiré et la surface d'une pièce retirée restent lisibles au
+journal d'audit jusqu'à la suppression du dossier, qui purge son journal (entrée du 2026-10-09). Une
+idée, un poste de budget et un document se rattachent à leur création et ne se détachent pas
+encore : un objet qui en porte ne peut donc être ni vidé ni retiré, et l'écran le dit.
+
+**Ce qui n'est pas tranché.** Détacher ou déplacer une idée, un poste de budget ou un document ;
+corriger une idée, un scénario et un poste (issue #22) ; retirer une idée, un scénario, un poste ou
+une action.

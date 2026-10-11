@@ -516,3 +516,129 @@ export function modifierSurfacePiece(
     return hydraterPiece(db.prepare(`SELECT ${COLONNES_PIECE} FROM piece WHERE id = ?`).get(params.pieceId));
   });
 }
+
+// --- Retirer ------------------------------------------------------------------------------------------
+//
+// Un lieu, un bâtiment ou une pièce ne se retire que vide (issue #22). Le schéma, lui, laisserait
+// faire : un bâtiment supprimé emporterait ses pièces, et idées, postes et documents perdraient
+// leur rattachement sans que personne l'ait décidé. La règle est donc tenue ici, et l'écran lit la
+// même phrase que le contrôle pour dire pourquoi un objet ne se retire pas.
+
+type Entite = "lieu" | "batiment" | "piece";
+
+// Ce que le schéma rattache à chaque objet : les clés étrangères de migrations/002_v1.sql. Une
+// table qui se met à pointer vers un lieu, un bâtiment ou une pièce s'ajoute ici.
+const RATTACHES: Record<Entite, Array<{ table: string; colonne: string; un: string; plusieurs: string }>> = {
+  lieu: [
+    { table: "batiment", colonne: "lieu_id", un: "bâtiment", plusieurs: "bâtiments" },
+    { table: "document", colonne: "lieu_id", un: "document", plusieurs: "documents" },
+  ],
+  batiment: [
+    { table: "piece", colonne: "batiment_id", un: "pièce", plusieurs: "pièces" },
+    { table: "idee", colonne: "batiment_id", un: "idée", plusieurs: "idées" },
+    { table: "poste_budget", colonne: "batiment_id", un: "poste de budget", plusieurs: "postes de budget" },
+    { table: "document", colonne: "batiment_id", un: "document", plusieurs: "documents" },
+  ],
+  piece: [
+    { table: "idee", colonne: "piece_id", un: "idée", plusieurs: "idées" },
+    { table: "document", colonne: "piece_id", un: "document", plusieurs: "documents" },
+  ],
+};
+
+const REFUS_NON_VIDE: Record<Entite, (rattaches: string) => string> = {
+  lieu: (r) => `Ce lieu n'est pas vide (${r}) : seul un lieu vide se retire.`,
+  batiment: (r) => `Ce bâtiment n'est pas vide (${r}) : seul un bâtiment vide se retire.`,
+  piece: (r) => `Cette pièce n'est pas vide (${r}) : seule une pièce vide se retire.`,
+};
+
+/** Par identifiant, la phrase de refus de chaque objet non vide du dossier. */
+function refusParObjet(dossierId: string): Record<string, string> {
+  const db = obtenirBase();
+  const refus: Record<string, string> = {};
+  for (const entite of ["lieu", "batiment", "piece"] as const) {
+    const rattaches = new Map<string, string[]>();
+    for (const { table, colonne, un, plusieurs } of RATTACHES[entite]) {
+      const lignes = db
+        .prepare(`SELECT r.${colonne} AS id, COUNT(*) AS n FROM ${table} r JOIN ${entite} o ON o.id = r.${colonne} WHERE o.dossier_id = ? GROUP BY r.${colonne}`)
+        .all(dossierId) as Array<{ id: string; n: number }>;
+      for (const { id, n } of lignes) rattaches.set(id, [...(rattaches.get(id) ?? []), `${n} ${n > 1 ? plusieurs : un}`]);
+    }
+    for (const [id, liste] of rattaches) refus[id] = REFUS_NON_VIDE[entite](liste.join(", "));
+  }
+  return refus;
+}
+
+/**
+ * Pourquoi chaque objet non vide du dossier ne se retire pas, par identifiant ; un objet absent de
+ * la réponse est vide. Réservé à qui peut retirer : la phrase compte des idées, des postes et des
+ * documents, que tout rôle qui écrit les lieux peut aussi lire (tests/domain/droits.test.ts).
+ */
+export function objetsNonVides(acteur: Acteur, dossierId: string): Record<string, string> {
+  exiger(acteur, dossierId, "ecrire", "lieux");
+  return refusParObjet(dossierId);
+}
+
+/** Retire un objet vide. Le journal garde ce qu'il contenait : la valeur d'avant, puis rien. */
+function retirer(acteur: Acteur, entite: Entite, objet: { id: string; dossierId: string }, contenu: Record<string, string | number | null>): void {
+  exiger(acteur, objet.dossierId, "ecrire", "lieux");
+  transaction((db) => {
+    const refus = refusParObjet(objet.dossierId)[objet.id];
+    if (refus) throw invalide(refus);
+    db.prepare(`DELETE FROM ${entite} WHERE id = ?`).run(objet.id);
+    enregistrerEvenement(db, {
+      nomEntite: entite,
+      entiteId: objet.id,
+      action: "suppression",
+      acteurId: acteur.personneId,
+      dossierId: objet.dossierId,
+      changements: Object.entries(contenu)
+        .filter(([, avant]) => avant !== null)
+        .map(([champ, avant]) => ({ champ, avant, apres: null })),
+    });
+  });
+}
+
+export function retirerLieu(acteur: Acteur, params: { lieuId: string }): void {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId);
+  if (!ligne) throw interdit();
+  const l = hydraterLieu(ligne);
+  retirer(acteur, "lieu", l, {
+    nom: l.nom,
+    type_lieu: l.typeLieu,
+    adresse: l.adresse.valeur,
+    adresse_source: l.adresse.source,
+    adresse_confiance: l.adresse.valeur === null ? null : l.adresse.confiance,
+    parcelle: l.parcelle,
+    description: l.description,
+  });
+}
+
+export function retirerBatiment(acteur: Acteur, params: { batimentId: string }): void {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId);
+  if (!ligne) throw interdit();
+  const b = versObjet<Batiment>(ligne as Record<string, unknown>);
+  retirer(acteur, "batiment", b, {
+    nom: b.nom,
+    lieu_id: b.lieuId,
+    type: b.type,
+    etat: b.etat,
+    usage_actuel: b.usageActuel,
+    usage_envisage: b.usageEnvisage,
+    description: b.description,
+  });
+}
+
+export function retirerPiece(acteur: Acteur, params: { pieceId: string }): void {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_PIECE} FROM piece WHERE id = ?`).get(params.pieceId);
+  if (!ligne) throw interdit();
+  const p = hydraterPiece(ligne);
+  retirer(acteur, "piece", p, {
+    nom: p.nom,
+    batiment_id: p.batimentId,
+    usage: p.usage,
+    surface_centiemes: p.surface.valeur,
+    surface_source: p.surface.source,
+    surface_confiance: p.surface.valeur === null ? null : p.surface.confiance,
+    description: p.description,
+  });
+}
