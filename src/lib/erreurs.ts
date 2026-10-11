@@ -1,7 +1,7 @@
 // Enveloppe d'erreur uniforme : un seul type d'erreur applicative, avec un code STABLE
 // (utilisable par le code) distinct du message (destiné à l'utilisateur).
 
-export type CodeErreur = "NOT_FOUND" | "VALIDATION" | "CONFLIT" | "INTERDIT" | "IA_INDISPONIBLE";
+export type CodeErreur = "NOT_FOUND" | "VALIDATION" | "CONFLIT" | "INTERDIT" | "IA_INDISPONIBLE" | "SERVICE_INDISPONIBLE";
 
 export class ErreurApplicative extends Error {
   readonly code: CodeErreur;
@@ -19,6 +19,11 @@ export function introuvable(quoi: string): ErreurApplicative {
 
 export function invalide(message: string): ErreurApplicative {
   return new ErreurApplicative("VALIDATION", message);
+}
+
+/** Un service distant (adresses, carte) ne répond pas : l'application continue sans lui. */
+export function serviceIndisponible(message: string): ErreurApplicative {
+  return new ErreurApplicative("SERVICE_INDISPONIBLE", message);
 }
 
 /**

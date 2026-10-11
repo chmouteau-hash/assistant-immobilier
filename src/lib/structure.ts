@@ -19,6 +19,7 @@ import {
   type Source,
   type ValeurTracee,
 } from "../domain/provenance";
+import { validerPosition, type Position } from "../domain/geo";
 
 export type Lieu = {
   id: string;
@@ -26,6 +27,8 @@ export type Lieu = {
   nom: string;
   typeLieu: string;
   adresse: ValeurTracee<string>;
+  /** Repère sur la carte, en microdegrés. `note` : ce que le service d'adresses a compris, s'il a servi. */
+  position: ValeurTracee<Position>;
   parcelle: string | null;
   description: string | null;
   source: string;
@@ -110,21 +113,29 @@ type LieuBrut = {
   adresse: string | null;
   adresseSource: Source | null;
   adresseConfiance: Confiance;
+  latitudeMicrodeg: number | null;
+  longitudeMicrodeg: number | null;
+  positionSource: Source | null;
+  positionConfiance: Confiance;
+  positionNote: string | null;
   parcelle: string | null;
   description: string | null;
   source: string;
   createdAt: string;
 };
-const COLONNES_LIEU = `id, dossier_id, nom, type_lieu, adresse, adresse_source, adresse_confiance, parcelle, description, source, created_at`;
+const COLONNES_LIEU = `id, dossier_id, nom, type_lieu, adresse, adresse_source, adresse_confiance,
+  latitude_microdeg, longitude_microdeg, position_source, position_confiance, position_note, parcelle, description, source, created_at`;
 
 function hydraterLieu(ligne: unknown): Lieu {
   const b = versObjet<LieuBrut>(ligne as Record<string, unknown>);
+  const position = b.latitudeMicrodeg === null || b.longitudeMicrodeg === null ? null : { latitudeMicrodeg: b.latitudeMicrodeg, longitudeMicrodeg: b.longitudeMicrodeg };
   return {
     id: b.id,
     dossierId: b.dossierId,
     nom: b.nom,
     typeLieu: b.typeLieu,
     adresse: { valeur: b.adresse, source: b.adresseSource, confiance: b.adresseConfiance },
+    position: { valeur: position, source: b.positionSource, confiance: b.positionConfiance, note: b.positionNote },
     parcelle: b.parcelle,
     description: b.description,
     source: b.source,
@@ -135,6 +146,15 @@ function hydraterLieu(ligne: unknown): Lieu {
 export function listerLieux(acteur: Acteur, dossierId: string): Lieu[] {
   exiger(acteur, dossierId, "lire", "lieux");
   return (obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE dossier_id = ? ORDER BY created_at`).all(dossierId) as unknown[]).map(hydraterLieu);
+}
+
+/** Un lieu par identifiant. Inconnu ou hors de portée de l'acteur : même refus, rien ne fuit. */
+export function obtenirLieu(acteur: Acteur, lieuId: string): Lieu {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(lieuId);
+  if (!ligne) throw interdit();
+  const lieu = hydraterLieu(ligne);
+  exiger(acteur, lieu.dossierId, "lire", "lieux");
+  return lieu;
 }
 
 export function creerLieu(
@@ -201,9 +221,75 @@ export function modifierAdresseLieu(
 }
 
 /**
+ * Poser, déplacer ou effacer le repère d'un lieu sur la carte. Les deux coordonnées vont ensemble :
+ * toutes deux données (en microdegrés entiers), ou aucune (« à renseigner »). Comme l'adresse,
+ * c'est une provenance : source et confiance obligatoires dès qu'une position existe, tracé avec
+ * avant/après. `note` dit d'après quoi le repère a été posé (l'adresse comprise par le service
+ * d'adresses) ; absente, elle est effacée : une position déplacée à la main n'est plus celle du
+ * service.
+ */
+export function modifierPositionLieu(
+  acteur: Acteur,
+  params: {
+    lieuId: string;
+    latitudeMicrodeg: number | null;
+    longitudeMicrodeg: number | null;
+    positionSource?: string;
+    positionConfiance?: string;
+    note?: string | null;
+    motif?: string;
+  },
+): Lieu {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId);
+  if (!ligne) throw interdit();
+  const avant = hydraterLieu(ligne);
+  exiger(acteur, avant.dossierId, "ecrire", "lieux");
+  if ((params.latitudeMicrodeg === null) !== (params.longitudeMicrodeg === null)) {
+    throw invalide("Indiquez la latitude et la longitude, ou aucune des deux (position à renseigner).");
+  }
+  let valeur: Position | null = null;
+  if (params.latitudeMicrodeg !== null && params.longitudeMicrodeg !== null) {
+    valeur = { latitudeMicrodeg: params.latitudeMicrodeg, longitudeMicrodeg: params.longitudeMicrodeg };
+    const verdict = validerPosition(valeur);
+    if (!verdict.valide) throw invalide(verdict.motif);
+  }
+  const position = construireValeurTracee<Position>(valeur, params.positionSource, params.positionConfiance, valeur === null ? null : params.note?.trim() || null);
+
+  return transaction((db) => {
+    db.prepare(`UPDATE lieu SET latitude_microdeg = ?, longitude_microdeg = ?, position_source = ?, position_confiance = ?, position_note = ? WHERE id = ?`).run(
+      position.valeur?.latitudeMicrodeg ?? null,
+      position.valeur?.longitudeMicrodeg ?? null,
+      position.source,
+      position.confiance,
+      position.note ?? null,
+      params.lieuId,
+    );
+    enregistrerEvenement(db, {
+      nomEntite: "lieu",
+      entiteId: params.lieuId,
+      action: "modification",
+      acteurId: acteur.personneId,
+      dossierId: avant.dossierId,
+      motif: params.motif?.trim() || undefined,
+      changements: [
+        { champ: "latitude_microdeg", avant: avant.position.valeur?.latitudeMicrodeg ?? null, apres: position.valeur?.latitudeMicrodeg ?? null },
+        { champ: "longitude_microdeg", avant: avant.position.valeur?.longitudeMicrodeg ?? null, apres: position.valeur?.longitudeMicrodeg ?? null },
+        { champ: "position_source", avant: avant.position.source, apres: position.source },
+        { champ: "position_confiance", avant: avant.position.confiance, apres: position.confiance },
+        // La note n'existe que pour une position venue du service d'adresses : elle ne s'écrit au
+        // journal que si elle change, pour ne pas y laisser une ligne « — → — » à chaque déplacement.
+        ...((avant.position.note ?? null) === (position.note ?? null) ? [] : [{ champ: "position_note", avant: avant.position.note ?? null, apres: position.note ?? null }]),
+      ],
+    });
+    return hydraterLieu(db.prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId));
+  });
+}
+
+/**
  * Corriger un lieu après sa création : nom, type, parcelle, description. Un champ absent ne change
  * pas, un champ facultatif vidé redevient inconnu, seuls les champs changés sont tracés. L'adresse
- * porte une provenance : elle garde son propre formulaire (`modifierAdresseLieu`).
+ * et la position portent une provenance : chacune garde son propre formulaire
+ * (`modifierAdresseLieu`, `modifierPositionLieu`).
  */
 export function modifierLieu(acteur: Acteur, params: { lieuId: string; nom?: string; typeLieu?: string; parcelle?: string; description?: string }): Lieu {
   const ligne = obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId);
@@ -608,6 +694,11 @@ export function retirerLieu(acteur: Acteur, params: { lieuId: string }): void {
     adresse: l.adresse.valeur,
     adresse_source: l.adresse.source,
     adresse_confiance: l.adresse.valeur === null ? null : l.adresse.confiance,
+    latitude_microdeg: l.position.valeur?.latitudeMicrodeg ?? null,
+    longitude_microdeg: l.position.valeur?.longitudeMicrodeg ?? null,
+    position_source: l.position.source,
+    position_confiance: l.position.valeur === null ? null : l.position.confiance,
+    position_note: l.position.note ?? null,
     parcelle: l.parcelle,
     description: l.description,
   });

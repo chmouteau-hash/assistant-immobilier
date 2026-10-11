@@ -2,7 +2,8 @@
 
 Objectif : Christophe parcourt la V1 avec son projet réel **sans connaître toutes les réponses**, et
 vérifie à chaque étape que rien n'est inventé. Durée indicative : une heure. Données réelles
-autorisées (tout reste sur le PC) ; les montants inconnus restent inconnus.
+autorisées : tout reste sur le PC, sauf l'adresse d'un lieu si l'on clique sur « Situer d'après
+l'adresse » et la zone affichée par la carte (étape 29) ; les montants inconnus restent inconnus.
 
 Préparation : `npm install`, `npm run dev`, ouvrir http://localhost:3000. Faire une sauvegarde avant
 (`node scripts/sauvegarde.mjs`) si la base contient déjà des essais à garder.
@@ -36,6 +37,7 @@ Préparation : `npm install`, `npm run dev`, ouvrir http://localhost:3000. Faire
 | 26 | Export | Vue d'ensemble → Vos données → Exporter le dossier complet (.zip) ; ouvrir l'archive | `dossier.json` (toutes les tables), `fichiers/` (originaux), `LISEZMOI.txt` ; l'export est journalisé ; un contributeur ne voit pas le lien |
 | 27 | Suppression | Créer un dossier « Brouillon », y déposer une photo, puis Vue d'ensemble → Supprimer définitivement : retaper le nom, motif | Retour à « Mes dossiers » sans le brouillon ; le fichier a disparu de `data/fichiers/` ; le journal des autres dossiers est intact ; un nom mal retapé est refusé |
 | 28 | Facture partielle, puis solde | Budget → sur un poste chiffré par un devis, ajouter une facture d'un montant inférieur ; Postes détaillés → Solder le poste, motif ; tenter d'ajouter une autre facture | Avec la facture seule : la référence du poste reste « (devis) » et le total du scénario ne baisse pas ; une fois soldé : pastille « soldé », référence = total facturé « (facture) » ; la nouvelle facture est refusée tant que le poste n'est pas rouvert ; journal : transition avec motif |
+| 29 | Situer un bien sur la carte | Lieux → sur un lieu, Modifier l'adresse : une adresse publique (par exemple celle d'une mairie), « Je l'ai saisie moi-même » ; Situer sur la carte → « Situer d'après l'adresse » ; déplacer le repère à la souris, répondre aux deux questions, Enregistrer la position ; enfin vider latitude et longitude, Enregistrer | Avant : « Position : À renseigner », pas de carte, et l'écran dit que seule l'adresse partira ; après : la carte apparaît avec un repère au nom du lieu, position « source externe · à confirmer », suivie de l'adresse comprise par le service ; après le déplacement : « saisie · connu » ; position vidée : « À renseigner », la carte disparaît ; journal : chaque changement avec avant/après ; sans réseau : « Le service d'adresses ne répond pas », rien n'est écrit |
 | 24 | Téléphone (même Wi-Fi) | Arrêter le serveur ; `npm run dev:reseau` ; `npm run adresse` ; accepter l'invite du pare-feu Windows (réseau privé) ; ouvrir l'adresse affichée sur le téléphone | Même dossier, mêmes données ; pas de défilement horizontal de la page (les tableaux Budget, Comparaison, Journal défilent seuls) ; Documents → Déposer → appareil photo : une photo prise depuis le téléphone arrive dans la liste et s'ouvre depuis le PC ; arrêter le serveur après l'essai |
 
 Résultat global attendu : aucune valeur affichée sans source ni statut ; aucun total partiel

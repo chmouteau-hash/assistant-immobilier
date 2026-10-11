@@ -574,3 +574,53 @@ référence que l'écran Budget.
 **Ce qui n'est pas tranché.** Afficher l'engagement et les sous-totaux par nature (bloc 2 de
 l'issue #4) ; signaler à l'écran un poste « facturé en partie » ; solder plusieurs postes d'un coup,
 ou tout un scénario à la clôture (bloc 4 de l'issue #4).
+
+## 2026-10-11 — Lieux : une carte des lieux, avec deux services publics (fond de carte, adresses)
+
+**Décision.** Christophe a demandé une carte « comme Google Maps » pour voir où sont les biens à
+l'étude. Il a choisi entre les options qui lui étaient soumises. Cette entrée précise celle du
+2026-10-01 (« les données du dossier immobilier ne quittent pas le PC ») : le dossier reste dans la
+base locale, et deux sorties limitées sont ouvertes, listées au point 5.
+
+1. Fond de carte libre plutôt que Google Maps : la bibliothèque Leaflet (open source, sans clé ni
+   compte), servie par l'application, et le fond « Plan IGN » de la Géoplateforme. Google Maps
+   demandait un compte Google Cloud avec carte bancaire et une clé visible dans le navigateur.
+2. Un lieu peut porter une position (latitude, longitude). C'est une valeur tracée comme l'adresse :
+   source, confiance, « à renseigner » tant qu'elle n'est pas connue. Elle se stocke en microdegrés
+   entiers (millionièmes de degré, environ 11 cm) : pas de virgule flottante.
+3. La position s'obtient de trois façons. D'après l'adresse, par la Base Adresse Nationale, sur le
+   bouton « Situer d'après l'adresse » : elle entre « source externe · à confirmer », avec l'adresse
+   telle que le service l'a comprise. En déplaçant le repère sur la carte. En saisissant les deux
+   coordonnées. Dans les deux derniers cas, les deux questions de provenance sont posées.
+4. La carte s'affiche dans l'écran Lieux de chaque dossier, avec un repère par lieu situé. Il n'y
+   a pas de carte tous dossiers confondus.
+5. Ce qui sort du PC, et quand :
+   - l'adresse du lieu, et elle seule (ni nom de lieu, ni nom de dossier), vers `data.geopf.fr`,
+     uniquement au clic sur « Situer d'après l'adresse », après contrôle du droit d'écrire les
+     lieux ; l'écran le dit avant le clic ;
+   - les demandes de tuiles du fond de carte, vers `data.geopf.fr`, quand s'affiche l'écran Lieux
+     d'un dossier dont au moins un lieu est situé : le service voit l'adresse IP du poste et la zone
+     regardée, donc à peu près où est le bien. Tant qu'aucun lieu n'est situé, rien ne part.
+6. La position ne part jamais vers l'assistant IA, comme l'adresse.
+
+**Pourquoi.** Une liste d'adresses ne montre pas où sont les biens les uns par rapport aux autres.
+Les deux services retenus sont publics, sans compte ni clé à protéger, et le géocodage n'est jamais
+automatique : c'est le plus petit écart au principe du 2026-10-01 qui donne quand même une carte.
+Une position calculée par un service n'est pas un fait : elle entre « à confirmer », et c'est en
+regardant le repère que l'utilisateur la confirme ou la déplace.
+
+**Conséquences.** Migration 005 : cinq colonnes sur `lieu` (latitude et longitude en microdegrés,
+source, confiance, note), avec les mêmes contrôles en base que l'adresse. Deux dépendances :
+`leaflet` et, pour le développement, `@types/leaflet`. Sans réseau, l'application fonctionne : les
+repères s'affichent sur un fond gris avec une phrase qui le dit, et le géocodage répond que le
+service ne répond pas, sans rien écrire. La position figure dans l'export du dossier et dans le
+journal d'audit (avant/après à chaque changement, et à la suppression du lieu). La checklist de
+`docs/05-securite-rgpd.md` porte une ligne « Carte et adresses ».
+
+**Ce qui n'est pas tranché.** Les conditions d'utilisation des deux services et la durée de
+conservation de leurs journaux n'ont pas été lues [À vérifier] ; seul leur fonctionnement sans clé a
+été essayé, le 2026-10-11. Une carte tous dossiers confondus, qui demande une règle de droits
+nouvelle. Les biens hors de France : la Base Adresse Nationale ne couvre que la France, la position
+à la main reste possible. Un autre fond (OpenStreetMap, vue aérienne). Un réglage qui couperait la
+carte pour un dossier. La description de l'application dans `layout.tsx` dit encore « sans serveur
+distant ».

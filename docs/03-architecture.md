@@ -12,11 +12,11 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 │ acces.ts : exiger(acteur, dossier, action, section) → journalise les refus         │
 │ dossiers · personnes · structure · idees · budget · taches · documents · ia        │
 │ db/client.ts (SQLite, migrations, transactions)   db/audit.ts (ajout seul)         │
-│ ia/anthropic.ts (chargé dynamiquement si configuré)                               │
+│ ia/anthropic.ts (chargé si configuré)   geocodage.ts (adresse → position)         │
 └───────────────┬───────────────────────────────────────────────────────────────────┘
                 │ données simples (entiers, chaînes, listes)
 ┌───────────────▼──────────────── src/domain (pur) ─────────────────────────────────┐
-│ provenance · budget · comparaison · droits · planning · mesure · ia/types          │
+│ provenance · budget · comparaison · droits · planning · mesure · geo · ia/types    │
 │ ia/questions-manquantes (fournisseur règles locales)                               │
 └───────────────────────────────────────────────────────────────────────────────────┘
                  data/dossier.sqlite        data/fichiers/<dossier>/<id>.<ext>
@@ -31,11 +31,14 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 | `domain/comparaison` | Classe les scénarios complets, refuse de conclure sur un total partiel | Ne décide pas |
 | `domain/droits` | `peut()` : refus par défaut, rôles, sections, révocation | Ne connaît pas l'acteur courant |
 | `domain/planning` | Dépendances, cycles, liste du jour, timeline | N'invente pas de date |
+| `domain/geo` | Positions en microdegrés entiers, bornes, lecture de la réponse du service d'adresses, définition du fond de carte | N'appelle aucun réseau |
 | `domain/ia` | Contrat de réponse sourcée, fournisseur règles locales | N'appelle aucun réseau |
 | `lib/acces` | Applique `peut()` sur les participations en base, journalise les refus | Ne décide pas des règles |
 | `lib/*` métier | Valide, écrit en transaction avec son événement d'audit, renvoie des objets plats | Pas de rendu |
 | `lib/ia` | Construit le contexte autorisé (agrégats), choisit le fournisseur, journalise l'échange | N'écrit jamais dans le dossier |
+| `lib/geocodage` | Sur demande, envoie l'adresse d'un lieu à la Base Adresse Nationale et enregistre la position « source externe · à confirmer » | Ne part jamais sans clic ; n'envoie que l'adresse |
 | `app/actions.ts` | Lit le formulaire, résout l'acteur, appelle `lib`, traduit les erreurs | Pas de SQL, pas de règle métier |
+| `components/CarteLieux` | Composant client : dessine la carte des lieux (Leaflet), un repère par lieu situé ; un repère déplacé repasse par une Server Action | N'écrit rien lui-même ; n'est pas monté si aucun lieu n'est situé |
 
 ## Flux principaux
 
@@ -53,6 +56,11 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 1. `budget.syntheseScenario` : droits `lire budget` ; lit postes et lignes ; lit le taux d'imprévus du dossier.
 2. `domain/budget.synthetiserScenario` (pur) : par poste, sommes par nature, référence = le plus élevé entre le montant prévu (engagement, sinon devis, sinon estimation) et le total facturé, ou le facturé seul si le poste est soldé, écarts, reste à payer ; par scénario, totaux, marge (arithmétique entière), `complet` faux si un poste est à renseigner.
 3. `domain/comparaison.comparerScenarios` : rang et écart seulement entre scénarios complets ; `reserve` explicite sinon.
+
+**Situer un lieu sur la carte**
+1. `actionSituerDepuisAdresse` → `geocodage.situerLieuDepuisAdresse` : droits `ecrire lieux` vérifiés avant tout appel ; l'adresse du lieu, seule, part vers la Base Adresse Nationale ; `domain/geo` lit la première correspondance ; sans correspondance ou sans réseau → refus, rien n'est écrit.
+2. `structure.modifierPositionLieu` : position en microdegrés, source `source_externe`, confiance `a_confirmer`, note = l'adresse comprise par le service ; audit avec avant/après et motif.
+3. Écran Lieux : `CarteLieux` n'est monté que si un lieu est situé ; le navigateur demande alors les tuiles du fond de carte. Un repère déplacé, ou deux coordonnées saisies, passent par `actionModifierPosition` avec les deux questions de provenance.
 
 **Activation de l'IA**
 1. Propriétaire seul (`activer_ia`) : `configurerIA` enregistre `ia_activee`, `ia_perimetre` (sections, jamais personnes/droits/ia), `ia_fournisseur` ; audit.
