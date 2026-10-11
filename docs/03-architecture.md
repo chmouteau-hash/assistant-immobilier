@@ -51,7 +51,7 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 
 **Calcul d'un scénario**
 1. `budget.syntheseScenario` : droits `lire budget` ; lit postes et lignes ; lit le taux d'imprévus du dossier.
-2. `domain/budget.synthetiserScenario` (pur) : par poste, sommes par nature, référence = nature la plus avancée, écarts, reste à payer ; par scénario, totaux, marge (arithmétique entière), `complet` faux si un poste est à renseigner.
+2. `domain/budget.synthetiserScenario` (pur) : par poste, sommes par nature, référence = le plus élevé entre le montant prévu (engagement, sinon devis, sinon estimation) et le total facturé, ou le facturé seul si le poste est soldé, écarts, reste à payer ; par scénario, totaux, marge (arithmétique entière), `complet` faux si un poste est à renseigner.
 3. `domain/comparaison.comparerScenarios` : rang et écart seulement entre scénarios complets ; `reserve` explicite sinon.
 
 **Activation de l'IA**

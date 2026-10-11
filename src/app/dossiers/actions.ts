@@ -291,6 +291,18 @@ export async function actionModifierPoste(_e: EtatFormulaire, fd: FormData): Pro
   });
 }
 
+export async function actionSolderPoste(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    budget.solderPoste(acteur, { posteId: texte(fd, "posteId"), motif: texte(fd, "motif") });
+  });
+}
+
+export async function actionRouvrirPoste(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    budget.rouvrirPoste(acteur, { posteId: texte(fd, "posteId"), motif: texte(fd, "motif") });
+  });
+}
+
 export async function actionAjouterLigne(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     const brut = texte(fd, "montant");

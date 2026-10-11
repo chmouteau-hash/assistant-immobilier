@@ -27,6 +27,8 @@ export type PosteBudget = {
   nom: string;
   categorie: string | null;
   batimentId: string | null;
+  /** Plus aucune facture n'est attendue : la référence du poste est alors son total facturé. */
+  solde: boolean;
   createdAt: string;
 };
 
@@ -47,20 +49,24 @@ export type LigneBudget = {
   createdAt: string;
 };
 
-const COLONNES_POSTE = `id, dossier_id, scenario_id, nom, categorie, batiment_id, created_at`;
+const COLONNES_POSTE = `id, dossier_id, scenario_id, nom, categorie, batiment_id, solde, created_at`;
 const COLONNES_LIGNE = `id, scenario_id, poste_id, poste, montant_centimes, type_montant, source, confiance, document_id, date_piece, fournisseur, statut, created_at`;
+
+type PosteBrut = Omit<PosteBudget, "solde"> & { solde: number };
+
+function hydraterPostes(lignes: unknown[]): PosteBudget[] {
+  return versObjets<PosteBrut>(lignes).map((p) => ({ ...p, solde: p.solde === 1 }));
+}
 
 export function lirePosteBrut(id: string): PosteBudget {
   const ligne = obtenirBase().prepare(`SELECT ${COLONNES_POSTE} FROM poste_budget WHERE id = ?`).get(id);
   if (!ligne) throw interdit();
-  return versObjet<PosteBudget>(ligne as Record<string, unknown>);
+  return hydraterPostes([ligne])[0];
 }
 
 export function listerPostes(acteur: Acteur, dossierId: string): PosteBudget[] {
   exiger(acteur, dossierId, "lire", "budget");
-  return versObjets<PosteBudget>(
-    obtenirBase().prepare(`SELECT ${COLONNES_POSTE} FROM poste_budget WHERE dossier_id = ? ORDER BY created_at`).all(dossierId),
-  );
+  return hydraterPostes(obtenirBase().prepare(`SELECT ${COLONNES_POSTE} FROM poste_budget WHERE dossier_id = ? ORDER BY created_at`).all(dossierId));
 }
 
 export function listerLignes(acteur: Acteur, dossierId: string): LigneBudget[] {
@@ -143,6 +149,49 @@ export function modifierPoste(acteur: Acteur, params: { posteId: string; nom?: s
   });
 }
 
+// --- Poste soldé -------------------------------------------------------------------------------------
+
+const FACTURE_REFUSEE_POSTE_SOLDE = "Ce poste est soldé : rouvrez-le avant d'y ajouter une facture.";
+
+/**
+ * Marque un poste « soldé » (plus aucune facture attendue) ou le rouvre. Même droit que pour y
+ * ajouter un montant, motif obligatoire, tracé au journal d'audit. Un poste ne se solde que s'il
+ * porte au moins une facture retenue : sans facture, il n'y a rien à solder.
+ */
+function changerSolde(acteur: Acteur, params: { posteId: string; motif: string }, solde: boolean): PosteBudget {
+  const motif = params.motif.trim();
+  if (motif === "") throw invalide(`Un motif est obligatoire pour ${solde ? "solder" : "rouvrir"} un poste.`);
+  const avant = lirePosteBrut(params.posteId);
+  exiger(acteur, avant.dossierId, "ecrire", "budget");
+  if (avant.solde === solde) return avant;
+
+  return transaction((db) => {
+    if (solde) {
+      const factures = db.prepare(`SELECT COUNT(*) AS n FROM ligne_budget WHERE poste_id = ? AND type_montant = 'facture' AND statut = 'active'`).get(params.posteId) as { n: number };
+      if (factures.n === 0) throw invalide("Un poste se solde une fois sa dernière facture saisie : celui-ci n'en a aucune.");
+    }
+    db.prepare(`UPDATE poste_budget SET solde = ? WHERE id = ?`).run(solde ? 1 : 0, params.posteId);
+    enregistrerEvenement(db, {
+      nomEntite: "poste_budget",
+      entiteId: params.posteId,
+      action: "transition_statut",
+      acteurId: acteur.personneId,
+      dossierId: avant.dossierId,
+      motif,
+      changements: [{ champ: "solde", avant: avant.solde ? 1 : 0, apres: solde ? 1 : 0 }],
+    });
+    return lirePosteBrut(params.posteId);
+  });
+}
+
+export function solderPoste(acteur: Acteur, params: { posteId: string; motif: string }): PosteBudget {
+  return changerSolde(acteur, params, true);
+}
+
+export function rouvrirPoste(acteur: Acteur, params: { posteId: string; motif: string }): PosteBudget {
+  return changerSolde(acteur, params, false);
+}
+
 /**
  * Ajoute une ligne (estimation, devis, engagement, facture, paiement) à un poste. La provenance
  * est validée par le domaine : une estimation ne peut pas être « connue », une suggestion de
@@ -166,6 +215,7 @@ export function ajouterLigne(
   exiger(acteur, poste.dossierId, "ecrire", "budget");
   if (!Number.isInteger(params.montantCentimes)) throw invalide("Le montant doit être un nombre entier de centimes.");
   if (!estTypeMontant(params.typeMontant)) throw invalide(`Nature de montant inconnue : ${params.typeMontant}`);
+  if (params.typeMontant === "facture" && poste.solde) throw invalide(FACTURE_REFUSEE_POSTE_SOLDE);
   if (!estSource(params.source)) throw invalide(`Source inconnue : ${params.source}`);
   const confiance: Confiance = params.confiance && estConfiance(params.confiance) ? params.confiance : confianceParDefaut(params.source);
   const verdict = validerValeurTracee({ valeur: params.montantCentimes, source: params.source, confiance });
@@ -215,7 +265,7 @@ export function ajouterLigne(
 
 function versDomaine(postes: PosteBudget[], lignes: LigneBudget[]): { postes: Poste[]; lignes: LigneMontant[] } {
   return {
-    postes: postes.map((p) => ({ id: p.id, nom: p.nom, scenarioId: p.scenarioId })),
+    postes: postes.map((p) => ({ id: p.id, nom: p.nom, scenarioId: p.scenarioId, solde: p.solde })),
     lignes: lignes.map((l) => ({
       posteId: l.posteId,
       typeMontant: l.typeMontant,
@@ -272,6 +322,10 @@ export function modifierLigne(
   }
   const statut = params.statut ?? avant.statut;
   if (statut !== "active" && statut !== "ecartee") throw invalide(`Statut de ligne inconnu : ${statut}`);
+  // Un poste soldé n'attend plus de facture. En faire apparaître une par une modification (une
+  // autre nature changée en facture, une facture écartée réactivée) demande aussi de le rouvrir.
+  const etaitFactureRetenue = avant.typeMontant === "facture" && avant.statut === "active";
+  if (poste.solde && typeMontant === "facture" && statut === "active" && !etaitFactureRetenue) throw invalide(FACTURE_REFUSEE_POSTE_SOLDE);
   const datePiece = params.datePiece === undefined ? avant.datePiece : params.datePiece || null;
   if (datePiece && !/^\d{4}-\d{2}-\d{2}$/.test(datePiece)) throw invalide("La date de la pièce doit être au format AAAA-MM-JJ.");
   const fournisseur = params.fournisseur === undefined ? avant.fournisseur : params.fournisseur?.trim() || null;
@@ -309,7 +363,7 @@ export function syntheseScenario(acteur: Acteur, scenarioId: string): SyntheseSc
   exiger(acteur, scenario.dossierId, "lire", "budget");
   const db = obtenirBase();
   const taux = (db.prepare(`SELECT taux_imprevus_pour_mille FROM dossier WHERE id = ?`).get(scenario.dossierId) as { taux_imprevus_pour_mille: number }).taux_imprevus_pour_mille;
-  const postes = versObjets<PosteBudget>(db.prepare(`SELECT ${COLONNES_POSTE} FROM poste_budget WHERE scenario_id = ?`).all(scenarioId));
+  const postes = hydraterPostes(db.prepare(`SELECT ${COLONNES_POSTE} FROM poste_budget WHERE scenario_id = ?`).all(scenarioId));
   const lignes = versObjets<LigneBudget>(db.prepare(`SELECT ${COLONNES_LIGNE} FROM ligne_budget WHERE scenario_id = ?`).all(scenarioId));
   const d = versDomaine(postes, lignes);
   return synthetiserScenario(scenarioId, d.postes, d.lignes, { tauxImprevusPourMille: taux });

@@ -6,7 +6,7 @@ import { listerPostes, listerLignes, syntheseScenario } from "@/lib/budget";
 import { listerBatiments } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterMontant } from "@/lib/montant";
-import { actionCreerPoste, actionModifierPoste, actionAjouterLigne, actionModifierLigne } from "../../actions";
+import { actionCreerPoste, actionModifierPoste, actionSolderPoste, actionRouvrirPoste, actionAjouterLigne, actionModifierLigne } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { REPONSE_HABITUELLE } from "@/domain/provenance";
 import { Champ, EtiquetteSourceConfiance, Pastille, QuestionConfiance, QuestionSource, Section, Select, Vide, classeSaisie, formaterDate } from "@/components/ui";
@@ -65,7 +65,7 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
   return (
     <div className="flex flex-col gap-8">
       <p className="text-xs text-neutral-500">
-        Montants en euros, stockés en centimes entiers. Un poste sans montant est « à renseigner » et ne compte jamais pour zéro. Référence d&apos;un poste = nature la plus avancée (facture &gt; engagement &gt; devis &gt; estimation).
+        Montants en euros, stockés en centimes entiers. Un poste sans montant est « à renseigner » et ne compte jamais pour zéro. Référence d&apos;un poste : le plus élevé entre le montant prévu (engagement, sinon devis, sinon estimation) et le total facturé ; une fois le poste soldé, le total facturé.
         {!voitScenarios && " Votre accès ne comprend pas les scénarios : ils sont désignés ici par un numéro."}
       </p>
       {scenarios.map((s) => {
@@ -112,6 +112,7 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
                         <td className="py-1 font-medium">{p.nom}</td>
                         <td>
                           <Pastille ton={p.statut === "a_renseigner" ? "attention" : p.statut === "estime" ? "attention" : "ok"}>{LIBELLES_STATUT_POSTE[p.statut]}</Pastille>
+                          {p.solde && <Pastille>soldé</Pastille>}
                         </td>
                         <td><Montant centimes={p.estimationCentimes} /></td>
                         <td><Montant centimes={p.devisCentimes} /></td>
@@ -134,13 +135,42 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
                 <ul className="mt-2 flex flex-col gap-1">
                   {siens.map((p) => {
                     const batiment = batiments.find((b) => b.id === p.batimentId);
+                    // Un poste ne se solde qu'avec une facture retenue : sans elle, rien n'est proposé.
+                    const aUneFacture = synthese.postes.some((sp) => sp.posteId === p.id && sp.factureCentimes !== null);
                     return (
                       <li key={p.id} className="flex flex-col gap-1 border-t border-neutral-100 py-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{p.nom}</span>
+                          {p.solde && <Pastille>soldé</Pastille>}
                           {p.categorie && <span className="text-neutral-500">{p.categorie}</span>}
                           {batiment && <span className="text-neutral-500">bâtiment : {batiment.nom}</span>}
                         </div>
+                        {peutEcrire && !p.solde && aUneFacture && (
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-neutral-500">Solder le poste</summary>
+                            <FormulaireAction action={actionSolderPoste} bouton="Solder" compact className="mt-1 text-neutral-900">
+                              <input type="hidden" name="dossierId" value={id} />
+                              <input type="hidden" name="posteId" value={p.id} />
+                              <p className="w-full text-neutral-600">Solder un poste, c&apos;est dire qu&apos;aucune autre facture n&apos;est attendue : sa référence devient son total facturé.</p>
+                              <Champ label="Motif (obligatoire)" large>
+                                <input name="motif" required className={classeSaisie} placeholder="ex. facture finale reçue" />
+                              </Champ>
+                            </FormulaireAction>
+                          </details>
+                        )}
+                        {peutEcrire && p.solde && (
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-neutral-500">Rouvrir le poste</summary>
+                            <FormulaireAction action={actionRouvrirPoste} bouton="Rouvrir" compact className="mt-1 text-neutral-900">
+                              <input type="hidden" name="dossierId" value={id} />
+                              <input type="hidden" name="posteId" value={p.id} />
+                              <p className="w-full text-neutral-600">Un poste rouvert attend de nouveau des factures : sa référence redevient le plus élevé entre le prévu et le facturé.</p>
+                              <Champ label="Motif (obligatoire)" large>
+                                <input name="motif" required className={classeSaisie} placeholder="ex. facture complémentaire annoncée" />
+                              </Champ>
+                            </FormulaireAction>
+                          </details>
+                        )}
                         {peutEcrire && (
                           <details className="text-xs">
                             <summary className="cursor-pointer text-neutral-500">Corriger le poste</summary>
