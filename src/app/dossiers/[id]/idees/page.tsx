@@ -1,7 +1,7 @@
 import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerIdees } from "@/lib/idees";
-import { listerScenarios } from "@/lib/dossiers";
+import { scenariosCites } from "@/lib/dossiers";
 import { listerBatiments } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { actionCreerIdee, actionChangerStatutIdee, actionModifierIdee } from "../../actions";
@@ -17,8 +17,19 @@ export default async function PageIdees({ params }: { params: Promise<{ id: stri
   const idees = listerIdees(acteur, id);
   const statuts = listerReference("ref_statut_idee");
   const sources = listerReference("ref_source_donnee");
-  const scenarios = autorise(acteur, id, "lire", "scenarios") ? listerScenarios(acteur, id) : [];
+  // Une idée cite son scénario et son bâtiment. Qui ne peut pas lire les scénarios en voit un
+  // libellé neutre (« Scénario 1 ») ; qui ne peut pas lire les lieux ne voit pas le bâtiment.
+  // L'écran écrivait « aucun » et « ? », ce qui était faux ou illisible (issue #27).
+  const scenarios = scenariosCites(acteur, id, "idees");
   const batiments = autorise(acteur, id, "lire", "lieux") ? listerBatiments(acteur, id) : [];
+  const nomBatiment = (batimentId: string | null) => batiments.find((b) => b.id === batimentId)?.nom;
+  // Un libellé neutre se suffit : « Scénario : Scénario 2 » se lirait comme une faute.
+  const voitScenarios = autorise(acteur, id, "lire", "scenarios");
+  const scenarioCite = (scenarioId: string | null) => {
+    const cite = scenarios.find((s) => s.id === scenarioId);
+    if (voitScenarios) return `Scénario : ${cite?.nom ?? "aucun"}`;
+    return cite ? cite.nom : "Aucun scénario";
+  };
   const peutEcrire = autorise(acteur, id, "ecrire", "idees");
   const choixScenarios = scenarios.map((s) => ({ code: s.id, libelle: s.nom }));
   const choixBatiments = batiments.map((b) => ({ code: b.id, libelle: b.nom }));
@@ -39,8 +50,8 @@ export default async function PageIdees({ params }: { params: Promise<{ id: stri
               </div>
               {i.description && <p className="text-neutral-600">{i.description}</p>}
               <p className="text-xs text-neutral-500">
-                Scénario : {scenarios.find((s) => s.id === i.scenarioId)?.nom ?? "aucun"}
-                {i.batimentId && ` · bâtiment : ${batiments.find((b) => b.id === i.batimentId)?.nom ?? "?"}`}
+                {scenarioCite(i.scenarioId)}
+                {nomBatiment(i.batimentId) && ` · bâtiment : ${nomBatiment(i.batimentId)}`}
               </p>
               {peutEcrire && (
                 <details className="mt-1">

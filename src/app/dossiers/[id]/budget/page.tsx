@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
-import { listerScenarios } from "@/lib/dossiers";
+import { scenariosCites } from "@/lib/dossiers";
 import { listerPostes, listerLignes, syntheseScenario } from "@/lib/budget";
 import { listerBatiments } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
@@ -29,7 +29,13 @@ function Montant({ centimes }: { centimes: number | null }) {
 export default async function PageBudget({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const acteur = await obtenirActeurPourSection(id, "budget");
-  const scenarios = autorise(acteur, id, "lire", "scenarios") ? listerScenarios(acteur, id) : [];
+  // Le budget se tient par scénario. Qui ne peut pas lire les scénarios les voit sous un libellé
+  // neutre (« Scénario 1 ») : une liste vide lui faisait dire « créez d'abord un scénario », ce qui
+  // était faux et lui fermait tout l'écran (issue #27).
+  const scenarios = scenariosCites(acteur, id, "budget");
+  const voitScenarios = autorise(acteur, id, "lire", "scenarios");
+  const voitDocuments = autorise(acteur, id, "lire", "documents");
+  const statutsScenario = listerReference("ref_statut_scenario");
   const postes = listerPostes(acteur, id);
   const lignes = listerLignes(acteur, id);
   const batiments = autorise(acteur, id, "lire", "lieux") ? listerBatiments(acteur, id) : [];
@@ -40,10 +46,18 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
   const peutEcrire = autorise(acteur, id, "ecrire", "budget");
   const choixBatiments = batiments.map((b) => ({ code: b.id, libelle: b.nom }));
 
+  // Ici la liste est vide seulement si le dossier n'a aucun scénario. Seul qui peut en créer un est
+  // invité à le faire.
   if (scenarios.length === 0) {
     return (
       <Vide>
-        Le budget se tient par scénario : créez d&apos;abord un scénario (même unique) dans <Link href={`/dossiers/${id}/scenarios`} className="underline">Scénarios</Link>.
+        {autorise(acteur, id, "ecrire", "scenarios") ? (
+          <>
+            Le budget se tient par scénario : créez d&apos;abord un scénario (même unique) dans <Link href={`/dossiers/${id}/scenarios`} className="underline">Scénarios</Link>.
+          </>
+        ) : (
+          "Le budget se tient par scénario, et ce dossier n'en a pas encore."
+        )}
       </Vide>
     );
   }
@@ -52,12 +66,13 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
     <div className="flex flex-col gap-8">
       <p className="text-xs text-neutral-500">
         Montants en euros, stockés en centimes entiers. Un poste sans montant est « à renseigner » et ne compte jamais pour zéro. Référence d&apos;un poste = nature la plus avancée (facture &gt; engagement &gt; devis &gt; estimation).
+        {!voitScenarios && " Votre accès ne comprend pas les scénarios : ils sont désignés ici par un numéro."}
       </p>
       {scenarios.map((s) => {
         const synthese = syntheseScenario(acteur, s.id);
         const siens = postes.filter((p) => p.scenarioId === s.id);
         return (
-          <Section key={s.id} titre={`${s.nom} — ${libelle(listerReference("ref_statut_scenario"), s.statut)}`}>
+          <Section key={s.id} titre={s.statut ? `${s.nom} — ${libelle(statutsScenario, s.statut)}` : s.nom}>
             <div className="flex flex-wrap gap-4 rounded bg-neutral-100 p-3 text-sm">
               <span>
                 Total de référence : <strong><Montant centimes={synthese.totalReferenceCentimes} /></strong>
@@ -167,7 +182,7 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
                         {l.statut === "ecartee" && <Pastille>écartée (ne compte pas)</Pastille>}
                         {l.fournisseur && <span className="text-neutral-500">{l.fournisseur}</span>}
                         {l.datePiece && <span className="text-neutral-500">{formaterDate(l.datePiece)}</span>}
-                        {l.documentId && (
+                        {l.documentId && voitDocuments && (
                           <Link href={`/dossiers/${id}/documents/${l.documentId}`} className="text-xs underline">
                             document
                           </Link>
@@ -218,16 +233,18 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
                     <Champ label="Catégorie">
                       <input name="categorie" className={classeSaisie} placeholder="gros œuvre, énergie…" />
                     </Champ>
-                    <Champ label="Bâtiment">
-                      <select name="batimentId" className={classeSaisie} defaultValue="">
-                        <option value="">— aucun —</option>
-                        {batiments.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.nom}
-                          </option>
-                        ))}
-                      </select>
-                    </Champ>
+                    {batiments.length > 0 && (
+                      <Champ label="Bâtiment">
+                        <select name="batimentId" className={classeSaisie} defaultValue="">
+                          <option value="">— aucun —</option>
+                          {batiments.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.nom}
+                            </option>
+                          ))}
+                        </select>
+                      </Champ>
+                    )}
                   </div>
                 </FormulaireAction>
                 {siens.length > 0 && (

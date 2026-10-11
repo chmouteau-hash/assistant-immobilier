@@ -478,3 +478,37 @@ action demande de pouvoir lire les scénarios (correction livrée le 2026-10-10,
 **Ce qui n'est pas tranché.** Retirer une idée, un scénario, un poste, un document ou une action ;
 changer un poste de scénario ; rattacher une idée à une pièce depuis l'écran (la fonction le permet,
 aucun formulaire ne le propose, ni à la création ni à la correction).
+
+## 2026-10-11 — Professionnel : le budget se lit sans les scénarios, sous un libellé neutre
+
+**Décision.** Vient de l'issue #27. Christophe a choisi entre trois options : rendre le budget
+lisible sans le nom des scénarios (retenue), exiger « Scénarios » avec « Budget », ou seulement
+corriger le message.
+
+1. Un écran ne dépend pas d'une section voisine pour dire vrai. Ce qui existe sans être lisible est
+   désigné par un libellé neutre, ou tu ; l'écran n'écrit jamais « aucun » ni « ? » à sa place.
+2. Le budget et les idées citent leur scénario. Qui ne lit pas les scénarios les voit sous
+   « Scénario 1 », « Scénario 2 », dans l'ordre de création et sans statut. C'est la règle 2 de
+   l'assistant (entrée « l'écran dit ce qui part » du même jour), appliquée à une personne par la
+   même fonction.
+3. Avec le seul périmètre « Budget », un professionnel lit les postes, les lignes et les totaux,
+   ajoute un poste et dépose un montant. L'onglet Scénarios lui reste fermé : ni nom, ni
+   description, ni hypothèse, ni décision.
+4. Un bâtiment cité par une idée ou un poste n'est montré qu'à qui lit les lieux ; le lien d'une
+   ligne de budget vers son document, qu'à qui lit les documents.
+
+**Pourquoi.** Avec « Budget » seul, l'écran Budget était vide et disait « créez d'abord un
+scénario » : c'était faux, et le professionnel ne pouvait rien déposer alors que l'écran Personnes
+annonce qu'il « dépose des documents et des montants ». L'écran Idées écrivait « Scénario : aucun »
+pour une idée rattachée. Exiger « Scénarios » aurait montré les motifs des décisions à un
+professionnel invité pour un devis.
+
+**Conséquences.** Le nombre de scénarios du dossier est visible de qui lit le budget ou les idées.
+Le périmètre reste réglé par section : qui a « Budget » voit tous les postes et tous les montants,
+y compris les devis d'autres fournisseurs. Pour recevoir un devis sans ouvrir le budget, le
+périmètre « Documents » suffit : le professionnel dépose sa pièce et propose ce qu'il y lit, puis
+le propriétaire la classe dans un scénario et la valide (un test le garde).
+
+**Ce qui n'est pas tranché.** Un périmètre plus fin que la section (un poste, un scénario) ; la
+liste des documents, qui dit « scénario » ou « poste budgétaire » sans numéro quand le nom n'est
+pas lisible.
