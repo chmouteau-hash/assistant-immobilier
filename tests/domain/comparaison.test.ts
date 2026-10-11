@@ -71,9 +71,19 @@ describe("comparerScenarios", () => {
     expect(c.reserve).toMatch(/indicative/);
   });
 
-  it("exige au moins deux scénarios", () => {
-    const c = comparerScenarios([element("N", "Neuf", postes, [])]);
-    expect(c.comparable).toBe(false);
-    expect(c.reserve).toMatch(/au moins deux/);
+  it("avec moins de deux scénarios, rien à comparer : ni classement concluant, ni réserve", () => {
+    // Un dossier simple peut n'avoir qu'un scénario : ce n'est pas un manque à signaler (issue #42).
+    const seul = comparerScenarios([element("N", "Neuf", postes, [])]);
+    expect(seul.comparable).toBe(false);
+    expect(seul.reserve).toBeNull();
+
+    // La réserve « indicative » ne vaut que pour une comparaison : un scénario seul, même estimé, n'en a pas.
+    const estime = comparerScenarios([
+      element("N", "Neuf", postes, [{ posteId: "N-gros", typeMontant: "estimation", montantCentimes: 150, source: "estimation", confiance: "estime" }]),
+    ]);
+    expect(estime.comparable).toBe(false);
+    expect(estime.reserve).toBeNull();
+
+    expect(comparerScenarios([]).reserve).toBeNull();
   });
 });

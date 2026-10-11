@@ -512,3 +512,30 @@ le propriétaire la classe dans un scénario et la valide (un test le garde).
 **Ce qui n'est pas tranché.** Un périmètre plus fin que la section (un poste, un scénario) ; la
 liste des documents, qui dit « scénario » ou « poste budgétaire » sans numéro quand le nom n'est
 pas lisible.
+
+## 2026-10-11 — Un seul scénario : rien n'est dit de la comparaison
+
+**Décision.** Vient de l'issue #42, relevée en jouant le parcours « chambre à refaire ». Christophe a
+retenu la proposition qui lui était faite.
+
+1. Tant qu'un dossier a moins de deux scénarios, l'application ne dit rien de la comparaison : ni
+   réserve sur la vue d'ensemble, ni section « Comparaison » dans l'onglet Scénarios. Cela ne dépend
+   que du nombre de scénarios, pas du type de projet ni du stade.
+2. L'assistant en règles locales ne suggère plus de créer un second scénario à un dossier de type
+   « Travaux ciblés ». Pour les autres types, la suggestion reste.
+
+**Pourquoi.** Avec un seul scénario, la vue d'ensemble écrivait « Il faut au moins deux scénarios
+pour comparer » dans la couleur des avertissements ; sur un dossier neuf, cette phrase suivait « un
+dossier simple (une chambre à refaire) peut n'en avoir qu'un ». L'onglet Scénarios s'ouvrait sur la
+même phrase, et l'assistant suggérait un second scénario. Le parcours passait, mais l'écran laissait
+croire à un manque.
+
+**Conséquences.** L'assistant ne connaît le type de projet que si « Identité du dossier » fait
+partie des sections transmises (règle 1 de l'entrée « l'écran dit ce qui part ») : sans elle, il
+suggère encore un second scénario. La vue d'ensemble ne compte pas les scénarios écartés, l'onglet
+Scénarios les compte : un dossier dont il ne reste qu'un scénario non écarté ne montre plus de
+réserve sur la vue d'ensemble, et garde son tableau de comparaison dans l'onglet.
+
+**Ce qui n'est pas tranché.** Mettre en avant ou reléguer d'autres éléments selon le stade ou le
+type de projet (bloc 4 de l'issue #3) ; la phrase de l'écran Lieux qui parle de recherche à un
+dossier de travaux (issue #43).

@@ -10,6 +10,9 @@
 import type { ContexteAutorise, ElementReponse, FournisseurIA, ReponseIA, SourceReponse } from "./types";
 import { AVERTISSEMENT_STANDARD } from "./types";
 
+/** Code du type « Travaux ciblés » dans la table `ref_type_projet` (migration 002). */
+const TYPE_PROJET_TRAVAUX_CIBLES = "travaux_cibles";
+
 function regle(code: string): SourceReponse {
   return { titre: `Règle locale ${code}`, reference: `src/domain/ia/questions-manquantes.ts#${code}`, date: null, type: "regle_locale" };
 }
@@ -77,7 +80,11 @@ export function detecterQuestionsManquantes(ctx: ContexteAutorise, maintenantISO
   }
 
   if (ctx.scenarios) {
-    if (ctx.scenarios.length === 1) {
+    // Un chantier ciblé (une chambre à refaire) n'a souvent qu'un scénario : on ne lui en suggère
+    // pas un second (issue #42). Le type du dossier n'est connu que si son identité est transmise ;
+    // sans elle, la règle s'applique comme pour les autres types.
+    const chantierCible = ctx.dossier?.typeProjet === TYPE_PROJET_TRAVAUX_CIBLES;
+    if (ctx.scenarios.length === 1 && !chantierCible) {
       elements.push({
         constat: { texte: "Un seul scénario existe : aucune comparaison n'est possible.", sources: [donnee("Scénarios", maintenantISO), regle("R20")] },
         hypothese: "Une alternative (rénover plutôt que reconstruire, ou l'inverse) pourrait être pertinente.",
