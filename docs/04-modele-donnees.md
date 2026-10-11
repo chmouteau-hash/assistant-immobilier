@@ -41,6 +41,6 @@ IA → à confirmer. L'utilisateur peut toujours abaisser la confiance, jamais c
 
 ## Exemple d'affichage attendu
 
-- « 92 m² — source : pièce importée (plan du 12/03/2027), statut : connu »
+- « 92 m² — source : document importé (plan du 12/03/2027), statut : connu »
 - « 18 000,00 € — source : estimation (devis non reçu), statut : à confirmer »
 - « À renseigner » (jamais « 0 »).

@@ -8,7 +8,7 @@ assistant IA facultatif.
 Trois règles tiennent tout le produit :
 
 1. **Rien n'est inventé.** Une donnée inconnue reste « à renseigner » ; elle ne vaut jamais 0.
-2. **Toute donnée affichée porte sa provenance et son statut** (saisie, pièce importée, estimation,
+2. **Toute donnée affichée porte sa provenance et son statut** (saisie, document importé, estimation,
    source externe, suggestion de l'IA × connu, estimé, à confirmer, à renseigner). Une estimation
    n'apparaît jamais comme un fait.
 3. **L'application fonctionne entièrement sans IA.** L'assistant est un module séparé, désactivé par

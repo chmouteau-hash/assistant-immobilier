@@ -2,18 +2,31 @@
 
 import type { ReactNode } from "react";
 import type { Reference } from "@/lib/references";
-import { etiquetteProvenance, LIBELLES_CONFIANCE, LIBELLES_SOURCE, type Confiance, type Source, type ValeurTracee } from "@/domain/provenance";
+import {
+  etiquetteProvenance,
+  LIBELLES_CONFIANCE,
+  LIBELLES_SOURCE,
+  QUESTION_CONFIANCE,
+  QUESTION_SOURCE,
+  REPONSES_CONFIANCE,
+  REPONSES_SOURCE,
+  type Confiance,
+  type Source,
+  type ValeurTracee,
+} from "@/domain/provenance";
 
 export function Champ({ label, children, large = false }: { label: string; children: ReactNode; large?: boolean }) {
   return (
-    <label className={`flex flex-col gap-1 text-sm ${large ? "flex-1 min-w-48" : ""}`}>
+    <label className={`flex max-w-full flex-col gap-1 text-sm ${large ? "flex-1 min-w-48" : ""}`}>
       <span className="text-neutral-600">{label}</span>
       {children}
     </label>
   );
 }
 
-export const classeSaisie = "min-h-10 rounded border border-neutral-300 bg-white px-2 py-1.5";
+// `max-w-full` : une liste prend la largeur de son choix le plus long. Sans cette borne, une réponse
+// longue la faisait dépasser de l'écran sur un téléphone.
+export const classeSaisie = "min-h-10 max-w-full rounded border border-neutral-300 bg-white px-2 py-1.5";
 
 // La `key` recrée la liste quand la valeur enregistrée change. Sans elle, React garde le choix de
 // départ du premier affichage puis remet le formulaire à zéro après chaque action : la liste
@@ -30,6 +43,46 @@ export function Select({ name, options, defaultValue, vide, required }: { name: 
         </option>
       ))}
     </select>
+  );
+}
+
+// Les deux champs de provenance, posés comme des questions (issue #15) : « Source » et « Confiance »
+// ne disaient pas ce qu'ils demandaient. Les réponses viennent du domaine ; les tables de référence
+// ne fournissent plus que les codes proposés et leur ordre.
+function reponses(options: Reference[], phrases: Record<string, string>): Reference[] {
+  return options.map((o) => ({ code: o.code, libelle: phrases[o.code] ?? o.libelle }));
+}
+
+/** Les réponses à « D'où vient cette information ? », pour une liste affichée sans sa question. */
+export function reponsesSource(sources: Reference[]): Reference[] {
+  return reponses(sources, REPONSES_SOURCE);
+}
+
+export function QuestionSource({
+  name,
+  sources,
+  defaultValue,
+  vide,
+  question = QUESTION_SOURCE,
+}: {
+  name: string;
+  sources: Reference[];
+  defaultValue?: string;
+  vide?: string;
+  question?: string;
+}) {
+  return (
+    <Champ label={question}>
+      <Select name={name} options={reponsesSource(sources)} defaultValue={defaultValue} vide={vide} />
+    </Champ>
+  );
+}
+
+export function QuestionConfiance({ name, confiances, defaultValue, vide }: { name: string; confiances: Reference[]; defaultValue?: string; vide?: string }) {
+  return (
+    <Champ label={QUESTION_CONFIANCE}>
+      <Select name={name} options={reponses(confiances, REPONSES_CONFIANCE)} defaultValue={defaultValue} vide={vide} />
+    </Champ>
   );
 }
 

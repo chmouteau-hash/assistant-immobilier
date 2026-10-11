@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { aRenseigner, confianceParDefaut, estUnFait, etiquetteProvenance, validerValeurTracee } from "@/domain/provenance";
+import {
+  aRenseigner,
+  confianceParDefaut,
+  estUnFait,
+  etiquetteProvenance,
+  validerValeurTracee,
+  CONFIANCES,
+  LIBELLES_CONFIANCE,
+  LIBELLES_SOURCE,
+  QUESTION_CONFIANCE,
+  QUESTION_SOURCE,
+  REPONSES_CONFIANCE,
+  REPONSES_SOURCE,
+  SOURCES,
+} from "@/domain/provenance";
 import { formaterSurface, formaterTaille, parserSurface } from "@/domain/mesure";
 import { formaterMontant, parserMontant } from "@/lib/montant";
 
@@ -46,7 +60,7 @@ describe("étiquettes", () => {
   it("affiche toujours source et statut, jamais 0 pour une inconnue", () => {
     expect(etiquetteProvenance(aRenseigner<number>(), formaterSurface)).toBe("À renseigner");
     expect(etiquetteProvenance({ valeur: 9200, source: "import", confiance: "connu", note: "plan du 12/03/2027" }, formaterSurface)).toBe(
-      "92 m² — source : pièce importée (plan du 12/03/2027), statut : connu",
+      "92 m² — source : document importé (plan du 12/03/2027), statut : connu",
     );
     // Intl insère des espaces insécables dans les montants : on les normalise avant de comparer.
     const etiquette = etiquetteProvenance({ valeur: 1_800_000, source: "estimation", confiance: "a_confirmer", note: "devis non reçu" }, formaterMontant);
@@ -91,5 +105,25 @@ describe("montants et surfaces en entiers", () => {
     expect(formaterTaille(1024 * 1024)).toBe("1 Mo");
     expect(formaterTaille(1.5 * 1024 * 1024)).toBe("1,5 Mo");
     expect(formaterTaille(20 * 1024 * 1024)).toBe("20 Mo");
+  });
+});
+
+describe("questions de provenance (issue #15)", () => {
+  it("chaque origine a une réponse en clair, qui reprend le nom affiché sur la pastille", () => {
+    for (const s of SOURCES) expect(REPONSES_SOURCE[s].toLowerCase()).toContain(LIBELLES_SOURCE[s].toLowerCase());
+  });
+
+  it("chaque niveau de certitude a une réponse en clair, qui reprend le nom affiché sur la pastille", () => {
+    for (const c of CONFIANCES) expect(REPONSES_CONFIANCE[c].toLowerCase()).toContain(LIBELLES_CONFIANCE[c].toLowerCase());
+  });
+
+  it("les deux champs sont posés comme des questions", () => {
+    expect(QUESTION_SOURCE.endsWith("?")).toBe(true);
+    expect(QUESTION_CONFIANCE.endsWith("?")).toBe(true);
+  });
+
+  it("un document importé porte un seul nom, sans le mot « pièce » qui désigne aussi une salle", () => {
+    expect(LIBELLES_SOURCE.import).toBe("document importé");
+    for (const s of SOURCES) expect(LIBELLES_SOURCE[s] + REPONSES_SOURCE[s]).not.toMatch(/pièce/i);
   });
 });

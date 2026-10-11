@@ -8,7 +8,7 @@
 // Extraction (principe « validation avant effet ») : les champs lus sur un devis ou une facture
 // (montant, date, fournisseur, poste, nature) sont d'abord PROPOSÉS — par un humain qui lit la
 // pièce, ou par l'assistant IA s'il est activé — puis VALIDÉS ou CORRIGÉS. Seule la validation
-// crée une ligne de budget, avec source « pièce importée » et un lien vers le document.
+// crée une ligne de budget, avec source « document importé » et un lien vers le document.
 
 import { randomUUID, createHash } from "node:crypto";
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
@@ -228,7 +228,7 @@ export function proposerExtraction(
 
 /**
  * Valide (ou corrige puis valide) les champs proposés, et crée la ligne de budget correspondante :
- * source « pièce importée », statut « connu », reliée au document. Si le poste n'existe pas dans le
+ * source « document importé », statut « connu », reliée au document. Si le poste n'existe pas dans le
  * scénario de rattachement, il est créé. Un document sans scénario ni poste ne peut pas alimenter
  * le budget : il faut d'abord le rattacher.
  */

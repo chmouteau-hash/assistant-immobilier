@@ -99,7 +99,7 @@ export default async function PageDocument({ params }: { params: Promise<{ id: s
                 <input name="motif" className={classeSaisie} />
               </Champ>
               <p className="text-xs text-neutral-500">
-                À la validation : ligne de budget créée avec source « pièce importée », statut « connu », reliée à ce document. Le document doit être rattaché à un scénario (ou à un poste) — sinon la validation le signalera.
+                À la validation : ligne de budget créée avec source « document importé », statut « connu », reliée à ce document. Le document doit être rattaché à un scénario (ou à un poste) — sinon la validation le signalera.
               </p>
             </FormulaireAction>
           ) : (

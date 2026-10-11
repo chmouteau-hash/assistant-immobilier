@@ -69,7 +69,7 @@ export function construireValeurTracee<T>(
   note?: string | null,
 ): ValeurTracee<T> {
   if (valeur === null) return aRenseigner<T>();
-  if (!sourceBrute || !estSource(sourceBrute)) throw invalide("Indiquez la source de la valeur (saisie, document, estimation…).");
+  if (!sourceBrute || !estSource(sourceBrute)) throw invalide("Dites d'où vient cette information (saisie, document importé, estimation…).");
   const source: Source = sourceBrute;
   const confiance: Confiance = confianceBrute && estConfiance(confianceBrute) ? confianceBrute : confianceParDefaut(source);
   const v: ValeurTracee<T> = { valeur, source, confiance, note: note ?? null };
