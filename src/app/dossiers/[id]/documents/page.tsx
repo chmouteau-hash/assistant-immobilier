@@ -59,7 +59,7 @@ export default async function PageDocuments({ params }: { params: Promise<{ id: 
                 <p className="text-xs text-neutral-500">
                   {d.dateDocument ? `daté du ${formaterDate(d.dateDocument)}` : "date du document : à renseigner"} · déposé le {formaterDate(d.createdAt)} · {formaterTaille(d.tailleOctets)}
                   {d.scenarioId && ` · ${scenarios.find((s) => s.id === d.scenarioId)?.nom ?? "scénario"}`}
-                  {d.posteId && ` · poste ${postes.find((p) => p.id === d.posteId)?.nom ?? ""}`}
+                  {d.posteId && ` · poste ${postes.find((p) => p.id === d.posteId)?.nom ?? "budgétaire"}`}
                   {d.pieceId && ` · ${pieces.find((p) => p.id === d.pieceId)?.nom ?? "pièce"}`}
                 </p>
               </div>

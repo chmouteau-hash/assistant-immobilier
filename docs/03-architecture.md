@@ -63,6 +63,7 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 
 - Rôles : propriétaire (tout), contributeur (écrit sauf droits/IA), lecteur (lit sauf droits), professionnel (lit son périmètre ; dépose documents, montants, actions dans ce périmètre).
 - Sections : identite, personnes, lieux, idees, scenarios, budget, documents, taches, ia, droits.
+- Section voisine : le budget et les idées citent leur scénario. Qui ne lit pas les scénarios les voit sous un libellé neutre (« Scénario 1 »), sans statut ; un écran n'écrit jamais « aucun » pour ce qui existe sans être lisible. Un professionnel limité au budget peut donc y déposer un montant.
 - Sans participation active : aucun accès, et un dossier inconnu répond comme un dossier interdit (pas de fuite d'existence).
 - Le dernier propriétaire ne peut être ni révoqué ni rétrogradé.
 - L'interface masque ce qui est refusé ; le serveur refuse quand même (`exiger`), et journalise (`acces_refuse`).

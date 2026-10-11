@@ -19,7 +19,7 @@ import { obtenirBase, transaction, versObjets } from "./db/client";
 import { enregistrerEvenement } from "./db/audit";
 import { exiger, sectionsVisibles, type Acteur } from "./acces";
 import { ErreurApplicative, invalide } from "./erreurs";
-import { obtenirDossier, type Dossier } from "./dossiers";
+import { libelleNeutreScenario, obtenirDossier, type Dossier } from "./dossiers";
 import type { Section } from "../domain/droits";
 import { SECTIONS_NON_TRANSMISSIBLES, type ContexteAutorise, type FournisseurIA, type ReponseIA } from "../domain/ia/types";
 import { FournisseurReglesLocales } from "../domain/ia/questions-manquantes";
@@ -63,7 +63,7 @@ export function construireContexte(acteur: Acteur, dossier: Dossier): ContexteAu
   // Les idées et le budget citent leur scénario. Sans la section « scénarios », un libellé neutre
   // (« Scénario 1 ») garde le regroupement lisible sans transmettre le nom.
   const transmetScenarios = sections.includes("scenarios");
-  const libelleScenario = (rang: number) => (transmetScenarios ? scenarios[rang].nom : `Scénario ${rang + 1}`);
+  const libelleScenario = (rang: number) => (transmetScenarios ? scenarios[rang].nom : libelleNeutreScenario(rang));
   const nomScenario = (id: string | null) => {
     const rang = scenarios.findIndex((s) => s.id === id);
     return rang < 0 ? null : libelleScenario(rang);

@@ -6,7 +6,7 @@ import { existsSync, rmSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { cheminFichiers, obtenirBase, transaction, versObjet, versObjets } from "./db/client";
 import { enregistrerEvenement, historiqueDe, journalDossier, type EvenementAudit } from "./db/audit";
-import { dossiersAccessibles, exiger, sectionsVisibles, type Acteur } from "./acces";
+import { autorise, dossiersAccessibles, exiger, sectionsVisibles, type Acteur } from "./acces";
 import { interdit, introuvable, invalide } from "./erreurs";
 import { estSection, type Section } from "../domain/droits";
 import { estSource } from "../domain/provenance";
@@ -301,6 +301,29 @@ export function listerScenarios(acteur: Acteur, dossierId: string): Scenario[] {
   return versObjets<Scenario>(
     obtenirBase().prepare(`SELECT ${COLONNES_SCENARIO} FROM scenario WHERE dossier_id = ? ORDER BY created_at`).all(dossierId),
   );
+}
+
+/** Libellé d'un scénario pour qui ne peut pas lire son nom : son rang dans l'ordre de création. */
+export function libelleNeutreScenario(rang: number): string {
+  return `Scénario ${rang + 1}`;
+}
+
+export type ScenarioCite = { id: string; nom: string; statut: string | null };
+
+/**
+ * Les scénarios du dossier tels que les cite une section voisine (budget, idées), dans l'ordre de
+ * création. Qui lit les scénarios voit leur nom et leur statut. Les autres voient le même
+ * regroupement sous un libellé neutre (« Scénario 1 ») et sans statut : la règle de l'assistant
+ * (DECISIONS, 2026-10-11), appliquée à une personne. Un écran ne doit pas dire « aucun scénario »
+ * quand il y en a que l'acteur ne peut pas lire (issue #27).
+ */
+export function scenariosCites(acteur: Acteur, dossierId: string, section: "budget" | "idees"): ScenarioCite[] {
+  exiger(acteur, dossierId, "lire", section);
+  const nommes = autorise(acteur, dossierId, "lire", "scenarios");
+  const scenarios = versObjets<{ id: string; nom: string; statut: string }>(
+    obtenirBase().prepare(`SELECT id, nom, statut FROM scenario WHERE dossier_id = ? ORDER BY created_at`).all(dossierId),
+  );
+  return scenarios.map((s, rang) => (nommes ? s : { id: s.id, nom: libelleNeutreScenario(rang), statut: null }));
 }
 
 export function obtenirScenario(acteur: Acteur, id: string): Scenario {
