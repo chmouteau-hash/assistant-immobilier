@@ -102,7 +102,9 @@ Détail et alternatives comparées : [docs/02-choix-techniques.md](docs/02-choix
   l'applique avant chaque lecture/écriture et journalise les refus. L'interface ne fait que masquer.
 - **IA : interface `FournisseurIA`.** Deux fournisseurs : règles locales (déterministe, sans
   réseau) et Anthropic (SDK officiel, sortie structurée validée par schéma). Le module ne reçoit
-  qu'un contexte agrégé (jamais de nom, d'adresse ni de fichier) et ne peut rien écrire.
+  que les sections cochées, avec les noms, les textes et les montants saisis ; jamais une fiche de
+  personne, une adresse ni un fichier. L'écran montre le texte exact avant l'envoi. Il ne peut
+  rien écrire.
 
 Dépendances ajoutées en V1, et pourquoi : `vitest` (tests, résout `@/` et les imports TypeScript
 comme Next.js — `node --test` ne le fait pas), `@anthropic-ai/sdk` (client officiel, erreurs typées,

@@ -56,7 +56,7 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 
 **Activation de l'IA**
 1. Propriétaire seul (`activer_ia`) : `configurerIA` enregistre `ia_activee`, `ia_perimetre` (sections, jamais personnes/droits/ia), `ia_fournisseur` ; audit.
-2. Question : `demanderAssistant` : droits `lire ia` ; si désactivé → `IA_INDISPONIBLE` ; contexte = périmètre ∩ sections lisibles par l'acteur, sous forme d'agrégats (pas de nom, d'adresse, de fichier) ; fournisseur appelé ; `ia_echange` + audit `ia_requete`.
+2. Question : `demanderAssistant` : droits `lire ia` ; si désactivé → `IA_INDISPONIBLE` ; contexte = périmètre ∩ sections lisibles par l'acteur : noms, textes et montants saisis dans ces sections ; pas de fiche de personne, d'adresse, de fichier ni d'identifiant ; nom du dossier seulement avec « identité », nom d'un scénario seulement avec « scénarios » ; le même texte est affiché à l'écran avant l'envoi (`serialiserContexte`) ; fournisseur appelé ; `ia_echange` + audit `ia_requete`.
 3. Réponse affichée : constat (sources datées) → hypothèse → suggestion → vérification, incertitude, avertissement. Aucune écriture.
 
 ## Gestion des droits

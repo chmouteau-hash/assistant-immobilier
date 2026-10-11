@@ -15,13 +15,18 @@ describe("nom affiché d'un fournisseur", () => {
 
 describe("règles locales (assistant sans modèle)", () => {
   it("ne regarde que les sections présentes dans le contexte", () => {
-    const ctx: ContexteAutorise = { dossier: { id: "d", nom: "Pilote", typeProjet: "recherche_bien", stade: null }, sections: ["identite"] };
+    const ctx: ContexteAutorise = { dossier: { nom: "Pilote", typeProjet: "recherche_bien", stade: null }, sections: ["identite"] };
+    expect(detecterQuestionsManquantes(ctx, MAINTENANT)).toEqual([]);
+  });
+
+  it("sans l'identité du dossier, aucune remarque sur le type de projet", () => {
+    const ctx: ContexteAutorise = { sections: ["scenarios"], scenarios: [] };
     expect(detecterQuestionsManquantes(ctx, MAINTENANT)).toEqual([]);
   });
 
   it("signale les pièces sans surface, les postes à renseigner et les extractions en attente", () => {
     const ctx: ContexteAutorise = {
-      dossier: { id: "d", nom: "Pilote", typeProjet: null, stade: null },
+      dossier: { nom: "Pilote", typeProjet: null, stade: null },
       sections: ["identite", "lieux", "scenarios", "documents"],
       lieux: [{ nom: "Bien X", type: "bien_candidat", adresseRenseignee: false, batiments: [{ nom: "Ancien", pieces: [{ nom: "Grande pièce", surfaceCentiemes: null, surfaceConfiance: "a_renseigner" }] }] }],
       scenarios: [{ nom: "Rénovation", statut: "a_etudier", nbPostes: 2, nbPostesARenseigner: 1, nbPostesSurEstimation: 1, totalReferenceCentimes: 100, hypothesesOuvertes: ["Toiture saine"] }],
@@ -40,7 +45,7 @@ describe("règles locales (assistant sans modèle)", () => {
   });
 
   it("chaque élément porte au moins une source datée du dossier et la règle appliquée", () => {
-    const ctx: ContexteAutorise = { dossier: { id: "d", nom: "P", typeProjet: null, stade: null }, sections: ["identite"] };
+    const ctx: ContexteAutorise = { dossier: { nom: "P", typeProjet: null, stade: null }, sections: ["identite"] };
     for (const e of detecterQuestionsManquantes(ctx, MAINTENANT)) {
       expect(e.constat.sources.some((s) => s.type === "dossier" && s.date === MAINTENANT)).toBe(true);
       expect(e.constat.sources.some((s) => s.type === "regle_locale" && s.reference)).toBe(true);
@@ -50,7 +55,7 @@ describe("règles locales (assistant sans modèle)", () => {
 
   it("le fournisseur renvoie une réponse complète : fournisseur, date, périmètre, avertissement", async () => {
     const f = new FournisseurReglesLocales();
-    const r = await f.repondre({ dossier: { id: "d", nom: "P", typeProjet: null, stade: null }, sections: ["identite"] }, "que manque-t-il ?", MAINTENANT);
+    const r = await f.repondre({ dossier: { nom: "P", typeProjet: null, stade: null }, sections: ["identite"] }, "que manque-t-il ?", MAINTENANT);
     expect(r.fournisseur).toBe("regles_locales");
     expect(r.modele).toBeNull();
     expect(r.dateReponse).toBe(MAINTENANT);

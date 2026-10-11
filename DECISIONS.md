@@ -311,3 +311,33 @@ pas tenu (constat de l'issue #22).
 
 **Ce qui n'est pas tranché.** Supprimer une action, ou la marquer abandonnée ; les mêmes
 corrections sur les autres objets (lieu, bâtiment, pièce, idée, scénario, poste : issue #22).
+
+## 2026-10-11 — Assistant IA : l'écran dit ce qui part, et le montre
+
+**Décision.** Cinq règles sur ce que reçoit un fournisseur, venues de l'issue #19 :
+
+1. Le nom, le type et le stade du dossier ne partent que si « Identité du dossier » est cochée.
+   L'identifiant interne du dossier ne part jamais.
+2. Le nom d'un scénario ne part que si « Scénarios » est cochée. Les idées et le budget, qui citent
+   leur scénario, emploient sinon un libellé neutre (« Scénario 1 »).
+3. L'écran de l'assistant montre, avant l'envoi, le texte exact du contexte. Ce texte et celui que
+   reçoit le fournisseur distant sont écrits par la même fonction (`serialiserContexte`).
+4. L'écran et les documents ne promettent plus « jamais de nom ». Ils disent ce qui part : les
+   noms, les textes et les montants saisis dans les sections cochées. Et ce qui ne part jamais :
+   les fiches de personnes, les adresses, les fichiers.
+5. Les noms libres (lieux, bâtiments, pièces, postes) ne sont pas remplacés par des libellés
+   neutres. Ils portent le sens utile à l'assistant ; pour ne pas les transmettre, on décoche leur
+   section (« Identité du dossier », « Lieux »…), et on relit le texte montré avant d'envoyer.
+
+**Pourquoi.** L'écran annonçait « jamais de nom, d'adresse ni de fichier » alors que le nom du
+dossier partait dans tous les cas, et les noms de lieux, de bâtiments et de scénarios selon les
+sections. Un nom de dossier ou de lieu peut suffire à situer un projet. La règle « ne reçoit que
+les sections cochées » avait deux exceptions non dites : le dossier, et le nom d'un scénario joint
+aux idées et au budget.
+
+**Conséquence.** Aucun champ de texte n'est filtré : un nom ou une adresse écrits dans un titre,
+une description ou la question partent tels quels. L'écran le dit sous le texte montré.
+
+**Ce qui n'est pas tranché.** Conserver avec chaque échange le texte exact transmis (seuls la
+question, les sections et la réponse le sont aujourd'hui) ; la consigne envoyée au modèle distant,
+qui dit encore « ni noms de personnes ».
