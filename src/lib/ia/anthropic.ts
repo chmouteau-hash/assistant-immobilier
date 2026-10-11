@@ -2,7 +2,8 @@
 // `src/lib/ia.ts` UNIQUEMENT si le dossier le demande et si `ANTHROPIC_API_KEY` est définie.
 //
 // Ce que ce fichier NE fait pas : décider quoi envoyer. Il reçoit un `ContexteAutorise` déjà
-// filtré et le sérialise tel quel. Il impose la forme de la réponse (sortie structurée validée
+// filtré et l'écrit par `serialiserContexte`, la fonction qui sert aussi à l'afficher à l'écran
+// avant l'envoi : ne pas l'écrire autrement ici. Il impose la forme de la réponse (sortie structurée validée
 // par un schéma zod) : chaque élément porte constat + sources + hypothèse + suggestion +
 // vérification + incertitude. Une réponse qui ne respecte pas le schéma est rejetée.
 //
@@ -13,7 +14,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import type { ContexteAutorise, FournisseurIA, ReponseIA } from "../../domain/ia/types";
-import { AVERTISSEMENT_STANDARD } from "../../domain/ia/types";
+import { AVERTISSEMENT_STANDARD, serialiserContexte } from "../../domain/ia/types";
 import { ErreurApplicative } from "../erreurs";
 
 const SchemaSource = z.object({
@@ -60,7 +61,7 @@ export class FournisseurAnthropic implements FournisseurIA {
         messages: [
           {
             role: "user",
-            content: `Date du jour : ${maintenantISO}\n\nContexte autorisé du dossier (JSON) :\n${JSON.stringify(contexte, null, 2)}\n\nQuestion : ${question}`,
+            content: `Date du jour : ${maintenantISO}\n\nContexte autorisé du dossier (JSON) :\n${serialiserContexte(contexte)}\n\nQuestion : ${question}`,
           },
         ],
         output_config: { format: zodOutputFormat(SchemaReponse) },

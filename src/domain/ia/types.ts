@@ -59,9 +59,13 @@ export const AVERTISSEMENT_STANDARD =
  * Ce que le fournisseur REÇOIT : uniquement les sections autorisées par le propriétaire du
  * dossier (périmètre IA) ET lisibles par l'acteur qui pose la question. Chaque champ optionnel
  * est absent si sa section n'est pas autorisée — pas « vide », absent.
+ *
+ * Les noms et les textes sont ceux que l'utilisateur a saisis : ils partent tels quels. Ne
+ * figurent jamais ici : une adresse, une fiche de personne, un nom de fichier, un identifiant.
  */
 export type ContexteAutorise = {
-  dossier: { id: string; nom: string; typeProjet: string | null; stade: string | null };
+  /** Section « identité ». L'identifiant du dossier n'en fait pas partie. */
+  dossier?: { nom: string; typeProjet: string | null; stade: string | null };
   sections: Section[];
   lieux?: Array<{
     nom: string;
@@ -72,6 +76,7 @@ export type ContexteAutorise = {
       pieces: Array<{ nom: string; surfaceCentiemes: number | null; surfaceConfiance: string }>;
     }>;
   }>;
+  /** `scenarioNom` : nom du scénario si « scénarios » est autorisée, libellé neutre sinon. */
   idees?: Array<{ titre: string; statut: string; scenarioNom: string | null }>;
   scenarios?: Array<{
     nom: string;
@@ -103,6 +108,14 @@ export type ContexteAutorise = {
     bloqueePar: number;
   }>;
 };
+
+/**
+ * Texte exact du contexte remis à un fournisseur distant. L'écran de l'assistant affiche ce même
+ * texte avant l'envoi : ce que l'utilisateur lit est ce qui part (issue #19).
+ */
+export function serialiserContexte(contexte: ContexteAutorise): string {
+  return JSON.stringify(contexte, null, 2);
+}
 
 /** Interface d'un fournisseur. `repondre` ne doit JAMAIS lever pour une raison métier : il
  *  renvoie une réponse (éventuellement vide) ; les erreurs techniques remontent à l'appelant. */

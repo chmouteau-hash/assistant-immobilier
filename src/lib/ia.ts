@@ -6,8 +6,9 @@
 //    une question.
 // 2. Le fournisseur reçoit un `ContexteAutorise` construit UNIQUEMENT à partir des sections que
 //    le propriétaire a cochées (`ia_perimetre`) ET que l'acteur qui pose la question peut lire.
-//    Jamais de nom de personne, jamais de fichier, jamais d'adresse : seuls des agrégats et des
-//    libellés (voir `construireContexte`).
+//    Jamais de fiche de personne, jamais de fichier, jamais d'adresse. Les noms et les textes
+//    saisis dans une section cochée partent tels quels, avec les montants : l'écran le dit et
+//    montre le texte exact avant l'envoi (voir `construireContexte`, issue #19).
 // 3. Chaque réponse porte ses sources, leur date, son niveau d'incertitude et l'avertissement
 //    standard. Elle est journalisée (`ia_echange`) et auditée (`ia_requete`).
 // 4. L'IA n'écrit RIEN dans le dossier. Ses propositions passent par les mêmes formulaires que
@@ -45,20 +46,28 @@ export function perimetreEffectif(acteur: Acteur, dossier: Dossier): Section[] {
 
 /**
  * Construit le contexte autorisé. Chaque bloc n'est ajouté que si sa section est dans le
- * périmètre effectif — absent sinon, pas vide. Les données sont des agrégats et des libellés :
- * aucune adresse, aucun nom de personne, aucun contenu de fichier.
+ * périmètre effectif — absent sinon, pas vide. Aucune adresse, aucune fiche de personne, aucun
+ * nom ni contenu de fichier, aucun identifiant. Le nom du dossier et le nom d'un scénario suivent
+ * la même règle que le reste : ils ne partent que si leur section est cochée.
  */
 export function construireContexte(acteur: Acteur, dossier: Dossier): ContexteAutorise {
   const db = obtenirBase();
   const sections = perimetreEffectif(acteur, dossier);
-  const ctx: ContexteAutorise = {
-    dossier: { id: dossier.id, nom: dossier.nom, typeProjet: dossier.typeProjet, stade: dossier.stade },
-    sections,
-  };
+  const ctx: ContexteAutorise = { sections };
+  if (sections.includes("identite")) {
+    ctx.dossier = { nom: dossier.nom, typeProjet: dossier.typeProjet, stade: dossier.stade };
+  }
   const scenarios = versObjets<{ id: string; nom: string; statut: string }>(
     db.prepare(`SELECT id, nom, statut FROM scenario WHERE dossier_id = ? ORDER BY created_at`).all(dossier.id),
   );
-  const nomScenario = (id: string | null) => scenarios.find((s) => s.id === id)?.nom ?? null;
+  // Les idées et le budget citent leur scénario. Sans la section « scénarios », un libellé neutre
+  // (« Scénario 1 ») garde le regroupement lisible sans transmettre le nom.
+  const transmetScenarios = sections.includes("scenarios");
+  const libelleScenario = (rang: number) => (transmetScenarios ? scenarios[rang].nom : `Scénario ${rang + 1}`);
+  const nomScenario = (id: string | null) => {
+    const rang = scenarios.findIndex((s) => s.id === id);
+    return rang < 0 ? null : libelleScenario(rang);
+  };
 
   if (sections.includes("lieux")) {
     const lieux = versObjets<{ id: string; nom: string; typeLieu: string; adresse: string | null }>(
@@ -119,8 +128,8 @@ export function construireContexte(acteur: Acteur, dossier: Dossier): ContexteAu
       }));
     }
     if (sections.includes("budget")) {
-      ctx.budget = syntheses.flatMap(({ s, synthese }) =>
-        synthese.postes.map((p) => ({ scenarioNom: s.nom, poste: p.nom, statut: p.statut, referenceCentimes: p.referenceCentimes, natureReference: p.natureReference })),
+      ctx.budget = syntheses.flatMap(({ synthese }, rang) =>
+        synthese.postes.map((p) => ({ scenarioNom: libelleScenario(rang), poste: p.nom, statut: p.statut, referenceCentimes: p.referenceCentimes, natureReference: p.natureReference })),
       );
     }
   }

@@ -21,7 +21,7 @@ function donnee(titre: string, maintenantISO: string): SourceReponse {
 export function detecterQuestionsManquantes(ctx: ContexteAutorise, maintenantISO: string): ElementReponse[] {
   const elements: ElementReponse[] = [];
 
-  if (ctx.sections.includes("identite")) {
+  if (ctx.dossier) {
     if (!ctx.dossier.typeProjet) {
       elements.push({
         constat: { texte: "Le type de projet du dossier n'est pas renseigné.", sources: [donnee("Dossier : type de projet", maintenantISO), regle("R01")] },

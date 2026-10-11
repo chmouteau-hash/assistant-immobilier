@@ -1,9 +1,9 @@
 import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { obtenirDossier } from "@/lib/dossiers";
-import { listerEchanges, perimetreEffectif } from "@/lib/ia";
+import { construireContexte, listerEchanges, perimetreEffectif } from "@/lib/ia";
 import { LIBELLES_SECTION, SECTIONS } from "@/domain/droits";
-import { SECTIONS_NON_TRANSMISSIBLES, libelleFournisseur } from "@/domain/ia/types";
+import { SECTIONS_NON_TRANSMISSIBLES, libelleFournisseur, serialiserContexte } from "@/domain/ia/types";
 import { actionConfigurerIA, actionDemanderAssistant } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { Champ, Pastille, Section, Vide, classeSaisie, formaterDateHeure } from "@/components/ui";
@@ -19,10 +19,13 @@ export default async function PageAssistant({ params }: { params: Promise<{ id: 
   const effectif = perimetreEffectif(acteur, dossier);
   const distantDisponible = Boolean(process.env.ANTHROPIC_API_KEY);
   const transmissibles = SECTIONS.filter((s) => !SECTIONS_NON_TRANSMISSIBLES.includes(s));
+  // Le texte montré avant l'envoi est écrit par la fonction qu'emploie le fournisseur distant : ce
+  // que l'écran affiche est ce qui part (issue #19). Calculé sur ce PC, sans appel réseau.
+  const apercu = dossier.iaActivee && effectif.length > 0 ? serialiserContexte(construireContexte(acteur, dossier)) : null;
 
   return (
     <div className="flex flex-col gap-8">
-      <Section titre="Assistant IA (facultatif)" sousTitre="Désactivé par défaut. Il ne reçoit que les sections cochées, sous forme d'agrégats : jamais de nom, d'adresse ni de fichier. Il n'écrit rien dans le dossier.">
+      <Section titre="Assistant IA (facultatif)" sousTitre="Désactivé par défaut. Il ne reçoit que les sections cochées, avec les noms, les textes et les montants que vous y avez saisis. Jamais les personnes, les adresses ni les fichiers. Il n'écrit rien dans le dossier.">
         <p className="text-sm">
           État : {dossier.iaActivee ? <Pastille ton="ia">activé · fournisseur « {libelleFournisseur(dossier.iaFournisseur)} »</Pastille> : <Pastille>désactivé</Pastille>}
           {dossier.iaActivee && (
@@ -68,6 +71,19 @@ export default async function PageAssistant({ params }: { params: Promise<{ id: 
           </FormulaireAction>
         ) : (
           <Vide>L&apos;assistant est désactivé : tout le reste de l&apos;application fonctionne sans lui.</Vide>
+        )}
+        {apercu !== null && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-neutral-600">Voir ce que l&apos;assistant reçoit avec votre question</summary>
+            <p className="mt-2 text-xs text-neutral-500">
+              {dossier.iaFournisseur === "regles_locales"
+                ? "Avec les règles locales, ce contenu est lu sur ce PC : rien ne le quitte."
+                : "Avec le modèle distant, ce contenu quitte ce PC, tel qu'il est écrit ici."}{" "}
+              S&apos;y ajoutent votre question, la date du jour et des consignes fixes, sans donnée du dossier. Un nom ou une adresse écrits dans un titre, une description ou votre
+              question partent tels quels.
+            </p>
+            <pre className="mt-2 max-h-96 overflow-y-auto rounded bg-neutral-100 p-3 text-xs whitespace-pre-wrap wrap-anywhere">{apercu}</pre>
+          </details>
         )}
       </Section>
 
