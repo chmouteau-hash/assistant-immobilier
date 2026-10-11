@@ -1,8 +1,10 @@
 "use client";
 
-// Navigation d'un dossier : une seule ligne qui défile horizontalement sur téléphone (au lieu de
-// quatre lignes d'onglets), onglet courant mis en évidence, barre collée en haut pendant le
-// défilement. Composant client uniquement pour connaître l'URL courante.
+// Navigation d'un dossier : onglet courant mis en évidence, barre collée en haut pendant le
+// défilement. Au doigt (écran tactile), une seule ligne qui défile horizontalement, au lieu de
+// quatre lignes d'onglets. À la souris, les onglets passent à la ligne : sur une seule ligne sans
+// barre de défilement, deux onglets sur dix restaient hors de vue même en plein écran (issue #18).
+// Composant client uniquement pour connaître l'URL courante.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,8 +24,9 @@ export function NavDossier({ onglets }: { onglets: OngletDossier[] }) {
   };
 
   useEffect(() => {
-    // Centre l'onglet courant dans la barre (utile sur téléphone, où elle défile). On déplace la
-    // barre elle-même, pas la page : `scrollIntoView` ferait aussi défiler la fenêtre.
+    // Centre l'onglet courant dans la barre (utile sur téléphone, où elle défile ; sans effet à la
+    // souris, où rien ne dépasse). On déplace la barre elle-même, pas la page : `scrollIntoView`
+    // ferait aussi défiler la fenêtre.
     const actif = actifRef.current;
     const barre = actif?.parentElement;
     if (!actif || !barre) return;
@@ -34,7 +37,7 @@ export function NavDossier({ onglets }: { onglets: OngletDossier[] }) {
   return (
     <nav
       aria-label="Sections du dossier"
-      className="sticky top-0 z-10 -mx-6 flex gap-1 overflow-x-auto border-b border-neutral-200 bg-neutral-50/95 px-6 py-2 text-sm backdrop-blur [scrollbar-width:none]"
+      className="sticky top-0 z-10 -mx-6 flex flex-wrap gap-1 border-b border-neutral-200 bg-neutral-50/95 px-6 py-2 text-sm backdrop-blur pointer-coarse:flex-nowrap pointer-coarse:overflow-x-auto pointer-coarse:[scrollbar-width:none]"
       style={{ top: "env(safe-area-inset-top, 0px)" }}
     >
       {onglets.map((o) => {
