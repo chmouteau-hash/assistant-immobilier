@@ -73,7 +73,7 @@ d'identité (moins de code sensible à maintenir), avec le modèle `personne` / 
 [À vérifier] avant tout hébergement : localisation des données, contrat de sous-traitance (art. 28
 RGPD), chiffrement au repos.
 
-## 2.8 Plan des lieux et géocodage
+## 2.8 Carte des lieux et géocodage
 
 Décision du 2026-10-11. Le géocodage est la conversion d'une adresse en position (latitude,
 longitude). Les conditions d'utilisation des services n'ont pas été lues [À vérifier].
@@ -94,5 +94,5 @@ La position se stocke en microdegrés entiers, avec source et confiance, comme t
 | `vitest` (dev) | Résout l'alias `@/` et les imports TypeScript sans extension comme Next.js ; rapide | `node --test` : exige des extensions `.ts` explicites et pas d'alias |
 | `@anthropic-ai/sdk` | Client officiel, erreurs typées, sortie structurée | Appels `fetch` à la main : à maintenir soi-même |
 | `zod` | Schéma de la réponse IA, exigé par `zodOutputFormat` | JSON Schema écrit à la main, non vérifié à l'exécution |
-| `leaflet` (ajouté le 2026-10-11) | Plan des lieux : carte interactive sans clé ni compte, repères déplaçables | Google Maps : compte, carte bancaire, clé exposée |
+| `leaflet` (ajouté le 2026-10-11) | Carte des lieux : interactive, sans clé ni compte, repères déplaçables | Google Maps : compte, carte bancaire, clé exposée |
 | `@types/leaflet` (dev) | Types TypeScript de Leaflet, qui n'en fournit pas | Écrire les types à la main |

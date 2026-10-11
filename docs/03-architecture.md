@@ -38,7 +38,7 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 | `lib/ia` | Construit le contexte autorisé (agrégats), choisit le fournisseur, journalise l'échange | N'écrit jamais dans le dossier |
 | `lib/geocodage` | Sur demande, envoie l'adresse d'un lieu à la Base Adresse Nationale et enregistre la position « source externe · à confirmer » | Ne part jamais sans clic ; n'envoie que l'adresse |
 | `app/actions.ts` | Lit le formulaire, résout l'acteur, appelle `lib`, traduit les erreurs | Pas de SQL, pas de règle métier |
-| `components/CarteLieux` | Composant client : dessine le plan (Leaflet), un repère par lieu situé ; un repère déplacé repasse par une Server Action | N'écrit rien lui-même ; n'est pas monté si aucun lieu n'est situé |
+| `components/CarteLieux` | Composant client : dessine la carte des lieux (Leaflet), un repère par lieu situé ; un repère déplacé repasse par une Server Action | N'écrit rien lui-même ; n'est pas monté si aucun lieu n'est situé |
 
 ## Flux principaux
 
@@ -57,7 +57,7 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 2. `domain/budget.synthetiserScenario` (pur) : par poste, sommes par nature, référence = le plus élevé entre le montant prévu (engagement, sinon devis, sinon estimation) et le total facturé, ou le facturé seul si le poste est soldé, écarts, reste à payer ; par scénario, totaux, marge (arithmétique entière), `complet` faux si un poste est à renseigner.
 3. `domain/comparaison.comparerScenarios` : rang et écart seulement entre scénarios complets ; `reserve` explicite sinon.
 
-**Situer un lieu sur le plan**
+**Situer un lieu sur la carte**
 1. `actionSituerDepuisAdresse` → `geocodage.situerLieuDepuisAdresse` : droits `ecrire lieux` vérifiés avant tout appel ; l'adresse du lieu, seule, part vers la Base Adresse Nationale ; `domain/geo` lit la première correspondance ; sans correspondance ou sans réseau → refus, rien n'est écrit.
 2. `structure.modifierPositionLieu` : position en microdegrés, source `source_externe`, confiance `a_confirmer`, note = l'adresse comprise par le service ; audit avec avant/après et motif.
 3. Écran Lieux : `CarteLieux` n'est monté que si un lieu est situé ; le navigateur demande alors les tuiles du fond de carte. Un repère déplacé, ou deux coordonnées saisies, passent par `actionModifierPosition` avec les deux questions de provenance.

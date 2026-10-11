@@ -575,7 +575,7 @@ référence que l'écran Budget.
 l'issue #4) ; signaler à l'écran un poste « facturé en partie » ; solder plusieurs postes d'un coup,
 ou tout un scénario à la clôture (bloc 4 de l'issue #4).
 
-## 2026-10-11 — Lieux : un plan des lieux, avec deux services publics de carte et d'adresses
+## 2026-10-11 — Lieux : une carte des lieux, avec deux services publics (fond de carte, adresses)
 
 **Décision.** Christophe a demandé une carte « comme Google Maps » pour voir où sont les biens à
 l'étude. Il a choisi entre les options qui lui étaient soumises. Cette entrée précise celle du
@@ -590,10 +590,10 @@ base locale, et deux sorties limitées sont ouvertes, listées au point 5.
    entiers (millionièmes de degré, environ 11 cm) : pas de virgule flottante.
 3. La position s'obtient de trois façons. D'après l'adresse, par la Base Adresse Nationale, sur le
    bouton « Situer d'après l'adresse » : elle entre « source externe · à confirmer », avec l'adresse
-   telle que le service l'a comprise. En déplaçant le repère sur le plan. En saisissant les deux
+   telle que le service l'a comprise. En déplaçant le repère sur la carte. En saisissant les deux
    coordonnées. Dans les deux derniers cas, les deux questions de provenance sont posées.
-4. Le plan s'affiche dans l'écran Lieux de chaque dossier, avec un repère par lieu situé. Il n'y a
-   pas de plan tous dossiers confondus.
+4. La carte s'affiche dans l'écran Lieux de chaque dossier, avec un repère par lieu situé. Il n'y
+   a pas de carte tous dossiers confondus.
 5. Ce qui sort du PC, et quand :
    - l'adresse du lieu, et elle seule (ni nom de lieu, ni nom de dossier), vers `data.geopf.fr`,
      uniquement au clic sur « Situer d'après l'adresse », après contrôle du droit d'écrire les
@@ -619,8 +619,8 @@ journal d'audit (avant/après à chaque changement, et à la suppression du lieu
 
 **Ce qui n'est pas tranché.** Les conditions d'utilisation des deux services et la durée de
 conservation de leurs journaux n'ont pas été lues [À vérifier] ; seul leur fonctionnement sans clé a
-été essayé, le 2026-10-11. Un plan tous dossiers confondus, qui demande une règle de droits
+été essayé, le 2026-10-11. Une carte tous dossiers confondus, qui demande une règle de droits
 nouvelle. Les biens hors de France : la Base Adresse Nationale ne couvre que la France, la position
-à la main reste possible. Un autre fond (OpenStreetMap, vue aérienne). Un réglage qui couperait le
-plan pour un dossier. La description de l'application dans `layout.tsx` dit encore « sans serveur
+à la main reste possible. Un autre fond (OpenStreetMap, vue aérienne). Un réglage qui couperait la
+carte pour un dossier. La description de l'application dans `layout.tsx` dit encore « sans serveur
 distant ».

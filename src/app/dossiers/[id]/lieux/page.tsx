@@ -38,10 +38,11 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // L'adresse, la position et la surface gardent leur propre formulaire, parce qu'elles portent une
 // provenance. Chaque carte porte aussi « Retirer », qui n'offre son bouton que pour un objet vide.
 //
-// Le plan (composant `CarteLieux`) montre un repère par lieu situé. Il n'est monté que si au moins
-// un lieu a une position : tant qu'aucun n'est situé, l'écran ne demande aucun fond de carte au
-// réseau. L'adresse ne part vers le service d'adresses que sur le bouton « Situer d'après
-// l'adresse » (DECISIONS.md, 2026-10-11).
+// La carte des lieux (composant `CarteLieux`) montre un repère par lieu situé. À ne pas confondre
+// avec les « cartes » des commentaires ci-dessus, qui sont les encadrés de l'écran. Elle n'est
+// montée que si au moins un lieu a une position : tant qu'aucun n'est situé, l'écran ne demande
+// aucun fond de carte au réseau. L'adresse ne part vers le service d'adresses que sur le bouton
+// « Situer d'après l'adresse » (DECISIONS.md, 2026-10-11).
 
 // Comment vider un objet, dit sous la phrase de refus : chaque rattachement se change sur l'écran
 // de ce qui est rattaché.
@@ -283,7 +284,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
         )}
         {lieux.length > 0 && !auMoinsUnSitue && (
           <Vide>
-            Aucun lieu n&apos;est encore situé : le plan apparaît dès qu&apos;un lieu a une position{peutEcrire ? " (« Situer sur la carte », dans la fiche du lieu)" : ""}.
+            Aucun lieu n&apos;est encore situé : la carte apparaît dès qu&apos;un lieu a une position{peutEcrire ? " (« Situer sur la carte », dans la fiche du lieu)" : ""}.
           </Vide>
         )}
         <ul className="flex flex-col gap-4 text-sm">
@@ -349,7 +350,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                         <input type="hidden" name="lieuId" value={l.id} />
                         <p className="w-full text-xs text-neutral-600">
                           L&apos;adresse de ce lieu, et rien d&apos;autre, est envoyée à la {NOM_SERVICE_GEOCODAGE}, un service public sans compte. La position obtenue est notée « source externe ·
-                          à confirmer » : vérifiez le repère sur le plan.{l.position.valeur !== null && " Elle remplace la position actuelle."}
+                          à confirmer » : vérifiez le repère sur la carte.{l.position.valeur !== null && " Elle remplace la position actuelle."}
                         </p>
                       </FormulaireAction>
                     ) : (
