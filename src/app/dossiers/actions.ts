@@ -16,7 +16,7 @@ import { COOKIE_ACTEUR, obtenirActeurCourant } from "@/lib/acteur-courant";
 import { ErreurApplicative } from "@/lib/erreurs";
 import { parserMontant } from "@/lib/montant";
 import { parserSurface } from "@/domain/mesure";
-import { parserCoordonnee } from "@/domain/geo";
+import { parserCoordonnee, type AdresseProche, type Endroit, type Position } from "@/domain/geo";
 import * as dossiers from "@/lib/dossiers";
 import * as personnes from "@/lib/personnes";
 import * as structure from "@/lib/structure";
@@ -173,6 +173,8 @@ export async function actionModifierPosition(_e: EtatFormulaire, fd: FormData): 
       longitudeMicrodeg: coordonneeDepuis(fd, "longitude", "2,33031"),
       positionSource: texte(fd, "positionSource"),
       positionConfiance: texte(fd, "positionConfiance"),
+      // D'après quoi le repère est posé : rempli quand l'endroit vient de la liste de recherche.
+      note: texte(fd, "note") || undefined,
       motif: texte(fd, "motif"),
     });
   });
@@ -182,6 +184,59 @@ export async function actionModifierPosition(_e: EtatFormulaire, fd: FormData): 
 export async function actionSituerDepuisAdresse(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), async (acteur) => {
     await geocodage.situerLieuDepuisAdresse(acteur, { lieuId: texte(fd, "lieuId") });
+  });
+}
+
+// Chercher un endroit (code postal, commune, adresse) : seul le texte saisi part, et rien n'est
+// écrit. La liste revient au composant ; choisir un endroit passe ensuite par
+// `actionModifierPosition`, avec sa provenance. Cette action renvoie des données : elle n'emploie
+// donc pas `executer`, mais traite les erreurs de la même façon.
+export type EtatRecherche = { erreur: string | null; texte: string; resultats: Endroit[] | null };
+
+export async function actionChercherEndroit(_e: EtatRecherche, fd: FormData): Promise<EtatRecherche> {
+  const recherche = texte(fd, "recherche");
+  try {
+    const acteur = await obtenirActeurCourant();
+    return { erreur: null, texte: recherche, resultats: await geocodage.chercherEndroits(acteur, { dossierId: texte(fd, "dossierId"), texte: recherche }) };
+  } catch (erreur) {
+    if (erreur instanceof ErreurApplicative) return { erreur: erreur.message, texte: recherche, resultats: null };
+    throw erreur;
+  }
+}
+
+function positionDepuis(fd: FormData): Position {
+  const latitudeMicrodeg = coordonneeDepuis(fd, "latitude", "48,868546");
+  const longitudeMicrodeg = coordonneeDepuis(fd, "longitude", "2,33031");
+  if (latitudeMicrodeg === null || longitudeMicrodeg === null) throw new ErreurApplicative("VALIDATION", "Choisissez un point sur la carte.");
+  return { latitudeMicrodeg, longitudeMicrodeg };
+}
+
+// L'adresse connue la plus proche d'un point cliqué sur la carte : seul le point part, et rien
+// n'est écrit. Appelée directement par la carte, pas par un formulaire.
+export type EtatAdresseProche = { erreur: string | null; adresse: AdresseProche | null };
+
+export async function actionAdresseLaPlusProche(fd: FormData): Promise<EtatAdresseProche> {
+  try {
+    const acteur = await obtenirActeurCourant();
+    return { erreur: null, adresse: await geocodage.adresseLaPlusProche(acteur, { lieuId: texte(fd, "lieuId"), ...positionDepuis(fd) }) };
+  } catch (erreur) {
+    if (erreur instanceof ErreurApplicative) return { erreur: erreur.message, adresse: null };
+    throw erreur;
+  }
+}
+
+// Enregistrer le point choisi sur la carte. L'adresse montrée à l'écran n'est écrite que si la
+// case est cochée : sans elle, `adresseVue` ne part pas, et l'adresse du lieu n'est pas touchée.
+export async function actionSituerParClic(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), async (acteur) => {
+    await geocodage.situerLieuParClic(acteur, {
+      lieuId: texte(fd, "lieuId"),
+      ...positionDepuis(fd),
+      positionSource: texte(fd, "positionSource"),
+      positionConfiance: texte(fd, "positionConfiance"),
+      motif: texte(fd, "motif"),
+      adresseVue: fd.get("adopterAdresse") === "on" ? texte(fd, "adresseVue") : null,
+    });
   });
 }
 

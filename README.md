@@ -74,10 +74,10 @@ src/lib/           Accès aux données + contrôle des droits CÔTÉ SERVEUR
   acteur-courant.ts  qui agit (utilisateur local ; acteur simulé via cookie pour tester les rôles)
   dossiers.ts, personnes.ts, structure.ts, idees.ts, budget.ts, taches.ts, documents.ts, ia.ts
   ia/anthropic.ts    fournisseur distant (SDK officiel), chargé seulement si configuré
-  geocodage.ts       adresse d'un lieu → position, par la Base Adresse Nationale, sur demande
+  geocodage.ts       Base Adresse Nationale, sur demande : adresse → position, recherche d'un endroit, point → adresse
 src/app/           Interface Next.js (App Router) : pages serveur + Server Actions (actions.ts)
   api/fichiers/[id]  sert un fichier déposé après contrôle des droits
-src/components/    FormulaireAction (client), CarteLieux (client, carte Leaflet), ui.tsx (étiquettes de provenance, pastilles)
+src/components/    FormulaireAction (client), CarteLieux (client, carte Leaflet), RechercheEndroit (client), ui.tsx (étiquettes de provenance, pastilles)
 tests/             vitest : domaine, droits, parcours de bout en bout (base en mémoire)
 scripts/           sauvegarde.mjs, restauration.mjs
 docs/              cadrage, choix techniques, architecture, modèle de données, RGPD, plan de test
@@ -108,10 +108,11 @@ Détail et alternatives comparées : [docs/02-choix-techniques.md](docs/02-choix
   personne, une adresse ni un fichier. L'écran montre le texte exact avant l'envoi. Il ne peut
   rien écrire.
 - **Carte des lieux : Leaflet et deux services publics.** L'écran Lieux montre un repère par lieu
-  situé, sur le fond « Plan IGN ». La position est une donnée tracée, en microdegrés entiers. Deux
-  choses seulement sortent du PC : l'adresse d'un lieu, vers la Base Adresse Nationale, au clic sur
-  « Situer d'après l'adresse » ; les demandes de tuiles du fond de carte, quand un lieu du dossier
-  est situé. Ni clé ni compte. Décision du 2026-10-11 (voir [DECISIONS.md](DECISIONS.md)).
+  situé, sur le fond « Plan IGN ». Un lieu se situe en cherchant un code postal, une commune ou une
+  adresse, en cliquant sur la carte, ou par ses coordonnées. La position est une donnée tracée, en
+  microdegrés entiers. Rien ne sort du PC sans un geste : l'adresse du lieu, le texte cherché ou le
+  point cliqué, vers la Base Adresse Nationale ; les demandes de tuiles du fond de carte, quand la
+  carte s'affiche. Ni clé ni compte. Décisions du 2026-10-11 (voir [DECISIONS.md](DECISIONS.md)).
 
 Dépendances ajoutées en V1, et pourquoi : `vitest` (tests, résout `@/` et les imports TypeScript
 comme Next.js — `node --test` ne le fait pas), `@anthropic-ai/sdk` (client officiel, erreurs typées,

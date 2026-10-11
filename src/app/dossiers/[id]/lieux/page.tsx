@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerLieux, listerBatiments, listerPieces, objetsNonVides, type Batiment } from "@/lib/structure";
@@ -13,6 +14,9 @@ import {
   actionModifierAdresse,
   actionModifierPosition,
   actionSituerDepuisAdresse,
+  actionChercherEndroit,
+  actionAdresseLaPlusProche,
+  actionSituerParClic,
   actionRattacherBatiment,
   actionModifierLieu,
   actionModifierBatiment,
@@ -23,6 +27,7 @@ import {
 } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { CarteLieux } from "@/components/CarteLieux";
+import { RechercheEndroit } from "@/components/RechercheEndroit";
 import { REPONSE_HABITUELLE } from "@/domain/provenance";
 import { Champ, Pastille, Provenance, QuestionConfiance, QuestionSource, Section, Select, Vide, classeSaisie } from "@/components/ui";
 
@@ -40,9 +45,13 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 //
 // La carte des lieux (composant `CarteLieux`) montre un repère par lieu situé. À ne pas confondre
 // avec les « cartes » des commentaires ci-dessus, qui sont les encadrés de l'écran. Elle n'est
-// montée que si au moins un lieu a une position : tant qu'aucun n'est situé, l'écran ne demande
-// aucun fond de carte au réseau. L'adresse ne part vers le service d'adresses que sur le bouton
-// « Situer d'après l'adresse » (DECISIONS.md, 2026-10-11).
+// montée que si au moins un lieu a une position, ou si l'utilisateur demande à en situer un sur la
+// carte : sans cela, l'écran ne demande aucun fond de carte au réseau.
+//
+// Rien ne part vers le service d'adresses sans un geste (DECISIONS.md, 2026-10-11, deux entrées) :
+// l'adresse du lieu sur « Situer d'après l'adresse », le texte saisi sur « Chercher », le point
+// cliqué en mode « Choisir l'endroit sur la carte ». Ce mode s'ouvre par le paramètre `placer` de
+// l'adresse de la page, pour un lieu à la fois : c'est un lien ordinaire, lu ici côté serveur.
 
 // Comment vider un objet, dit sous la phrase de refus : chaque rattachement se change sur l'écran
 // de ce qui est rattaché.
@@ -52,8 +61,9 @@ const POUR_VIDER = {
   piece: "Un document se reclasse depuis sa fiche, dans Documents.",
 };
 
-export default async function PageLieux({ params }: { params: Promise<{ id: string }> }) {
+export default async function PageLieux({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ placer?: string | string[] }> }) {
   const { id } = await params;
+  const { placer } = await searchParams;
   const acteur = await obtenirActeurPourSection(id, "lieux");
   const lieux = listerLieux(acteur, id);
   const batiments = listerBatiments(acteur, id);
@@ -66,6 +76,10 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
   const choixBatiments = batiments.map((b) => ({ code: b.id, libelle: b.nom }));
   const nonVides = peutEcrire ? objetsNonVides(acteur, id) : {};
   const auMoinsUnSitue = lieux.some((l) => l.position.valeur !== null);
+  // Le lieu à situer sur la carte, s'il est bien de ce dossier et si l'acteur peut écrire : sinon
+  // le paramètre est ignoré, sans rien dire de plus.
+  const lieuAPlacer = peutEcrire && typeof placer === "string" ? (lieux.find((l) => l.id === placer) ?? null) : null;
+  const cheminLieux = `/dossiers/${id}/lieux`;
 
   // Un objet non vide montre la phrase que le serveur opposerait à une demande directe, à la place
   // du bouton.
@@ -272,17 +286,24 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
         sousTitre="Un lieu (bien candidat, bien acquis, terrain) contient ses bâtiments, un bâtiment contient ses pièces. L'adresse reste « à renseigner » tant qu'elle n'est pas connue."
       >
         {lieux.length === 0 && <Vide>Aucun lieu. En phase de recherche, on peut créer un bien candidat fictif clairement nommé.</Vide>}
-        {auMoinsUnSitue && (
-          <CarteLieux
-            dossierId={id}
-            lieux={lieux.map((l) => ({ id: l.id, nom: l.nom, position: l.position.valeur }))}
-            peutEcrire={peutEcrire}
-            action={actionModifierPosition}
-            sources={sources}
-            confiances={confiances}
-          />
+        {(auMoinsUnSitue || lieuAPlacer) && (
+          // `scroll-mt` : le lien « Choisir l'endroit sur la carte » amène ici, sous la barre d'onglets collée.
+          <div id="carte-des-lieux" className="scroll-mt-32">
+            <CarteLieux
+              dossierId={id}
+              lieux={lieux.map((l) => ({ id: l.id, nom: l.nom, position: l.position.valeur }))}
+              peutEcrire={peutEcrire}
+              action={actionModifierPosition}
+              sources={sources}
+              confiances={confiances}
+              aPlacer={lieuAPlacer ? { id: lieuAPlacer.id, nom: lieuAPlacer.nom, adresse: lieuAPlacer.adresse.valeur } : null}
+              actionAdresseProche={actionAdresseLaPlusProche}
+              actionSituerParClic={actionSituerParClic}
+              chemin={cheminLieux}
+            />
+          </div>
         )}
-        {lieux.length > 0 && !auMoinsUnSitue && (
+        {lieux.length > 0 && !auMoinsUnSitue && !lieuAPlacer && (
           <Vide>
             Aucun lieu n&apos;est encore situé : la carte apparaît dès qu&apos;un lieu a une position{peutEcrire ? " (« Situer sur la carte », dans la fiche du lieu)" : ""}.
           </Vide>
@@ -344,6 +365,13 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                 {peutEcrire && (
                   <details className="mt-1">
                     <summary className="cursor-pointer text-xs text-neutral-500">Situer sur la carte</summary>
+                    <p className="mt-2 text-xs text-neutral-600">
+                      <Link href={`${cheminLieux}?placer=${l.id}#carte-des-lieux`} prefetch={false} className="font-medium text-neutral-900 underline">
+                        Choisir l&apos;endroit sur la carte
+                      </Link>{" "}
+                      : vous cliquez à l&apos;endroit du lieu, l&apos;écran montre l&apos;adresse connue la plus proche, puis vous enregistrez.
+                    </p>
+                    <RechercheEndroit dossierId={id} lieuId={l.id} actionChercher={actionChercherEndroit} actionSituer={actionModifierPosition} />
                     {l.adresse.valeur !== null ? (
                       <FormulaireAction action={actionSituerDepuisAdresse} bouton="Situer d'après l'adresse" compact className="mt-2">
                         <input type="hidden" name="dossierId" value={id} />
@@ -354,7 +382,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                         </p>
                       </FormulaireAction>
                     ) : (
-                      <p className="mt-2 text-xs text-neutral-600">Sans adresse, la position ne peut pas être cherchée : renseignez l&apos;adresse, ou saisissez la position ci-dessous.</p>
+                      <p className="mt-2 text-xs text-neutral-600">Ce lieu n&apos;a pas d&apos;adresse : choisissez l&apos;endroit sur la carte, cherchez-le ci-dessus, ou saisissez sa position ci-dessous.</p>
                     )}
                     <FormulaireAction action={actionModifierPosition} bouton="Enregistrer" compact className="group mt-2">
                       <input type="hidden" name="dossierId" value={id} />

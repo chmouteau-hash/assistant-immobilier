@@ -624,3 +624,45 @@ nouvelle. Les biens hors de France : la Base Adresse Nationale ne couvre que la 
 à la main reste possible. Un autre fond (OpenStreetMap, vue aérienne). Un réglage qui couperait la
 carte pour un dossier. La description de l'application dans `layout.tsx` dit encore « sans serveur
 distant ».
+
+## 2026-10-11 — Carte des lieux : chercher par code postal, situer un lieu en cliquant
+
+**Décision.** Vient de l'issue #48, relevée par Christophe à son premier essai de la carte. Il a
+choisi entre les options qui lui étaient soumises. Cette entrée complète le point 5 de la
+précédente : deux sorties de plus, vers le même service d'adresses.
+
+1. Un endroit se cherche par un code postal, une commune ou une adresse, sans que le lieu ait une
+   adresse. Le service répond rarement par un seul endroit : l'écran propose la liste, et c'est en
+   choisissant un endroit que la position s'enregistre, « source externe · à confirmer », avec le
+   nom de l'endroit en note. Un code postal seul donne toutes ses communes, par ordre alphabétique.
+   Un texte sans chiffre donne d'abord les communes de ce nom.
+2. Un lieu se situe en cliquant sur la carte. Ce mode s'ouvre depuis la fiche du lieu, pour un lieu
+   à la fois : sans lui, un clic sur la carte ne pose rien.
+3. Après le clic, l'écran montre la position et l'adresse connue la plus proche, avec sa distance,
+   avant d'écrire quoi que ce soit. Un seul bouton enregistre. Option retenue contre
+   l'enregistrement dès le clic. La position passe par les deux questions de provenance ; l'adresse,
+   si elle est gardée, entre « source externe · à confirmer ».
+4. Une adresse déjà saisie n'est jamais remplacée d'office. Option retenue contre le remplacement à
+   chaque clic. La case qui garde l'adresse trouvée n'est cochée d'avance que si le lieu n'en a pas.
+5. Ce qui sort du PC en plus, toujours vers `data.geopf.fr` et après contrôle du droit d'écrire les
+   lieux : le texte cherché, au clic sur « Chercher » ; le point cliqué, en mode « Choisir l'endroit
+   sur la carte », puis une seconde fois à l'enregistrement si l'adresse est gardée. L'écran le dit
+   avant, dans les deux cas. La carte, donc ses tuiles, se charge aussi quand ce mode est ouvert
+   dans un dossier sans lieu situé.
+
+**Pourquoi.** En recherche d'un bien, on connaît une commune ou un code postal avant une adresse :
+sans recherche, il fallait taper des coordonnées. L'adresse la plus proche d'un point n'est pas
+forcément celle du bien, et c'est parfois celle d'un voisin. La montrer avant de l'écrire, puis la
+redemander au service au moment d'écrire, garantit que ce qui entre comme venant du service en
+vient, et a été vu.
+
+**Conséquences.** Pas de migration. `lib/geocodage.ts` porte les trois usages du service, et
+`domain/geo.ts` lit ses réponses. Nouveau composant client `RechercheEndroit` ; `CarteLieux` reçoit
+le mode « choisir l'endroit », ouvert par le paramètre `placer` de l'adresse de la page. Loin de
+toute adresse, le service ne renvoie rien : seule la position s'enregistre alors.
+`ASSISTANT_GEOCODAGE_URL` désigne la recherche ; la recherche inverse s'en déduit.
+
+**Ce qui n'est pas tranché.** « Situer d'après l'adresse » garde son comportement : la première
+réponse du service, sans liste. Le point que le service attribue à une commune (mairie, centre)
+n'a pas été vérifié. Les biens hors de France restent hors du service. Les conditions
+d'utilisation restent [À vérifier].

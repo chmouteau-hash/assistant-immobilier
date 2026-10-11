@@ -80,7 +80,7 @@ longitude). Les conditions d'utilisation des services n'ont pas été lues [À v
 
 | Option | Avantages | Inconvénients |
 | --- | --- | --- |
-| **Leaflet + fond « Plan IGN » + Base Adresse Nationale (retenu)** | Bibliothèque open source servie par l'application ; services publics sans clé ni compte ; l'adresse ne part que sur un bouton | Adresses françaises seulement ; pas de vue de rue |
+| **Leaflet + fond « Plan IGN » + Base Adresse Nationale (retenu)** | Bibliothèque open source servie par l'application ; services publics sans clé ni compte ; rien ne part vers le service d'adresses sans un geste ; il sait aussi chercher par code postal et donner l'adresse la plus proche d'un point | Adresses françaises seulement ; pas de vue de rue |
 | Google Maps (carte et géocodage) | Rendu familier, monde entier, vue de rue | Compte Google Cloud avec carte bancaire ; clé visible dans le navigateur ; un contrat de plus |
 | Leaflet + OpenStreetMap + Nominatim | Libre, monde entier | Serveurs communautaires, règles d'usage à respecter [À vérifier] |
 | Pas de carte : un lien vers un site de cartes | Rien à maintenir | Ne montre pas plusieurs biens ensemble ; l'adresse part chez un tiers à chaque clic |

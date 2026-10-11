@@ -22,6 +22,7 @@ export function FormulaireAction({
   titre,
   compact = false,
   className = "",
+  apresSucces,
 }: {
   action: (etat: EtatFormulaire, donnees: FormData) => Promise<EtatFormulaire>;
   children: ReactNode;
@@ -29,13 +30,17 @@ export function FormulaireAction({
   titre?: string;
   compact?: boolean;
   className?: string;
+  /** Appelé une fois l'action réussie : par exemple pour quitter un mode de l'écran. */
+  apresSucces?: () => void;
 }) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const dernieresValeurs = useRef<FormData | null>(null);
 
   const [etat, soumettre, enCours] = useActionState(async (precedent: EtatFormulaire, donnees: FormData) => {
     dernieresValeurs.current = donnees;
-    return action(precedent, donnees);
+    const resultat = await action(precedent, donnees);
+    if (resultat.ok && !resultat.erreur) apresSucces?.();
+    return resultat;
   }, ETAT_INITIAL);
 
   useEffect(() => {

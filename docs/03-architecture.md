@@ -36,9 +36,10 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 | `lib/acces` | Applique `peut()` sur les participations en base, journalise les refus | Ne décide pas des règles |
 | `lib/*` métier | Valide, écrit en transaction avec son événement d'audit, renvoie des objets plats | Pas de rendu |
 | `lib/ia` | Construit le contexte autorisé (agrégats), choisit le fournisseur, journalise l'échange | N'écrit jamais dans le dossier |
-| `lib/geocodage` | Sur demande, envoie l'adresse d'un lieu à la Base Adresse Nationale et enregistre la position « source externe · à confirmer » | Ne part jamais sans clic ; n'envoie que l'adresse |
+| `lib/geocodage` | Sur demande, interroge la Base Adresse Nationale : adresse d'un lieu → position, texte cherché → liste d'endroits, point cliqué → adresse connue la plus proche | Ne part jamais sans geste ; n'envoie qu'une chose à la fois ; n'écrit une adresse que vue et demandée |
 | `app/actions.ts` | Lit le formulaire, résout l'acteur, appelle `lib`, traduit les erreurs | Pas de SQL, pas de règle métier |
-| `components/CarteLieux` | Composant client : dessine la carte des lieux (Leaflet), un repère par lieu situé ; un repère déplacé repasse par une Server Action | N'écrit rien lui-même ; n'est pas monté si aucun lieu n'est situé |
+| `components/CarteLieux` | Composant client : dessine la carte des lieux (Leaflet), un repère par lieu situé ; un repère déplacé, ou un point cliqué en mode « choisir l'endroit », repasse par une Server Action | N'écrit rien lui-même ; n'est monté que si un lieu est situé ou si ce mode est ouvert |
+| `components/RechercheEndroit` | Composant client : envoie le texte cherché, affiche la liste des endroits proposés, un formulaire par endroit | N'écrit rien tant qu'un endroit n'est pas choisi |
 
 ## Flux principaux
 
@@ -60,7 +61,9 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 **Situer un lieu sur la carte**
 1. `actionSituerDepuisAdresse` → `geocodage.situerLieuDepuisAdresse` : droits `ecrire lieux` vérifiés avant tout appel ; l'adresse du lieu, seule, part vers la Base Adresse Nationale ; `domain/geo` lit la première correspondance ; sans correspondance ou sans réseau → refus, rien n'est écrit.
 2. `structure.modifierPositionLieu` : position en microdegrés, source `source_externe`, confiance `a_confirmer`, note = l'adresse comprise par le service ; audit avec avant/après et motif.
-3. Écran Lieux : `CarteLieux` n'est monté que si un lieu est situé ; le navigateur demande alors les tuiles du fond de carte. Un repère déplacé, ou deux coordonnées saisies, passent par `actionModifierPosition` avec les deux questions de provenance.
+3. Écran Lieux : `CarteLieux` n'est monté que si un lieu est situé ou si le mode « choisir l'endroit » est ouvert ; le navigateur demande alors les tuiles du fond de carte. Un repère déplacé, ou deux coordonnées saisies, passent par `actionModifierPosition` avec les deux questions de provenance.
+4. Chercher un endroit : `RechercheEndroit` → `actionChercherEndroit` → `geocodage.chercherEndroits` : droits `ecrire lieux`, puis le texte seul part (un code postal seul demande toutes ses communes) ; la liste revient à l'écran, rien n'est écrit. L'endroit choisi passe par `actionModifierPosition` : « source externe · à confirmer », son nom en note.
+5. Choisir l'endroit sur la carte : un lien `?placer=<lieu>`, lu par la page, ouvre le mode pour ce lieu. Clic → `actionAdresseLaPlusProche` : le point seul part, rien n'est écrit ; l'écran montre l'adresse et sa distance. Enregistrer → `actionSituerParClic` → `geocodage.situerLieuParClic` : si l'adresse est gardée, elle est redemandée au service et comparée à celle affichée, puis position et adresse s'écrivent dans la même transaction ; sinon l'adresse du lieu n'est pas touchée.
 
 **Activation de l'IA**
 1. Propriétaire seul (`activer_ia`) : `configurerIA` enregistre `ia_activee`, `ia_perimetre` (sections, jamais personnes/droits/ia), `ia_fournisseur` ; audit.
