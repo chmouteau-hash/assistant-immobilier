@@ -24,46 +24,44 @@ export default async function PageScenarios({ params }: { params: Promise<{ id: 
 
   return (
     <div className="flex flex-col gap-8">
-      {comparaison && (
+      {/* Avec moins de deux scénarios il n'y a rien à comparer : la section n'apparaît pas. Un dossier
+          simple peut n'avoir qu'un scénario, et l'écran ne le présente pas comme un manque (issue #42). */}
+      {comparaison && comparaison.lignes.length >= 2 && (
         <Section titre="Comparaison" sousTitre="Aucun scénario n'écrase l'autre. Les totaux ne sont comparés que si tous les postes sont renseignés.">
-          {comparaison.lignes.length < 2 ? (
-            <Vide>Il faut au moins deux scénarios pour comparer.</Vide>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm [&_td]:pr-3 [&_th]:pr-3">
-                <thead className="text-left text-xs text-neutral-500">
-                  <tr>
-                    <th className="py-1">Scénario</th>
-                    <th>Statut</th>
-                    <th>Total de référence</th>
-                    <th>Avec imprévus</th>
-                    <th>Postes</th>
-                    <th>Rang</th>
-                    <th>Écart</th>
-                    <th>Hypothèses à valider</th>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm [&_td]:pr-3 [&_th]:pr-3">
+              <thead className="text-left text-xs text-neutral-500">
+                <tr>
+                  <th className="py-1">Scénario</th>
+                  <th>Statut</th>
+                  <th>Total de référence</th>
+                  <th>Avec imprévus</th>
+                  <th>Postes</th>
+                  <th>Rang</th>
+                  <th>Écart</th>
+                  <th>Hypothèses à valider</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparaison.lignes.map((l) => (
+                  <tr key={l.scenarioId} className="border-t border-neutral-200">
+                    <td className="py-1 font-medium">{l.nom}</td>
+                    <td>{libelle(statuts, l.statut)}</td>
+                    <td>{l.synthese.totalReferenceCentimes === null ? <Pastille ton="attention">aucun montant</Pastille> : formaterMontant(l.synthese.totalReferenceCentimes)}</td>
+                    <td>{l.synthese.totalAvecImprevusCentimes === null ? "—" : formaterMontant(l.synthese.totalAvecImprevusCentimes)}</td>
+                    <td>
+                      {l.synthese.nbPostes} {l.synthese.nbPostesARenseigner > 0 && <Pastille ton="attention">{l.synthese.nbPostesARenseigner} à renseigner</Pastille>}{" "}
+                      {l.synthese.nbPostesSurEstimation > 0 && <Pastille ton="attention">{l.synthese.nbPostesSurEstimation} estimé(s)</Pastille>}
+                    </td>
+                    <td>{l.rangCout ?? "—"}</td>
+                    <td>{l.ecartAuMoinsCherCentimes === null ? "—" : l.ecartAuMoinsCherCentimes === 0 ? "le moins cher" : `+ ${formaterMontant(l.ecartAuMoinsCherCentimes)}`}</td>
+                    <td>{l.nbHypothesesOuvertes}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {comparaison.lignes.map((l) => (
-                    <tr key={l.scenarioId} className="border-t border-neutral-200">
-                      <td className="py-1 font-medium">{l.nom}</td>
-                      <td>{libelle(statuts, l.statut)}</td>
-                      <td>{l.synthese.totalReferenceCentimes === null ? <Pastille ton="attention">aucun montant</Pastille> : formaterMontant(l.synthese.totalReferenceCentimes)}</td>
-                      <td>{l.synthese.totalAvecImprevusCentimes === null ? "—" : formaterMontant(l.synthese.totalAvecImprevusCentimes)}</td>
-                      <td>
-                        {l.synthese.nbPostes} {l.synthese.nbPostesARenseigner > 0 && <Pastille ton="attention">{l.synthese.nbPostesARenseigner} à renseigner</Pastille>}{" "}
-                        {l.synthese.nbPostesSurEstimation > 0 && <Pastille ton="attention">{l.synthese.nbPostesSurEstimation} estimé(s)</Pastille>}
-                      </td>
-                      <td>{l.rangCout ?? "—"}</td>
-                      <td>{l.ecartAuMoinsCherCentimes === null ? "—" : l.ecartAuMoinsCherCentimes === 0 ? "le moins cher" : `+ ${formaterMontant(l.ecartAuMoinsCherCentimes)}`}</td>
-                      <td>{l.nbHypothesesOuvertes}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {comparaison.reserve && comparaison.lignes.length >= 2 && <p className="text-sm text-amber-800">{comparaison.reserve}</p>}
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {comparaison.reserve && <p className="text-sm text-amber-800">{comparaison.reserve}</p>}
         </Section>
       )}
 

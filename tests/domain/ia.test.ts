@@ -44,6 +44,17 @@ describe("règles locales (assistant sans modèle)", () => {
     expect(textes).toContainEqual(expect.stringMatching(/rattachés à aucun/));
   });
 
+  it("ne suggère pas un second scénario à un chantier ciblé, quand le type du dossier est transmis", () => {
+    const scenarios = [{ nom: "Refaire la pièce", statut: "idee", nbPostes: 1, nbPostesARenseigner: 0, nbPostesSurEstimation: 0, totalReferenceCentimes: 100, hypothesesOuvertes: [] }];
+    const constats = (ctx: ContexteAutorise) => detecterQuestionsManquantes(ctx, MAINTENANT).map((e) => e.constat.texte);
+    const cible = { nom: "P", typeProjet: "travaux_cibles", stade: "travaux" };
+    expect(constats({ dossier: cible, sections: ["identite", "scenarios"], scenarios })).toEqual([]);
+
+    // Pour un autre type de projet, ou sans l'identité du dossier, la suggestion reste.
+    expect(constats({ dossier: { ...cible, typeProjet: "recherche_bien" }, sections: ["identite", "scenarios"], scenarios })).toContainEqual(expect.stringMatching(/Un seul scénario/));
+    expect(constats({ sections: ["scenarios"], scenarios })).toContainEqual(expect.stringMatching(/Un seul scénario/));
+  });
+
   it("chaque élément porte au moins une source datée du dossier et la règle appliquée", () => {
     const ctx: ContexteAutorise = { dossier: { nom: "P", typeProjet: null, stade: null }, sections: ["identite"] };
     for (const e of detecterQuestionsManquantes(ctx, MAINTENANT)) {
