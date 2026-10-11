@@ -78,3 +78,4 @@ Application Next.js (App Router) locale, mono-poste, sans authentification. Troi
 
 - Un commit, un push ou une PR attend l'accord explicite de Christophe, donné après avoir vu le diff ou le texte complet. L'accord vaut pour l'opération montrée, pas pour la suivante. Christophe fusionne lui-même les PR, une fois la CI verte.
 - Réécrire le texte d'une issue existante attend le même accord. Créer une issue de retour d'utilisation n'en demande pas.
+- Une branche dont la PR est fusionnée se supprime sans demander, sur le PC et sur GitHub, après avoir vérifié qu'elle ne contient aucun commit absent de `main`. Toute autre branche (sans PR, PR fermée sans fusion, commits non fusionnés) attend l'accord.
