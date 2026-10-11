@@ -3,12 +3,16 @@ import { autorise } from "@/lib/acces";
 import { listerLieux, listerBatiments, listerPieces, objetsNonVides, type Batiment } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterSurface } from "@/domain/mesure";
+import { formaterCoordonnee, formaterPosition } from "@/domain/geo";
+import { NOM_SERVICE_GEOCODAGE } from "@/lib/geocodage";
 import {
   actionCreerLieu,
   actionCreerBatiment,
   actionCreerPiece,
   actionModifierSurface,
   actionModifierAdresse,
+  actionModifierPosition,
+  actionSituerDepuisAdresse,
   actionRattacherBatiment,
   actionModifierLieu,
   actionModifierBatiment,
@@ -18,6 +22,7 @@ import {
   actionRetirerPiece,
 } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
+import { CarteLieux } from "@/components/CarteLieux";
 import { REPONSE_HABITUELLE } from "@/domain/provenance";
 import { Champ, Pastille, Provenance, QuestionConfiance, QuestionSource, Section, Select, Vide, classeSaisie } from "@/components/ui";
 
@@ -30,8 +35,13 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // partie du lieu (issue #14). Un bâtiment se crée donc dans la carte de son lieu ; ceux qui n'en
 // ont pas sont montrés à part, avec de quoi les y rattacher. Chaque carte porte un formulaire
 // « Corriger » : une faute de frappe ne se rattrapait qu'en supprimant le dossier (issue #22).
-// L'adresse et la surface gardent leur propre formulaire, parce qu'elles portent une provenance.
-// Chaque carte porte aussi « Retirer », qui n'offre son bouton que pour un objet vide.
+// L'adresse, la position et la surface gardent leur propre formulaire, parce qu'elles portent une
+// provenance. Chaque carte porte aussi « Retirer », qui n'offre son bouton que pour un objet vide.
+//
+// Le plan (composant `CarteLieux`) montre un repère par lieu situé. Il n'est monté que si au moins
+// un lieu a une position : tant qu'aucun n'est situé, l'écran ne demande aucun fond de carte au
+// réseau. L'adresse ne part vers le service d'adresses que sur le bouton « Situer d'après
+// l'adresse » (DECISIONS.md, 2026-10-11).
 
 // Comment vider un objet, dit sous la phrase de refus : chaque rattachement se change sur l'écran
 // de ce qui est rattaché.
@@ -54,6 +64,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
   const sansLieu = batiments.filter((b) => !lieux.some((l) => l.id === b.lieuId));
   const choixBatiments = batiments.map((b) => ({ code: b.id, libelle: b.nom }));
   const nonVides = peutEcrire ? objetsNonVides(acteur, id) : {};
+  const auMoinsUnSitue = lieux.some((l) => l.position.valeur !== null);
 
   // Un objet non vide montre la phrase que le serveur opposerait à une demande directe, à la place
   // du bouton.
@@ -260,6 +271,21 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
         sousTitre="Un lieu (bien candidat, bien acquis, terrain) contient ses bâtiments, un bâtiment contient ses pièces. L'adresse reste « à renseigner » tant qu'elle n'est pas connue."
       >
         {lieux.length === 0 && <Vide>Aucun lieu. En phase de recherche, on peut créer un bien candidat fictif clairement nommé.</Vide>}
+        {auMoinsUnSitue && (
+          <CarteLieux
+            dossierId={id}
+            lieux={lieux.map((l) => ({ id: l.id, nom: l.nom, position: l.position.valeur }))}
+            peutEcrire={peutEcrire}
+            action={actionModifierPosition}
+            sources={sources}
+            confiances={confiances}
+          />
+        )}
+        {lieux.length > 0 && !auMoinsUnSitue && (
+          <Vide>
+            Aucun lieu n&apos;est encore situé : le plan apparaît dès qu&apos;un lieu a une position{peutEcrire ? " (« Situer sur la carte », dans la fiche du lieu)" : ""}.
+          </Vide>
+        )}
         <ul className="flex flex-col gap-4 text-sm">
           {lieux.map((l) => {
             const siens = batiments.filter((b) => b.lieuId === l.id);
@@ -271,6 +297,10 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                 <p>
                   Adresse : <Provenance valeur={l.adresse} formater={(v) => v} />
                   {l.parcelle && <span className="ml-2 text-neutral-500">parcelle {l.parcelle}</span>}
+                </p>
+                <p>
+                  Position : <Provenance valeur={l.position} formater={formaterPosition} />
+                  {l.position.note && <span className="ml-2 text-neutral-500">d&apos;après « {l.position.note} »</span>}
                 </p>
                 {l.description && <p className="text-neutral-600">{l.description}</p>}
                 {peutEcrire && (
@@ -304,6 +334,48 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                         <input name="adresse" defaultValue={l.adresse.valeur ?? ""} className={`${classeSaisie} valeur-tracee`} placeholder=" " />
                       </Champ>
                       {champsProvenance("adresse")}
+                      <Champ label="Motif">
+                        <input name="motif" className={classeSaisie} />
+                      </Champ>
+                    </FormulaireAction>
+                  </details>
+                )}
+                {peutEcrire && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs text-neutral-500">Situer sur la carte</summary>
+                    {l.adresse.valeur !== null ? (
+                      <FormulaireAction action={actionSituerDepuisAdresse} bouton="Situer d'après l'adresse" compact className="mt-2">
+                        <input type="hidden" name="dossierId" value={id} />
+                        <input type="hidden" name="lieuId" value={l.id} />
+                        <p className="w-full text-xs text-neutral-600">
+                          L&apos;adresse de ce lieu, et rien d&apos;autre, est envoyée à la {NOM_SERVICE_GEOCODAGE}, un service public sans compte. La position obtenue est notée « source externe ·
+                          à confirmer » : vérifiez le repère sur le plan.{l.position.valeur !== null && " Elle remplace la position actuelle."}
+                        </p>
+                      </FormulaireAction>
+                    ) : (
+                      <p className="mt-2 text-xs text-neutral-600">Sans adresse, la position ne peut pas être cherchée : renseignez l&apos;adresse, ou saisissez la position ci-dessous.</p>
+                    )}
+                    <FormulaireAction action={actionModifierPosition} bouton="Enregistrer" compact className="group mt-2">
+                      <input type="hidden" name="dossierId" value={id} />
+                      <input type="hidden" name="lieuId" value={l.id} />
+                      <p className="w-full text-xs text-neutral-600">Ou saisissez la position, en degrés décimaux. Rien ne part sur le réseau.</p>
+                      <Champ label="Latitude (vide = à renseigner)">
+                        <input
+                          name="latitude"
+                          defaultValue={l.position.valeur ? formaterCoordonnee(l.position.valeur.latitudeMicrodeg) : ""}
+                          className={`${classeSaisie} valeur-tracee w-32`}
+                          placeholder="48,868546"
+                        />
+                      </Champ>
+                      <Champ label="Longitude">
+                        <input
+                          name="longitude"
+                          defaultValue={l.position.valeur ? formaterCoordonnee(l.position.valeur.longitudeMicrodeg) : ""}
+                          className={`${classeSaisie} valeur-tracee w-32`}
+                          placeholder="2,33031"
+                        />
+                      </Champ>
+                      {champsProvenance("position")}
                       <Champ label="Motif">
                         <input name="motif" className={classeSaisie} />
                       </Champ>

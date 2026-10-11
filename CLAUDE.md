@@ -25,7 +25,7 @@ La CI (`.github/workflows/ci.yml`) joue `typecheck`, `lint`, `test` puis `build`
 
 Application Next.js (App Router) locale, mono-poste, sans authentification. Trois couches, dépendance à sens unique `app → lib → domain` ; aucune requête SQL hors de `src/lib`.
 
-- `src/domain/` : fonctions pures (provenance, budget, comparaison, droits, planning, mesure, contrat de l'IA). Ni base, ni Next.js, ni React.
+- `src/domain/` : fonctions pures (provenance, budget, comparaison, droits, planning, mesure, positions, contrat de l'IA). Ni base, ni Next.js, ni React.
 - `src/lib/` : accès aux données et application des droits. Une fonction qui lit ou écrit un dossier reçoit l'`Acteur` en premier paramètre et commence par `exiger(acteur, dossierId, action, section)`. Elle lève une `ErreurApplicative` (`invalide()`, `interdit()`, `introuvable()` dans `erreurs.ts`) et renvoie des objets plats.
 - `src/app/` : pages serveur pour la lecture ; toutes les écritures passent par les Server Actions d'un seul fichier, `src/app/dossiers/actions.ts`. Pages et routes déclarent `export const dynamic = "force-dynamic"`.
 
@@ -47,10 +47,11 @@ Application Next.js (App Router) locale, mono-poste, sans authentification. Troi
 ### Règles du produit que le code doit tenir
 
 - **L'inconnu n'est jamais 0.** Une valeur absente est `null`, affichée « à renseigner ». Une donnée sensible est une `ValeurTracee` : valeur, `source`, `confiance`. Les combinaisons permises sont définies dans `domain/provenance.ts` et redites en contraintes `CHECK` dans les migrations : une règle qui change se change aux deux endroits.
-- **Pas de virgule flottante.** Montants en centimes entiers, surfaces en centièmes de m², taux d'imprévus en pour-mille. La saisie se convertit dans `lib/montant.ts` et `domain/mesure.ts`.
+- **Pas de virgule flottante.** Montants en centimes entiers, surfaces en centièmes de m², taux d'imprévus en pour-mille, positions en microdegrés. La saisie se convertit dans `lib/montant.ts`, `domain/mesure.ts` et `domain/geo.ts`.
 - **Statuts en base.** Statuts et types sont des tables `ref_*`, lues par `lib/references.ts` : en ajouter un passe par une migration. Les vocabulaires qui portent une règle (source, confiance, rôles, sections) sont en plus typés dans `domain`. Pour la source et la confiance, les mots des formulaires et des pastilles viennent de `domain/provenance.ts` (un seul nom par origine), pas des libellés des tables.
 - **Journal d'audit en ajout seul**, garanti par un déclencheur SQLite. Seule exception : la suppression définitive d'un dossier, qui purge son journal dans la même transaction.
 - **L'application fonctionne sans IA.** L'assistant est désactivé par défaut et s'active par dossier. Il ne reçoit que les sections cochées par le propriétaire que l'acteur peut lire (jamais `personnes`, `droits` ni `ia`) et n'écrit rien dans le dossier. Le nom du dossier ne part qu'avec la section `identite`, le nom d'un scénario qu'avec `scenarios`. L'écran montre le texte exact avant l'envoi : l'écran et le fournisseur distant l'écrivent par la même fonction, `serialiserContexte` (`domain/ia/types.ts`). Deux fournisseurs derrière l'interface `FournisseurIA` : règles locales (`domain/ia/questions-manquantes.ts`, sans réseau) et Anthropic (`lib/ia/anthropic.ts`, importé dynamiquement seulement si le dossier le demande et si `ANTHROPIC_API_KEY` existe).
+- **Le plan des lieux ne fait sortir que deux choses.** L'adresse d'un lieu part vers la Base Adresse Nationale seulement au clic sur « Situer d'après l'adresse » (`lib/geocodage.ts`), après contrôle du droit d'écrire les lieux, et la position revient « source externe · à confirmer ». Le navigateur ne demande les tuiles du fond de carte que si un lieu du dossier est situé (`components/CarteLieux.tsx` ; le fond est défini dans `domain/geo.ts`). La position, comme l'adresse, ne part jamais vers l'IA.
 - **Juridique, fiscal, financier : structuré, jamais tranché.** Ces points sont marqués « à vérifier avec un professionnel ».
 
 ### Base de données

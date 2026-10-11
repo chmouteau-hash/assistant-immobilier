@@ -16,9 +16,11 @@ import { COOKIE_ACTEUR, obtenirActeurCourant } from "@/lib/acteur-courant";
 import { ErreurApplicative } from "@/lib/erreurs";
 import { parserMontant } from "@/lib/montant";
 import { parserSurface } from "@/domain/mesure";
+import { parserCoordonnee } from "@/domain/geo";
 import * as dossiers from "@/lib/dossiers";
 import * as personnes from "@/lib/personnes";
 import * as structure from "@/lib/structure";
+import * as geocodage from "@/lib/geocodage";
 import * as idees from "@/lib/idees";
 import * as budget from "@/lib/budget";
 import * as taches from "@/lib/taches";
@@ -152,6 +154,34 @@ export async function actionModifierLieu(_e: EtatFormulaire, fd: FormData): Prom
 export async function actionModifierAdresse(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     structure.modifierAdresseLieu(acteur, { lieuId: texte(fd, "lieuId"), adresse: texte(fd, "adresse"), adresseSource: texte(fd, "adresseSource"), adresseConfiance: texte(fd, "adresseConfiance"), motif: texte(fd, "motif") });
+  });
+}
+
+function coordonneeDepuis(fd: FormData, nom: string, exemple: string): number | null {
+  const brut = texte(fd, nom);
+  if (brut === "") return null;
+  const microdeg = parserCoordonnee(brut);
+  if (microdeg === null) throw new ErreurApplicative("VALIDATION", `Coordonnée invalide : « ${brut} ». Exemple attendu : ${exemple}`);
+  return microdeg;
+}
+
+export async function actionModifierPosition(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.modifierPositionLieu(acteur, {
+      lieuId: texte(fd, "lieuId"),
+      latitudeMicrodeg: coordonneeDepuis(fd, "latitude", "48,868546"),
+      longitudeMicrodeg: coordonneeDepuis(fd, "longitude", "2,33031"),
+      positionSource: texte(fd, "positionSource"),
+      positionConfiance: texte(fd, "positionConfiance"),
+      motif: texte(fd, "motif"),
+    });
+  });
+}
+
+// L'adresse part vers le service d'adresses seulement ici, sur ce bouton (lib/geocodage.ts).
+export async function actionSituerDepuisAdresse(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), async (acteur) => {
+    await geocodage.situerLieuDepuisAdresse(acteur, { lieuId: texte(fd, "lieuId") });
   });
 }
 
