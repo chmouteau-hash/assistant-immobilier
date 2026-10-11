@@ -12,7 +12,7 @@ référence (`ref_*`), modifiables sans toucher au code. Schéma exécutable : `
 | **Personne** | nom (oui) ; email ; type (particulier/professionnel/societe) ; profession ; est_utilisateur_local | — | n-n dossiers via Participation |
 | **Participation (rôle)** | dossier_id, personne_id (oui) ; role ∈ ref_role (oui) ; perimetre (JSON sections, pro) ; finalite (mission) ; revoquee_le (null = active) | — | unique (dossier, personne) |
 | **Lieu (Bien / Terrain)** | nom, type_lieu ∈ ref_type_lieu (oui) ; adresse (non) + adresse_source + adresse_confiance ; parcelle ; description | adresse : Prov. (CHECK : null ⇔ à renseigner) | n bâtiments, documents |
-| **Bâtiment** | nom (oui) ; lieu_id ; type, usage_actuel, usage_envisage, etat, description (libres) | source (saisie par défaut) | n pièces, postes, idées |
+| **Bâtiment** | nom (oui) ; lieu_id (facultatif, modifiable : le bâtiment change de lieu) ; type, usage_actuel, usage_envisage, etat, description (libres) | source (saisie par défaut) | n pièces, postes, idées |
 | **Pièce / espace** | batiment_id, nom (oui) ; usage ; surface_centiemes (non) + surface_source + surface_confiance + surface_document_id ; description | surface : Prov. (CHECK : estimation ≠ connu ; suggestion_ia ⇒ à confirmer) | n idées, documents |
 | **Idée** | titre (oui) ; description ; statut ∈ ref_statut_idee (idée, à étudier, retenue, écartée) ; scenario_id, batiment_id, piece_id | source | décision créée quand retenue/écartée |
 | **Scénario** | nom (oui) ; description ; statut ∈ ref_statut_scenario | source | n postes, hypothèses, idées, actions, documents ; décision à retenue/écartée |

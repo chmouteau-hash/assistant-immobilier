@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { obtenirBase, reinitialiserBasePourTests } from "@/lib/db/client";
 import { creerDossier, creerScenario, changerStatutScenario, listerDecisions, configurerIA, modifierDossier, journalAudit, obtenirDossier } from "@/lib/dossiers";
-import { creerLieu, creerBatiment, creerPiece, modifierSurfacePiece } from "@/lib/structure";
+import { creerLieu, creerBatiment, creerPiece, modifierSurfacePiece, rattacherBatiment, listerBatiments } from "@/lib/structure";
 import { creerIdee, changerStatutIdee } from "@/lib/idees";
 import { creerPoste, ajouterLigne, syntheseScenario, comparaisonDossier, listerLignes } from "@/lib/budget";
 import { creerTache, modifierTache, ajouterDependance, retirerDependance, listerDependances, changerStatutTache, classementDossier, timelineDossier } from "@/lib/taches";
@@ -43,6 +43,42 @@ describe("parcours pilote", () => {
     const estimee = modifierSurfacePiece(moi, { pieceId: piece.id, surfaceCentiemes: 4500, surfaceSource: "estimation" });
     expect(estimee.surface).toMatchObject({ valeur: 4500, source: "estimation", confiance: "estime" });
     expect(() => modifierSurfacePiece(moi, { pieceId: piece.id, surfaceCentiemes: 4500 })).toThrow(/source/);
+  });
+
+  it("un bâtiment créé sans lieu se rattache ensuite, change de lieu, et chaque fois c'est tracé", () => {
+    const d = creerDossier(moi, { nom: "Pilote" });
+    const ailleurs = creerDossier(moi, { nom: "Autre dossier" });
+    const terrain = creerLieu(moi, { dossierId: d.id, nom: "Terrain (fictif)", typeLieu: "terrain" });
+    const bien = creerLieu(moi, { dossierId: d.id, nom: "Bien candidat (fictif)", typeLieu: "bien_candidat" });
+    const lieuAilleurs = creerLieu(moi, { dossierId: ailleurs.id, nom: "Lieu d'un autre dossier", typeLieu: "terrain" });
+
+    const bat = creerBatiment(moi, { dossierId: d.id, nom: "Maison bois" });
+    expect(bat.lieuId).toBeNull();
+
+    const changementsDeLieu = () =>
+      journalAudit(moi, d.id)
+        .filter((e) => e.nomEntite === "batiment" && e.action === "modification")
+        .flatMap((e) => e.changements ?? []);
+
+    expect(rattacherBatiment(moi, { batimentId: bat.id, lieuId: terrain.id }).lieuId).toBe(terrain.id);
+    expect(listerBatiments(moi, d.id).find((b) => b.id === bat.id)?.lieuId).toBe(terrain.id);
+    expect(changementsDeLieu()).toEqual([{ champ: "lieu_id", avant: null, apres: terrain.id }]);
+
+    // Même lieu : rien ne change, rien n'est tracé.
+    rattacherBatiment(moi, { batimentId: bat.id, lieuId: terrain.id });
+    expect(changementsDeLieu()).toHaveLength(1);
+
+    // Changer de lieu.
+    expect(rattacherBatiment(moi, { batimentId: bat.id, lieuId: bien.id }).lieuId).toBe(bien.id);
+    expect(changementsDeLieu()).toContainEqual({ champ: "lieu_id", avant: terrain.id, apres: bien.id });
+
+    // Mêmes garde-fous qu'à la création, même droit.
+    expect(() => rattacherBatiment(moi, { batimentId: bat.id, lieuId: lieuAilleurs.id })).toThrow(/n'appartient pas/);
+    expect(() => rattacherBatiment(moi, { batimentId: bat.id, lieuId: "" })).toThrow(/lieu/i);
+    expect(() => rattacherBatiment(moi, { batimentId: "inconnu", lieuId: bien.id })).toThrow(ErreurApplicative);
+    const invite = inviterPersonne(moi, { dossierId: d.id, nom: "Ami", role: "lecteur" });
+    expect(() => rattacherBatiment({ personneId: invite.personneId, nom: "Ami" }, { batimentId: bat.id, lieuId: terrain.id })).toThrow(ErreurApplicative);
+    expect(listerBatiments(moi, d.id).find((b) => b.id === bat.id)?.lieuId).toBe(bien.id);
   });
 
   it("deux scénarios se comparent sans s'écraser, la comparaison reste prudente", () => {

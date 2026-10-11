@@ -153,6 +153,13 @@ export async function actionCreerBatiment(_e: EtatFormulaire, fd: FormData): Pro
   });
 }
 
+export async function actionRattacherBatiment(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  const dossierId = texte(fd, "dossierId");
+  return executer(dossierId, (acteur) => {
+    structure.rattacherBatiment(acteur, { batimentId: texte(fd, "batimentId"), lieuId: texte(fd, "lieuId") });
+  });
+}
+
 function surfaceDepuis(fd: FormData): number | null {
   const brut = texte(fd, "surface");
   if (brut === "") return null;
