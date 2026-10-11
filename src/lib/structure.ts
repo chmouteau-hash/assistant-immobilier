@@ -7,7 +7,7 @@
 import { randomUUID } from "node:crypto";
 import { obtenirBase, transaction, versObjet, versObjets } from "./db/client";
 import { enregistrerEvenement } from "./db/audit";
-import { exiger, type Acteur } from "./acces";
+import { autorise, dossiersAccessibles, exiger, type Acteur } from "./acces";
 import { interdit, invalide } from "./erreurs";
 import {
   aRenseigner,
@@ -155,6 +155,41 @@ export function obtenirLieu(acteur: Acteur, lieuId: string): Lieu {
   const lieu = hydraterLieu(ligne);
   exiger(acteur, lieu.dossierId, "lire", "lieux");
   return lieu;
+}
+
+/** Un lieu situé d'un AUTRE dossier, tel que la carte du dossier ouvert le montre. */
+export type LieuVoisin = { id: string; nom: string; dossierId: string; dossierNom: string; position: Position };
+
+/**
+ * Les lieux situés des autres dossiers, pour la carte du dossier ouvert (issue #50) : quand on
+ * étudie plusieurs biens dans un même secteur, on veut les voir ensemble.
+ *
+ * Règle (DECISIONS.md, 2026-10-11) : l'acteur n'y trouve rien de plus que ce qu'il lirait en
+ * ouvrant chaque dossier. Seuls comptent les dossiers auxquels il participe encore et dont il peut
+ * lire la section « lieux » ; les autres n'apparaissent pas, sans trace de leur existence. Le nom
+ * du dossier accompagne le lieu : qui lit au moins une section d'un dossier en voit déjà le nom
+ * dans son en-tête (`obtenirDossierPourNavigation`). Ni adresse, ni provenance, ni description.
+ * L'ordre est celui de la création, des dossiers puis des lieux ; `rowid` départage deux créations
+ * de la même milliseconde, que la date seule laisserait dans un ordre indéterminé.
+ *
+ * Les droits sur les autres dossiers se lisent avec `autorise`, pas `exiger` : ne pas pouvoir lire
+ * un dossier voisin n'est pas une tentative d'accès, et ne s'écrit pas au journal.
+ */
+export function listerLieuxVoisins(acteur: Acteur, dossierId: string): LieuVoisin[] {
+  exiger(acteur, dossierId, "lire", "lieux");
+  const autres = dossiersAccessibles(acteur).filter((id) => id !== dossierId && autorise(acteur, id, "lire", "lieux"));
+  if (autres.length === 0) return [];
+  const lignes = versObjets<{ id: string; nom: string; dossierId: string; dossierNom: string; latitudeMicrodeg: number; longitudeMicrodeg: number }>(
+    obtenirBase()
+      .prepare(
+        `SELECT l.id, l.nom, l.dossier_id, d.nom AS dossier_nom, l.latitude_microdeg, l.longitude_microdeg
+         FROM lieu l JOIN dossier d ON d.id = l.dossier_id
+         WHERE l.dossier_id IN (${autres.map(() => "?").join(", ")}) AND l.latitude_microdeg IS NOT NULL AND l.longitude_microdeg IS NOT NULL
+         ORDER BY d.created_at, d.rowid, l.created_at, l.rowid`,
+      )
+      .all(...autres),
+  );
+  return lignes.map((l) => ({ id: l.id, nom: l.nom, dossierId: l.dossierId, dossierNom: l.dossierNom, position: { latitudeMicrodeg: l.latitudeMicrodeg, longitudeMicrodeg: l.longitudeMicrodeg } }));
 }
 
 export function creerLieu(

@@ -666,3 +666,41 @@ toute adresse, le service ne renvoie rien : seule la position s'enregistre alors
 réponse du service, sans liste. Le point que le service attribue à une commune (mairie, centre)
 n'a pas été vérifié. Les biens hors de France restent hors du service. Les conditions
 d'utilisation restent [À vérifier].
+
+## 2026-10-11 — Carte des lieux : les biens des autres dossiers
+
+**Décision.** Vient de l'issue #50. Christophe a choisi entre les options qui lui étaient soumises.
+Cette entrée renverse un point de l'entrée « une carte des lieux » du même jour, qui écartait une
+carte tous dossiers confondus (son point 4, et « ce qui n'est pas tranché »).
+
+1. La carte d'un dossier montre aussi les lieux situés des autres dossiers, d'une autre couleur :
+   foncés pour le dossier ouvert, bleus pour les autres, avec le nom du lieu et celui de son
+   dossier. Une légende le dit.
+2. Règle de droits : l'acteur n'y trouve rien de plus que ce qu'il lirait en ouvrant chaque dossier.
+   Seuls comptent les dossiers auxquels il participe encore et dont il peut lire la section
+   « lieux ». Un dossier qu'il ne lit pas n'apparaît pas, sans trace de son existence, et ne pas le
+   lire n'est pas journalisé comme un refus. De chaque lieu voisin, la carte ne reçoit que son nom,
+   sa position et le nom de son dossier, que tout participant voit déjà dans l'en-tête.
+3. Un clic sur un repère mène à la fiche du lieu dans l'écran Lieux : plus bas dans la page pour un
+   lieu du dossier, dans son dossier pour un autre. Option retenue contre la vue d'ensemble du
+   dossier. Entrée et Espace font de même au clavier. Un repère d'un autre dossier ne se déplace
+   pas d'ici.
+4. La carte s'ouvre sur le dossier et son secteur : un bien d'un autre dossier n'élargit le cadre
+   que s'il est à moins de 30 km d'un lieu du dossier. Les biens plus lointains sont sur la carte
+   aussi, et une phrase les compte.
+5. La carte n'apparaît toujours que si le dossier ouvert a un lieu situé, ou en mode « choisir
+   l'endroit ».
+
+**Pourquoi.** En recherche, on étudie plusieurs biens d'un même secteur, souvent un dossier par
+bien : les voir ensemble est le cœur de la comparaison. Le seuil de 30 km évite qu'un bien lointain
+fasse dézoomer la carte jusqu'à perdre le quartier de vue.
+
+**Conséquences.** `listerLieuxVoisins` dans `lib/structure.ts` ; chaque fiche de lieu porte une
+ancre. La checklist de `docs/05-securite-rgpd.md` est précisée : un dossier ne montre d'un autre
+que ce que l'acteur peut déjà y lire. Les tuiles demandées couvrent la zone de tous les biens
+affichés, pas seulement ceux du dossier. L'assistant IA n'est pas concerné : son contexte reste
+celui du dossier ouvert. Pas de migration.
+
+**Ce qui n'est pas tranché.** Une carte sur « Mes dossiers ». Un réglage du seuil de 30 km. Les
+étiquettes de deux biens très proches se chevauchent à petite échelle. Un dossier sans lieu situé
+n'affiche pas la carte, même si d'autres dossiers ont des biens dans le secteur.

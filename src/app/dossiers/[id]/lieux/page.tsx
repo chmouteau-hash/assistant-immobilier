@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
-import { listerLieux, listerBatiments, listerPieces, objetsNonVides, type Batiment } from "@/lib/structure";
+import { listerLieux, listerLieuxVoisins, listerBatiments, listerPieces, objetsNonVides, type Batiment } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterSurface } from "@/domain/mesure";
 import { formaterCoordonnee, formaterPosition } from "@/domain/geo";
@@ -29,7 +29,7 @@ import { FormulaireAction } from "@/components/FormulaireAction";
 import { CarteLieux } from "@/components/CarteLieux";
 import { RechercheEndroit } from "@/components/RechercheEndroit";
 import { REPONSE_HABITUELLE } from "@/domain/provenance";
-import { Champ, Pastille, Provenance, QuestionConfiance, QuestionSource, Section, Select, Vide, classeSaisie } from "@/components/ui";
+import { Champ, Pastille, Provenance, QuestionConfiance, QuestionSource, Section, Select, Vide, ancreFicheLieu, classeSaisie } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +52,10 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // l'adresse du lieu sur « Situer d'après l'adresse », le texte saisi sur « Chercher », le point
 // cliqué en mode « Choisir l'endroit sur la carte ». Ce mode s'ouvre par le paramètre `placer` de
 // l'adresse de la page, pour un lieu à la fois : c'est un lien ordinaire, lu ici côté serveur.
+//
+// La carte montre aussi, d'une autre couleur, les lieux situés des autres dossiers que l'acteur
+// peut lire (issue #50) : plusieurs biens étudiés dans un même secteur se voient ensemble. Un clic
+// sur un repère mène à la fiche du lieu, ici ou dans son dossier : chaque fiche porte une ancre.
 
 // Comment vider un objet, dit sous la phrase de refus : chaque rattachement se change sur l'écran
 // de ce qui est rattaché.
@@ -80,6 +84,9 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
   // le paramètre est ignoré, sans rien dire de plus.
   const lieuAPlacer = peutEcrire && typeof placer === "string" ? (lieux.find((l) => l.id === placer) ?? null) : null;
   const cheminLieux = `/dossiers/${id}/lieux`;
+  const carteMontee = auMoinsUnSitue || lieuAPlacer !== null;
+  // Les biens des autres dossiers ne se lisent que si la carte s'affiche.
+  const voisins = carteMontee ? listerLieuxVoisins(acteur, id) : [];
 
   // Un objet non vide montre la phrase que le serveur opposerait à une demande directe, à la place
   // du bouton.
@@ -286,12 +293,13 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
         sousTitre="Un lieu (bien candidat, bien acquis, terrain) contient ses bâtiments, un bâtiment contient ses pièces. L'adresse reste « à renseigner » tant qu'elle n'est pas connue."
       >
         {lieux.length === 0 && <Vide>Aucun lieu. En phase de recherche, on peut créer un bien candidat fictif clairement nommé.</Vide>}
-        {(auMoinsUnSitue || lieuAPlacer) && (
+        {carteMontee && (
           // `scroll-mt` : le lien « Choisir l'endroit sur la carte » amène ici, sous la barre d'onglets collée.
           <div id="carte-des-lieux" className="scroll-mt-32">
             <CarteLieux
               dossierId={id}
               lieux={lieux.map((l) => ({ id: l.id, nom: l.nom, position: l.position.valeur }))}
+              voisins={voisins.map((v) => ({ id: v.id, nom: v.nom, dossierNom: v.dossierNom, lien: `/dossiers/${v.dossierId}/lieux#${ancreFicheLieu(v.id)}`, position: v.position }))}
               peutEcrire={peutEcrire}
               action={actionModifierPosition}
               sources={sources}
@@ -312,7 +320,7 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
           {lieux.map((l) => {
             const siens = batiments.filter((b) => b.lieuId === l.id);
             return (
-              <li key={l.id} className="rounded border border-neutral-200 bg-white p-3">
+              <li key={l.id} id={ancreFicheLieu(l.id)} className="scroll-mt-32 rounded border border-neutral-200 bg-white p-3">
                 <p>
                   <span className={classeNiveau}>Lieu</span> <span className="font-medium">{l.nom}</span> <span className="text-neutral-500">· {libelle(typesLieu, l.typeLieu)}</span>
                 </p>

@@ -108,11 +108,13 @@ Détail et alternatives comparées : [docs/02-choix-techniques.md](docs/02-choix
   personne, une adresse ni un fichier. L'écran montre le texte exact avant l'envoi. Il ne peut
   rien écrire.
 - **Carte des lieux : Leaflet et deux services publics.** L'écran Lieux montre un repère par lieu
-  situé, sur le fond « Plan IGN ». Un lieu se situe en cherchant un code postal, une commune ou une
-  adresse, en cliquant sur la carte, ou par ses coordonnées. La position est une donnée tracée, en
-  microdegrés entiers. Rien ne sort du PC sans un geste : l'adresse du lieu, le texte cherché ou le
-  point cliqué, vers la Base Adresse Nationale ; les demandes de tuiles du fond de carte, quand la
-  carte s'affiche. Ni clé ni compte. Décisions du 2026-10-11 (voir [DECISIONS.md](DECISIONS.md)).
+  situé, sur le fond « Plan IGN », et, d'une autre couleur, les lieux situés des autres dossiers que
+  l'on peut déjà lire. Un clic sur un repère mène à sa fiche. Un lieu se situe en cherchant un code
+  postal, une commune ou une adresse, en cliquant sur la carte, ou par ses coordonnées. La position
+  est une donnée tracée, en microdegrés entiers. Rien ne sort du PC sans un geste : l'adresse du
+  lieu, le texte cherché ou le point cliqué, vers la Base Adresse Nationale ; les demandes de tuiles
+  du fond de carte, quand la carte s'affiche. Ni clé ni compte. Décisions du 2026-10-11 (voir
+  [DECISIONS.md](DECISIONS.md)).
 
 Dépendances ajoutées en V1, et pourquoi : `vitest` (tests, résout `@/` et les imports TypeScript
 comme Next.js — `node --test` ne le fait pas), `@anthropic-ai/sdk` (client officiel, erreurs typées,

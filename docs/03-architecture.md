@@ -38,7 +38,7 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 | `lib/ia` | Construit le contexte autorisé (agrégats), choisit le fournisseur, journalise l'échange | N'écrit jamais dans le dossier |
 | `lib/geocodage` | Sur demande, interroge la Base Adresse Nationale : adresse d'un lieu → position, texte cherché → liste d'endroits, point cliqué → adresse connue la plus proche | Ne part jamais sans geste ; n'envoie qu'une chose à la fois ; n'écrit une adresse que vue et demandée |
 | `app/actions.ts` | Lit le formulaire, résout l'acteur, appelle `lib`, traduit les erreurs | Pas de SQL, pas de règle métier |
-| `components/CarteLieux` | Composant client : dessine la carte des lieux (Leaflet), un repère par lieu situé ; un repère déplacé, ou un point cliqué en mode « choisir l'endroit », repasse par une Server Action | N'écrit rien lui-même ; n'est monté que si un lieu est situé ou si ce mode est ouvert |
+| `components/CarteLieux` | Composant client : dessine la carte des lieux (Leaflet), un repère par lieu situé, ceux des autres dossiers d'une autre couleur ; un clic sur un repère mène à sa fiche ; un repère déplacé, ou un point cliqué en mode « choisir l'endroit », repasse par une Server Action | N'écrit rien lui-même ; n'est monté que si un lieu est situé ou si ce mode est ouvert |
 | `components/RechercheEndroit` | Composant client : envoie le texte cherché, affiche la liste des endroits proposés, un formulaire par endroit | N'écrit rien tant qu'un endroit n'est pas choisi |
 
 ## Flux principaux
@@ -76,6 +76,7 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 - Sections : identite, personnes, lieux, idees, scenarios, budget, documents, taches, ia, droits.
 - Section voisine : le budget et les idées citent leur scénario. Qui ne lit pas les scénarios les voit sous un libellé neutre (« Scénario 1 »), sans statut ; un écran n'écrit jamais « aucun » pour ce qui existe sans être lisible. Un professionnel limité au budget peut donc y déposer un montant.
 - Sans participation active : aucun accès, et un dossier inconnu répond comme un dossier interdit (pas de fuite d'existence).
+- Carte des lieux : elle réunit les lieux situés des autres dossiers que l'acteur peut lire (`structure.listerLieuxVoisins` : participation active et section « lieux » lisible, vérifiées dossier par dossier avec `autorise`). Elle n'ouvre aucun accès : nom du lieu, position, nom du dossier, rien d'autre.
 - Le dernier propriétaire ne peut être ni révoqué ni rétrogradé.
 - L'interface masque ce qui est refusé ; le serveur refuse quand même (`exiger`), et journalise (`acces_refuse`).
 
