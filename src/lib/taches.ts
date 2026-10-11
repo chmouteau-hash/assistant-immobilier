@@ -136,6 +136,9 @@ export function modifierTache(
 ): Tache {
   const avant = lireBrute(params.tacheId);
   exiger(acteur, avant.dossierId, "ecrire", "taches");
+  // Toucher au scénario demande de pouvoir lire les scénarios : l'écran ne propose la liste qu'à
+  // qui peut la lire, et une requête directe ne doit pas permettre davantage.
+  if (params.scenarioId !== undefined) exiger(acteur, avant.dossierId, "lire", "scenarios");
   const apres = {
     description: params.description === undefined ? avant.description : descriptionExigee(params.description),
     echeance: params.echeance === undefined ? avant.echeance : params.echeance || null,

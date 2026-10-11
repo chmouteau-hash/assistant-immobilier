@@ -445,3 +445,36 @@ encore : un objet qui en porte ne peut donc être ni vidé ni retiré, et l'écr
 **Ce qui n'est pas tranché.** Détacher ou déplacer une idée, un poste de budget ou un document ;
 corriger une idée, un scénario et un poste (issue #22) ; retirer une idée, un scénario, un poste ou
 une action.
+
+## 2026-10-11 — Une idée, un scénario, un poste et un document se corrigent et se détachent
+
+**Décision.** Suite de l'issue #22, après les lieux. Même règle que pour une action (2026-10-10) et
+pour un lieu (2026-10-11) : même droit qu'à la création, un champ absent ne change pas, un champ
+vidé redevient inconnu, seuls les champs changés sont tracés au journal d'audit, sans motif.
+
+1. Idée : titre, description, et ses rattachements (scénario, bâtiment, pièce). Son statut garde
+   son formulaire et son motif.
+2. Scénario : nom et description. Une décision déjà prise garde le nom que le scénario, ou l'idée,
+   portait : elle dit ce qui a été décidé avec les mots du moment, et n'est pas réécrite.
+3. Poste de budget : nom, catégorie, bâtiment. Le nom reste unique dans son scénario ; les lignes
+   du poste suivent son nouveau nom. Un poste ne change pas de scénario.
+4. Document : type, date, note et rattachements (lieu, bâtiment, pièce, scénario, poste, idée,
+   action). Le fichier ne change jamais : ni son nom d'origine, ni son contenu.
+5. Un rattachement se pose, se change et se retire. Une liste (scénarios, bâtiments…) n'est
+   proposée qu'à qui peut la lire ; sans elle, la correction ne touche pas au rattachement. La règle
+   est tenue côté serveur : toucher à un rattachement demande de pouvoir lire la section de l'objet
+   visé, et le refus est inscrit au journal. Elle vaut pour un document, un poste et une action,
+   que des professionnels peuvent écrire ; qui écrit les idées lit déjà tout ce qu'elles visent.
+
+**Pourquoi.** Ces objets ne se corrigeaient pas (issue #22), et un bâtiment ou une pièce qui portait
+une idée, un poste ou un document ne pouvait être ni vidé ni retiré (entrée précédente). Un document
+déposé sans scénario ne pouvait pas non plus alimenter le budget.
+
+**Conséquences.** Lève la limite notée dans l'entrée précédente. Trois garde-fous qui manquaient
+sont ajoutés au passage : le bâtiment d'un poste doit appartenir au même dossier, dès la création ;
+un type de document inconnu est refusé par un message, dès le dépôt ; corriger le scénario d'une
+action demande de pouvoir lire les scénarios (correction livrée le 2026-10-10, contrôle ajouté ici).
+
+**Ce qui n'est pas tranché.** Retirer une idée, un scénario, un poste, un document ou une action ;
+changer un poste de scénario ; rattacher une idée à une pièce depuis l'écran (la fonction le permet,
+aucun formulaire ne le propose, ni à la création ni à la correction).

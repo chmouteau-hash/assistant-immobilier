@@ -4,7 +4,7 @@ import { listerIdees } from "@/lib/idees";
 import { listerScenarios } from "@/lib/dossiers";
 import { listerBatiments } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
-import { actionCreerIdee, actionChangerStatutIdee, actionRattacherIdee } from "../../actions";
+import { actionCreerIdee, actionChangerStatutIdee, actionModifierIdee } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { Champ, Pastille, QuestionSource, Section, Select, Vide, classeSaisie } from "@/components/ui";
 import { LIBELLES_SOURCE } from "@/domain/provenance";
@@ -20,6 +20,8 @@ export default async function PageIdees({ params }: { params: Promise<{ id: stri
   const scenarios = autorise(acteur, id, "lire", "scenarios") ? listerScenarios(acteur, id) : [];
   const batiments = autorise(acteur, id, "lire", "lieux") ? listerBatiments(acteur, id) : [];
   const peutEcrire = autorise(acteur, id, "ecrire", "idees");
+  const choixScenarios = scenarios.map((s) => ({ code: s.id, libelle: s.nom }));
+  const choixBatiments = batiments.map((b) => ({ code: b.id, libelle: b.nom }));
 
   return (
     <div className="flex flex-col gap-8">
@@ -41,6 +43,21 @@ export default async function PageIdees({ params }: { params: Promise<{ id: stri
                 {i.batimentId && ` · bâtiment : ${batiments.find((b) => b.id === i.batimentId)?.nom ?? "?"}`}
               </p>
               {peutEcrire && (
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-xs text-neutral-500">Corriger l&apos;idée</summary>
+                  <FormulaireAction action={actionModifierIdee} bouton="Enregistrer" compact className="mt-1">
+                    <input type="hidden" name="dossierId" value={id} />
+                    <input type="hidden" name="ideeId" value={i.id} />
+                    <Champ label="Titre" large>
+                      <input name="titre" required defaultValue={i.titre} className={classeSaisie} />
+                    </Champ>
+                    <Champ label="Description, contraintes, questions ouvertes" large>
+                      <textarea name="description" rows={2} defaultValue={i.description ?? ""} className={classeSaisie} />
+                    </Champ>
+                  </FormulaireAction>
+                </details>
+              )}
+              {peutEcrire && (
                 <div className="mt-2 flex flex-wrap gap-4">
                   <FormulaireAction action={actionChangerStatutIdee} bouton="Changer" compact>
                     <input type="hidden" name="dossierId" value={id} />
@@ -52,20 +69,20 @@ export default async function PageIdees({ params }: { params: Promise<{ id: stri
                       <input name="motif" className={classeSaisie} />
                     </Champ>
                   </FormulaireAction>
-                  {scenarios.length > 0 && (
-                    <FormulaireAction action={actionRattacherIdee} bouton="Rattacher" compact>
+                  {(scenarios.length > 0 || batiments.length > 0) && (
+                    <FormulaireAction action={actionModifierIdee} bouton="Rattacher" compact>
                       <input type="hidden" name="dossierId" value={id} />
                       <input type="hidden" name="ideeId" value={i.id} />
-                      <Champ label="Scénario">
-                        <select key={i.scenarioId ?? ""} name="scenarioId" defaultValue={i.scenarioId ?? ""} className={classeSaisie}>
-                          <option value="">— aucun —</option>
-                          {scenarios.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.nom}
-                            </option>
-                          ))}
-                        </select>
-                      </Champ>
+                      {scenarios.length > 0 && (
+                        <Champ label="Scénario">
+                          <Select name="scenarioId" options={choixScenarios} defaultValue={i.scenarioId ?? ""} vide="— aucun —" />
+                        </Champ>
+                      )}
+                      {batiments.length > 0 && (
+                        <Champ label="Bâtiment">
+                          <Select name="batimentId" options={choixBatiments} defaultValue={i.batimentId ?? ""} vide="— aucun —" />
+                        </Champ>
+                      )}
                     </FormulaireAction>
                   )}
                 </div>

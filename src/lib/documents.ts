@@ -20,6 +20,7 @@ import { interdit, invalide } from "./erreurs";
 import { ajouterLigne, creerPoste, lirePosteBrut, type LigneBudget, type PosteBudget } from "./budget";
 import { parserMontant } from "./montant";
 import { estTypeMontant } from "../domain/budget";
+import type { Section } from "../domain/droits";
 import type { Source } from "../domain/provenance";
 
 export type Document = {
@@ -94,19 +95,26 @@ export function cheminAbsoluDocument(acteur: Acteur, id: string): { chemin: stri
 
 type Rattachements = Partial<Pick<Document, "lieuId" | "batimentId" | "pieceId" | "scenarioId" | "posteId" | "ideeId" | "tacheId">>;
 
+// Ce à quoi un document se rattache : le champ, la table où vit l'objet visé, et la section qu'il
+// faut pouvoir lire pour y toucher.
+const TABLES_RATTACHEMENT: Array<[keyof Rattachements, string, Section]> = [
+  ["lieuId", "lieu", "lieux"],
+  ["batimentId", "batiment", "lieux"],
+  ["pieceId", "piece", "lieux"],
+  ["scenarioId", "scenario", "scenarios"],
+  ["posteId", "poste_budget", "budget"],
+  ["ideeId", "idee", "idees"],
+  ["tacheId", "tache", "taches"],
+];
+
+function exigerTypeDocument(code: string): void {
+  if (!obtenirBase().prepare(`SELECT 1 FROM ref_type_document WHERE code = ?`).get(code)) throw invalide("Type de document inconnu.");
+}
+
 function verifierRattachements(dossierId: string, r: Rattachements): Rattachements {
   const db = obtenirBase();
-  const tables: Array<[keyof Rattachements, string]> = [
-    ["lieuId", "lieu"],
-    ["batimentId", "batiment"],
-    ["pieceId", "piece"],
-    ["scenarioId", "scenario"],
-    ["posteId", "poste_budget"],
-    ["ideeId", "idee"],
-    ["tacheId", "tache"],
-  ];
   const propre: Rattachements = {};
-  for (const [cle, table] of tables) {
+  for (const [cle, table] of TABLES_RATTACHEMENT) {
     const id = r[cle];
     if (!id) {
       propre[cle] = null;
@@ -136,6 +144,7 @@ export function deposerDocument(
   if (params.octets.length === 0) throw invalide("Le fichier est vide.");
   if (params.octets.length > TAILLE_MAX_OCTETS) throw invalide(`Fichier trop volumineux (max ${Math.round(TAILLE_MAX_OCTETS / 1024 / 1024)} Mo).`);
   if (params.dateDocument && !/^\d{4}-\d{2}-\d{2}$/.test(params.dateDocument)) throw invalide("La date du document doit être au format AAAA-MM-JJ.");
+  exigerTypeDocument(params.typeDocument);
   const rattachements = verifierRattachements(params.dossierId, params);
 
   const id = randomUUID();
@@ -176,6 +185,53 @@ export function deposerDocument(
     );
     enregistrerEvenement(db, { nomEntite: "document", entiteId: id, action: "creation", acteurId: acteur.personneId, dossierId: params.dossierId });
     return lireDocumentBrut(id);
+  });
+}
+
+/**
+ * Reclasser un document après son dépôt : type, date, note et rattachements. Un champ absent ne
+ * change pas, un champ vidé redevient inconnu ou détaché ; seuls les champs changés sont tracés.
+ * Le fichier, lui, ne change jamais : ni son nom d'origine, ni son contenu.
+ */
+export function modifierDocument(
+  acteur: Acteur,
+  params: { documentId: string; typeDocument?: string; dateDocument?: string | null; note?: string } & Rattachements,
+): Document {
+  const avant = lireDocumentBrut(params.documentId);
+  exiger(acteur, avant.dossierId, "ecrire", "documents");
+  // Toucher à un rattachement demande de pouvoir lire la section de l'objet visé. L'écran ne propose
+  // la liste qu'à qui peut la lire ; une requête directe ne doit pas permettre davantage.
+  for (const [cle, , section] of TABLES_RATTACHEMENT) if (params[cle] !== undefined) exiger(acteur, avant.dossierId, "lire", section);
+  const typeDocument = params.typeDocument ?? avant.typeDocument;
+  if (typeDocument !== avant.typeDocument) exigerTypeDocument(typeDocument);
+  const dateDocument = params.dateDocument === undefined ? avant.dateDocument : params.dateDocument || null;
+  if (dateDocument && !/^\d{4}-\d{2}-\d{2}$/.test(dateDocument)) throw invalide("La date du document doit être au format AAAA-MM-JJ.");
+  const note = params.note === undefined ? avant.note : params.note.trim() || null;
+  const demandes = verifierRattachements(avant.dossierId, params);
+  const rattachements = TABLES_RATTACHEMENT.map(([cle]) => ({
+    colonne: cle.replace(/Id$/, "_id"),
+    avant: avant[cle],
+    apres: params[cle] === undefined ? avant[cle] : (demandes[cle] ?? null),
+  }));
+
+  const changements = [
+    { champ: "type_document", avant: avant.typeDocument, apres: typeDocument },
+    { champ: "date_document", avant: avant.dateDocument, apres: dateDocument },
+    { champ: "note", avant: avant.note, apres: note },
+    ...rattachements.map((r) => ({ champ: r.colonne, avant: r.avant, apres: r.apres })),
+  ].filter((c) => c.avant !== c.apres);
+  if (changements.length === 0) return avant;
+
+  return transaction((db) => {
+    db.prepare(`UPDATE document SET type_document = ?, date_document = ?, note = ?, ${rattachements.map((r) => `${r.colonne} = ?`).join(", ")} WHERE id = ?`).run(
+      typeDocument,
+      dateDocument,
+      note,
+      ...rattachements.map((r) => r.apres),
+      params.documentId,
+    );
+    enregistrerEvenement(db, { nomEntite: "document", entiteId: params.documentId, action: "modification", acteurId: acteur.personneId, dossierId: avant.dossierId, changements });
+    return lireDocumentBrut(params.documentId);
   });
 }
 

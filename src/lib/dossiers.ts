@@ -333,6 +333,31 @@ export function creerScenario(
 }
 
 /**
+ * Corriger un scénario après sa création : nom, description. Un champ absent ne change pas, une
+ * description vidée redevient inconnue, seuls les champs changés sont tracés. Une décision déjà
+ * prise garde le nom que le scénario portait : elle n'est pas réécrite.
+ */
+export function modifierScenario(acteur: Acteur, params: { scenarioId: string; nom?: string; description?: string }): Scenario {
+  const avant = lireScenarioBrut(params.scenarioId);
+  exiger(acteur, avant.dossierId, "ecrire", "scenarios");
+  const nom = params.nom === undefined ? avant.nom : params.nom.trim();
+  if (nom === "") throw invalide("Le nom du scénario est obligatoire.");
+  const description = params.description === undefined ? avant.description : params.description.trim() || null;
+
+  const changements = [
+    { champ: "nom", avant: avant.nom, apres: nom },
+    { champ: "description", avant: avant.description, apres: description },
+  ].filter((c) => c.avant !== c.apres);
+  if (changements.length === 0) return avant;
+
+  return transaction((db) => {
+    db.prepare(`UPDATE scenario SET nom = ?, description = ? WHERE id = ?`).run(nom, description, params.scenarioId);
+    enregistrerEvenement(db, { nomEntite: "scenario", entiteId: params.scenarioId, action: "modification", acteurId: acteur.personneId, dossierId: avant.dossierId, changements });
+    return lireScenarioBrut(params.scenarioId);
+  });
+}
+
+/**
  * Change le statut d'un scénario, toujours avec un motif. Passer à « retenue » ou « écartée »
  * est une DÉCISION : elle est enregistrée comme telle (table `decision`), avec les alternatives
  * écartées et les conditions encore ouvertes si on les donne.

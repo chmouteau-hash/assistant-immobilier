@@ -90,7 +90,7 @@ function exigerTypeLieu(code: string): void {
   if (!obtenirBase().prepare(`SELECT 1 FROM ref_type_lieu WHERE code = ?`).get(code)) throw invalide("Type de lieu inconnu.");
 }
 
-function exigerBatimentDuDossier(batimentId: string, dossierId: string): void {
+export function exigerBatimentDuDossier(batimentId: string, dossierId: string): void {
   const bat = obtenirBase().prepare(`SELECT dossier_id FROM batiment WHERE id = ?`).get(batimentId) as { dossier_id: string } | undefined;
   if (!bat || bat.dossier_id !== dossierId) throw invalide("Le bâtiment indiqué n'appartient pas à ce dossier.");
 }

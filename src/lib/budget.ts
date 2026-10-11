@@ -8,6 +8,7 @@ import { enregistrerEvenement } from "./db/audit";
 import { exiger, type Acteur } from "./acces";
 import { interdit, invalide } from "./erreurs";
 import { lireScenarioBrut, type Scenario } from "./dossiers";
+import { exigerBatimentDuDossier } from "./structure";
 import {
   estTypeMontant,
   synthetiserScenario,
@@ -83,6 +84,7 @@ export function creerPoste(
   exiger(acteur, scenario.dossierId, "ecrire", "budget");
   const nom = params.nom.trim();
   if (nom === "") throw invalide("Le nom du poste est obligatoire.");
+  if (params.batimentId) exigerBatimentDuDossier(params.batimentId, scenario.dossierId);
 
   return transaction((db) => {
     const doublon = db.prepare(`SELECT id FROM poste_budget WHERE scenario_id = ? AND nom = ?`).get(params.scenarioId, nom);
@@ -98,6 +100,46 @@ export function creerPoste(
     );
     enregistrerEvenement(db, { nomEntite: "poste_budget", entiteId: id, action: "creation", acteurId: acteur.personneId, dossierId: scenario.dossierId });
     return lirePosteBrut(id);
+  });
+}
+
+/**
+ * Corriger un poste après sa création : nom, catégorie, bâtiment. Un champ absent ne change pas,
+ * une catégorie vidée redevient inconnue, un bâtiment vide est détaché ; seuls les champs changés
+ * sont tracés. Le nom reste unique dans son scénario. Chaque ligne garde une copie du nom de son
+ * poste (colonne `poste`, d'avant les postes) : elle est mise à jour dans la même transaction.
+ */
+export function modifierPoste(acteur: Acteur, params: { posteId: string; nom?: string; categorie?: string; batimentId?: string | null }): PosteBudget {
+  const avant = lirePosteBrut(params.posteId);
+  exiger(acteur, avant.dossierId, "ecrire", "budget");
+  // Toucher au bâtiment demande de pouvoir lire les lieux : l'écran ne propose la liste qu'à qui
+  // peut la lire, et une requête directe ne doit pas permettre davantage.
+  if (params.batimentId !== undefined) exiger(acteur, avant.dossierId, "lire", "lieux");
+  const nom = params.nom === undefined ? avant.nom : params.nom.trim();
+  if (nom === "") throw invalide("Le nom du poste est obligatoire.");
+  const apres = {
+    nom,
+    categorie: params.categorie === undefined ? avant.categorie : params.categorie.trim() || null,
+    batimentId: params.batimentId === undefined ? avant.batimentId : params.batimentId || null,
+  };
+  if (apres.batimentId && apres.batimentId !== avant.batimentId) exigerBatimentDuDossier(apres.batimentId, avant.dossierId);
+
+  const changements = [
+    { champ: "nom", avant: avant.nom, apres: apres.nom },
+    { champ: "categorie", avant: avant.categorie, apres: apres.categorie },
+    { champ: "batiment_id", avant: avant.batimentId, apres: apres.batimentId },
+  ].filter((c) => c.avant !== c.apres);
+  if (changements.length === 0) return avant;
+
+  return transaction((db) => {
+    if (apres.nom !== avant.nom) {
+      const doublon = db.prepare(`SELECT id FROM poste_budget WHERE scenario_id = ? AND nom = ? AND id != ?`).get(avant.scenarioId, apres.nom, params.posteId);
+      if (doublon) throw invalide(`Le poste « ${apres.nom} » existe déjà dans ce scénario.`);
+      db.prepare(`UPDATE ligne_budget SET poste = ? WHERE poste_id = ?`).run(apres.nom, params.posteId);
+    }
+    db.prepare(`UPDATE poste_budget SET nom = ?, categorie = ?, batiment_id = ? WHERE id = ?`).run(apres.nom, apres.categorie, apres.batimentId, params.posteId);
+    enregistrerEvenement(db, { nomEntite: "poste_budget", entiteId: params.posteId, action: "modification", acteurId: acteur.personneId, dossierId: avant.dossierId, changements });
+    return lirePosteBrut(params.posteId);
   });
 }
 

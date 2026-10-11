@@ -30,6 +30,9 @@ export type EtatFormulaire = { erreur: string | null; ok?: boolean };
 const texte = (fd: FormData, nom: string): string => String(fd.get(nom) ?? "").trim();
 const texteOuNull = (fd: FormData, nom: string): string | null => texte(fd, nom) || null;
 const liste = (fd: FormData, nom: string): string[] => fd.getAll(nom).map(String).filter((x) => x !== "");
+// Un champ absent du formulaire n'est pas touché. Une liste (scénarios, bâtiments…) n'est proposée
+// qu'à qui peut la lire ; sans elle, la correction laisse le rattachement tel qu'il est.
+const siPresent = (fd: FormData, nom: string): string | undefined => (fd.has(nom) ? texte(fd, nom) : undefined);
 
 async function executer(dossierId: string | null, fn: (acteur: Awaited<ReturnType<typeof obtenirActeurCourant>>) => void | Promise<void>): Promise<EtatFormulaire> {
   try {
@@ -232,9 +235,11 @@ export async function actionChangerStatutIdee(_e: EtatFormulaire, fd: FormData):
   });
 }
 
-export async function actionRattacherIdee(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+// Sert aux deux formulaires d'une idée : « Corriger » (titre, description) et « Rattacher »
+// (scénario, bâtiment). Chacun n'envoie que ses champs.
+export async function actionModifierIdee(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
-    idees.rattacherIdee(acteur, { ideeId: texte(fd, "ideeId"), scenarioId: texteOuNull(fd, "scenarioId") });
+    idees.modifierIdee(acteur, { ideeId: texte(fd, "ideeId"), titre: siPresent(fd, "titre"), description: siPresent(fd, "description"), scenarioId: siPresent(fd, "scenarioId"), batimentId: siPresent(fd, "batimentId") });
   });
 }
 
@@ -244,6 +249,12 @@ export async function actionCreerScenario(_e: EtatFormulaire, fd: FormData): Pro
   const dossierId = texte(fd, "dossierId");
   return executer(dossierId, (acteur) => {
     dossiers.creerScenario(acteur, { dossierId, nom: texte(fd, "nom"), description: texte(fd, "description") });
+  });
+}
+
+export async function actionModifierScenario(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    dossiers.modifierScenario(acteur, { scenarioId: texte(fd, "scenarioId"), nom: texte(fd, "nom"), description: texte(fd, "description") });
   });
 }
 
@@ -271,6 +282,12 @@ export async function actionChangerStatutHypothese(_e: EtatFormulaire, fd: FormD
 export async function actionCreerPoste(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     budget.creerPoste(acteur, { scenarioId: texte(fd, "scenarioId"), nom: texte(fd, "nom"), categorie: texte(fd, "categorie"), batimentId: texteOuNull(fd, "batimentId") });
+  });
+}
+
+export async function actionModifierPoste(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    budget.modifierPoste(acteur, { posteId: texte(fd, "posteId"), nom: texte(fd, "nom"), categorie: texte(fd, "categorie"), batimentId: siPresent(fd, "batimentId") });
   });
 }
 
@@ -318,8 +335,7 @@ export async function actionModifierTache(_e: EtatFormulaire, fd: FormData): Pro
       description: texte(fd, "description"),
       echeance: texte(fd, "echeance"),
       responsable: texte(fd, "responsable"),
-      // La liste des scénarios n'est proposée qu'à qui peut les lire : sans elle, on ne touche pas au rattachement.
-      scenarioId: fd.has("scenarioId") ? texte(fd, "scenarioId") : undefined,
+      scenarioId: siPresent(fd, "scenarioId"),
       estJalon: fd.get("estJalon") === "on",
     });
   });
@@ -365,6 +381,24 @@ export async function actionDeposerDocument(_e: EtatFormulaire, fd: FormData): P
       posteId: texteOuNull(fd, "posteId"),
       ideeId: texteOuNull(fd, "ideeId"),
       tacheId: texteOuNull(fd, "tacheId"),
+    });
+  });
+}
+
+export async function actionModifierDocument(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    documents.modifierDocument(acteur, {
+      documentId: texte(fd, "documentId"),
+      typeDocument: texte(fd, "typeDocument") || undefined,
+      dateDocument: texte(fd, "dateDocument"),
+      note: texte(fd, "note"),
+      lieuId: siPresent(fd, "lieuId"),
+      batimentId: siPresent(fd, "batimentId"),
+      pieceId: siPresent(fd, "pieceId"),
+      scenarioId: siPresent(fd, "scenarioId"),
+      posteId: siPresent(fd, "posteId"),
+      ideeId: siPresent(fd, "ideeId"),
+      tacheId: siPresent(fd, "tacheId"),
     });
   });
 }

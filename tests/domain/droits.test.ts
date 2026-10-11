@@ -62,6 +62,12 @@ describe("peut", () => {
     const ecrivent = roles.filter((p) => peut(roles, p.personneId, "ecrire", "lieux")).map((p) => p.personneId);
     expect(ecrivent).toEqual(["proprietaire", "contributeur"]);
     for (const id of ecrivent) for (const s of ["idees", "budget", "documents"] as const) expect(peut(roles, id, "lire", s)).toBe(true);
+
+    // De même, corriger une idée change son scénario, son bâtiment ou sa pièce sans contrôle de
+    // lecture propre (lib/idees.ts) : qui écrit les idées lit aussi les scénarios et les lieux.
+    const ecriventIdees = roles.filter((p) => peut(roles, p.personneId, "ecrire", "idees")).map((p) => p.personneId);
+    expect(ecriventIdees).toEqual(["proprietaire", "contributeur"]);
+    for (const id of ecriventIdees) for (const s of ["scenarios", "lieux"] as const) expect(peut(roles, id, "lire", s)).toBe(true);
   });
 
   it("un accès révoqué ne vaut plus rien", () => {
