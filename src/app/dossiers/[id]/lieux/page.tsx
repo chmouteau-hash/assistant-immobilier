@@ -33,12 +33,12 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // L'adresse et la surface gardent leur propre formulaire, parce qu'elles portent une provenance.
 // Chaque carte porte aussi « Retirer », qui n'offre son bouton que pour un objet vide.
 
-// Ce qui se fait aujourd'hui pour vider un objet, dit sous la phrase de refus. Une idée, un poste
-// de budget et un document se rattachent à leur création et n'ont pas encore de quoi changer.
+// Comment vider un objet, dit sous la phrase de refus : chaque rattachement se change sur l'écran
+// de ce qui est rattaché.
 const POUR_VIDER = {
-  lieu: "Un bâtiment se déplace avec « Changer de lieu ». Un document rattaché ne se détache pas encore.",
-  batiment: "Une pièce se déplace avec « Corriger ». Une idée, un poste de budget ou un document rattaché ne se détache pas encore.",
-  piece: "Une idée ou un document rattaché ne se détache pas encore.",
+  lieu: "Un bâtiment se déplace avec « Changer de lieu ». Un document se reclasse depuis sa fiche, dans Documents.",
+  batiment: "Une pièce se déplace avec « Corriger ». Une idée se rattache ailleurs dans Idées, un poste dans Budget (« Postes détaillés »), un document depuis sa fiche, dans Documents.",
+  piece: "Un document se reclasse depuis sa fiche, dans Documents.",
 };
 
 export default async function PageLieux({ params }: { params: Promise<{ id: string }> }) {

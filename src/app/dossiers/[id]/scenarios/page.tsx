@@ -4,7 +4,7 @@ import { listerScenarios, listerHypotheses, listerDecisions, historiqueScenario 
 import { comparaisonDossier } from "@/lib/budget";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterMontant } from "@/lib/montant";
-import { actionCreerScenario, actionChangerStatutScenario, actionAjouterHypothese, actionChangerStatutHypothese } from "../../actions";
+import { actionCreerScenario, actionModifierScenario, actionChangerStatutScenario, actionAjouterHypothese, actionChangerStatutHypothese } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { Champ, Pastille, Section, Select, Vide, classeSaisie, formaterDateHeure, reponsesSource } from "@/components/ui";
 
@@ -80,6 +80,21 @@ export default async function PageScenarios({ params }: { params: Promise<{ id: 
                   <Pastille ton={s.statut === "retenue" ? "ok" : "neutre"}>{libelle(statuts, s.statut)}</Pastille>
                 </header>
                 {s.description && <p className="text-neutral-600">{s.description}</p>}
+                {peutEcrire && (
+                  <details>
+                    <summary className="cursor-pointer text-xs text-neutral-500">Corriger le scénario</summary>
+                    <FormulaireAction action={actionModifierScenario} bouton="Enregistrer" compact className="mt-1">
+                      <input type="hidden" name="dossierId" value={id} />
+                      <input type="hidden" name="scenarioId" value={s.id} />
+                      <Champ label="Nom" large>
+                        <input name="nom" required defaultValue={s.nom} className={classeSaisie} />
+                      </Champ>
+                      <Champ label="Description (travaux envisagés, contraintes, questions)" large>
+                        <textarea name="description" rows={2} defaultValue={s.description ?? ""} className={classeSaisie} />
+                      </Champ>
+                    </FormulaireAction>
+                  </details>
+                )}
                 <div>
                   <p className="text-xs font-medium text-neutral-500">Hypothèses</p>
                   {siennes.length === 0 ? (

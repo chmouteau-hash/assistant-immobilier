@@ -6,7 +6,7 @@ import { listerPostes, listerLignes, syntheseScenario } from "@/lib/budget";
 import { listerBatiments } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterMontant } from "@/lib/montant";
-import { actionCreerPoste, actionAjouterLigne, actionModifierLigne } from "../../actions";
+import { actionCreerPoste, actionModifierPoste, actionAjouterLigne, actionModifierLigne } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { REPONSE_HABITUELLE } from "@/domain/provenance";
 import { Champ, EtiquetteSourceConfiance, Pastille, QuestionConfiance, QuestionSource, Section, Select, Vide, classeSaisie, formaterDate } from "@/components/ui";
@@ -38,6 +38,7 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
   const confiances = listerReference("ref_confiance").filter((c) => c.code !== "a_renseigner");
   const statutsLigne = listerReference("ref_statut_ligne");
   const peutEcrire = autorise(acteur, id, "ecrire", "budget");
+  const choixBatiments = batiments.map((b) => ({ code: b.id, libelle: b.nom }));
 
   if (scenarios.length === 0) {
     return (
@@ -111,6 +112,45 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
                   </tbody>
                 </table>
               </div>
+            )}
+            {siens.length > 0 && (
+              <details className="text-sm">
+                <summary className="cursor-pointer text-neutral-600">Postes détaillés ({siens.length})</summary>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {siens.map((p) => {
+                    const batiment = batiments.find((b) => b.id === p.batimentId);
+                    return (
+                      <li key={p.id} className="flex flex-col gap-1 border-t border-neutral-100 py-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{p.nom}</span>
+                          {p.categorie && <span className="text-neutral-500">{p.categorie}</span>}
+                          {batiment && <span className="text-neutral-500">bâtiment : {batiment.nom}</span>}
+                        </div>
+                        {peutEcrire && (
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-neutral-500">Corriger le poste</summary>
+                            <FormulaireAction action={actionModifierPoste} bouton="Enregistrer" compact className="mt-1 text-neutral-900">
+                              <input type="hidden" name="dossierId" value={id} />
+                              <input type="hidden" name="posteId" value={p.id} />
+                              <Champ label="Nom" large>
+                                <input name="nom" required defaultValue={p.nom} className={classeSaisie} />
+                              </Champ>
+                              <Champ label="Catégorie">
+                                <input name="categorie" defaultValue={p.categorie ?? ""} className={classeSaisie} />
+                              </Champ>
+                              {batiments.length > 0 && (
+                                <Champ label="Bâtiment">
+                                  <Select name="batimentId" options={choixBatiments} defaultValue={p.batimentId ?? ""} vide="— aucun —" />
+                                </Champ>
+                              )}
+                            </FormulaireAction>
+                          </details>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>
             )}
             <details className="text-sm">
               <summary className="cursor-pointer text-neutral-600">Lignes détaillées ({lignes.filter((l) => l.scenarioId === s.id).length})</summary>

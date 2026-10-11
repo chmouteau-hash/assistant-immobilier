@@ -3,9 +3,14 @@ import { notFound } from "next/navigation";
 import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { obtenirDocument, listerExtractions, type ChampExtraction } from "@/lib/documents";
+import { listerScenarios } from "@/lib/dossiers";
+import { listerBatiments, listerLieux, listerPieces } from "@/lib/structure";
+import { listerPostes } from "@/lib/budget";
+import { listerIdees } from "@/lib/idees";
+import { listerTaches } from "@/lib/taches";
 import { ErreurApplicative } from "@/lib/erreurs";
 import { listerReference, libelle } from "@/lib/references";
-import { actionProposerExtraction, actionValiderExtraction } from "../../../actions";
+import { actionModifierDocument, actionProposerExtraction, actionValiderExtraction } from "../../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { Champ, EtiquetteSourceConfiance, Pastille, Section, Select, Vide, classeSaisie, formaterDate } from "@/components/ui";
 
@@ -41,6 +46,31 @@ export default async function PageDocument({ params }: { params: Promise<{ id: s
   const validees = extractions.filter((e) => e.statut !== "proposee");
   const estImage = document.mime.startsWith("image/");
 
+  // Ce à quoi le document se rattache. Chaque liste n'est lue que si l'acteur peut lire sa section :
+  // sans elle, le rattachement n'est ni montré ni proposé, et la correction n'y touche pas.
+  const lit = (s: Parameters<typeof autorise>[3]) => autorise(acteur, id, "lire", s);
+  const scenarios = lit("scenarios") ? listerScenarios(acteur, id) : [];
+  const nomScenario = (scenarioId: string) => scenarios.find((s) => s.id === scenarioId)?.nom;
+  const rattachements = [
+    { name: "scenarioId", label: "Scénario", valeur: document.scenarioId, options: scenarios.map((s) => ({ code: s.id, libelle: s.nom })) },
+    {
+      name: "posteId",
+      label: "Poste budgétaire",
+      valeur: document.posteId,
+      // Deux scénarios peuvent porter un poste du même nom : le scénario les départage.
+      options: (lit("budget") ? listerPostes(acteur, id) : []).map((p) => ({ code: p.id, libelle: nomScenario(p.scenarioId) ? `${p.nom} (${nomScenario(p.scenarioId)})` : p.nom })),
+    },
+    { name: "lieuId", label: "Lieu", valeur: document.lieuId, options: (lit("lieux") ? listerLieux(acteur, id) : []).map((l) => ({ code: l.id, libelle: l.nom })) },
+    { name: "batimentId", label: "Bâtiment", valeur: document.batimentId, options: (lit("lieux") ? listerBatiments(acteur, id) : []).map((b) => ({ code: b.id, libelle: b.nom })) },
+    { name: "pieceId", label: "Pièce", valeur: document.pieceId, options: (lit("lieux") ? listerPieces(acteur, id) : []).map((p) => ({ code: p.id, libelle: p.nom })) },
+    { name: "ideeId", label: "Idée", valeur: document.ideeId, options: (lit("idees") ? listerIdees(acteur, id) : []).map((i) => ({ code: i.id, libelle: i.titre })) },
+    { name: "tacheId", label: "Action", valeur: document.tacheId, options: (lit("taches") ? listerTaches(acteur, id) : []).map((t) => ({ code: t.id, libelle: t.description })) },
+  ].filter((r) => r.options.length > 0);
+  const classement = rattachements.flatMap((r) => {
+    const choisi = r.options.find((o) => o.code === r.valeur);
+    return choisi ? [`${r.label.toLowerCase()} : ${choisi.libelle}`] : [];
+  });
+
   return (
     <div className="flex flex-col gap-8">
       <Link href={`/dossiers/${id}/documents`} className="text-sm text-neutral-500 hover:underline">
@@ -58,6 +88,30 @@ export default async function PageDocument({ params }: { params: Promise<{ id: s
           <img src={`/api/fichiers/${docId}`} alt={document.nomOriginal} className="max-h-96 max-w-full rounded border border-neutral-200 object-contain" />
         )}
         {document.note && <p className="text-sm text-neutral-600">{document.note}</p>}
+        {classement.length > 0 && <p className="text-sm text-neutral-600">Classé dans : {classement.join(" · ")}</p>}
+        {peutEcrire && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-neutral-600">Corriger le classement</summary>
+            <FormulaireAction action={actionModifierDocument} bouton="Enregistrer" compact className="mt-2">
+              <input type="hidden" name="dossierId" value={id} />
+              <input type="hidden" name="documentId" value={docId} />
+              <Champ label="Type">
+                <Select name="typeDocument" options={types} defaultValue={document.typeDocument} />
+              </Champ>
+              <Champ label="Date portée par le document">
+                <input name="dateDocument" type="date" defaultValue={document.dateDocument ?? ""} className={classeSaisie} />
+              </Champ>
+              {rattachements.map((r) => (
+                <Champ key={r.name} label={r.label}>
+                  <Select name={r.name} options={r.options} defaultValue={r.valeur ?? ""} vide="— aucun —" />
+                </Champ>
+              ))}
+              <Champ label="Note" large>
+                <input name="note" defaultValue={document.note ?? ""} className={classeSaisie} />
+              </Champ>
+            </FormulaireAction>
+          </details>
+        )}
       </Section>
 
       <Section titre="Lecture du document" sousTitre="Principe « validation avant effet » : les champs lus sont proposés, puis validés ou corrigés. Rien n'entre au budget avant.">

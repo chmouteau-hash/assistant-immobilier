@@ -111,20 +111,48 @@ export function changerStatutIdee(acteur: Acteur, params: { ideeId: string; nouv
   });
 }
 
-export function rattacherIdee(acteur: Acteur, params: { ideeId: string; scenarioId: string | null }): Idee {
+/**
+ * Corriger une idée après sa création : titre, description, et ses rattachements (scénario,
+ * bâtiment, pièce). Un champ absent ne change pas, une description vidée redevient inconnue, un
+ * rattachement vide est détaché ; seuls les champs changés sont tracés. Le statut se change à part,
+ * avec un motif (`changerStatutIdee`).
+ */
+export function modifierIdee(
+  acteur: Acteur,
+  params: { ideeId: string; titre?: string; description?: string; scenarioId?: string | null; batimentId?: string | null; pieceId?: string | null },
+): Idee {
   const avant = lireBrut(params.ideeId);
   exiger(acteur, avant.dossierId, "ecrire", "idees");
-  return transaction((db) => {
-    const scenarioId = verifierAppartenance(db, "scenario", params.scenarioId, avant.dossierId);
-    db.prepare(`UPDATE idee SET scenario_id = ? WHERE id = ?`).run(scenarioId, params.ideeId);
-    enregistrerEvenement(db, {
-      nomEntite: "idee",
-      entiteId: params.ideeId,
-      action: "modification",
-      acteurId: acteur.personneId,
-      dossierId: avant.dossierId,
-      changements: [{ champ: "scenario_id", avant: avant.scenarioId, apres: scenarioId }],
-    });
+  const titre = params.titre === undefined ? avant.titre : params.titre.trim();
+  if (titre === "") throw invalide("Le titre de l'idée est obligatoire.");
+  const db = obtenirBase();
+  const apres = {
+    titre,
+    description: params.description === undefined ? avant.description : params.description.trim() || null,
+    scenarioId: params.scenarioId === undefined ? avant.scenarioId : verifierAppartenance(db, "scenario", params.scenarioId, avant.dossierId),
+    batimentId: params.batimentId === undefined ? avant.batimentId : verifierAppartenance(db, "batiment", params.batimentId, avant.dossierId),
+    pieceId: params.pieceId === undefined ? avant.pieceId : verifierAppartenance(db, "piece", params.pieceId, avant.dossierId),
+  };
+
+  const changements = [
+    { champ: "titre", avant: avant.titre, apres: apres.titre },
+    { champ: "description", avant: avant.description, apres: apres.description },
+    { champ: "scenario_id", avant: avant.scenarioId, apres: apres.scenarioId },
+    { champ: "batiment_id", avant: avant.batimentId, apres: apres.batimentId },
+    { champ: "piece_id", avant: avant.pieceId, apres: apres.pieceId },
+  ].filter((c) => c.avant !== c.apres);
+  if (changements.length === 0) return avant;
+
+  return transaction((tx) => {
+    tx.prepare(`UPDATE idee SET titre = ?, description = ?, scenario_id = ?, batiment_id = ?, piece_id = ? WHERE id = ?`).run(
+      apres.titre,
+      apres.description,
+      apres.scenarioId,
+      apres.batimentId,
+      apres.pieceId,
+      params.ideeId,
+    );
+    enregistrerEvenement(tx, { nomEntite: "idee", entiteId: params.ideeId, action: "modification", acteurId: acteur.personneId, dossierId: avant.dossierId, changements });
     return lireBrut(params.ideeId);
   });
 }
