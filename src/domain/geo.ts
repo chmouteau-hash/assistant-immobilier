@@ -13,6 +13,13 @@ export const MICRODEGRES_PAR_DEGRE = 1_000_000;
 export type Position = { latitudeMicrodeg: number; longitudeMicrodeg: number };
 
 /**
+ * Ce que la carte d'un dossier appelle « le même secteur » : elle s'ouvre sur les lieux du dossier
+ * et sur les biens des autres dossiers situés à moins de cette distance. Les biens plus lointains
+ * sont sur la carte aussi, mais elle ne dézoome pas d'office jusqu'à eux.
+ */
+export const RAYON_SECTEUR_KM = 30;
+
+/**
  * Fond de carte dessiné par `components/CarteLieux.tsx` : le Plan IGN de la Géoplateforme
  * (service public, sans clé). Le navigateur demande les tuiles à cet hôte quand une carte
  * s'affiche : l'écran le dit (DECISIONS.md, 2026-10-11). Changer de fond se fait ici seulement ;

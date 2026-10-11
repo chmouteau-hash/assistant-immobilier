@@ -8,10 +8,17 @@
 // carte. Le repère est un simple rond en CSS : rien d'autre que les tuiles du fond de carte ne
 // part chercher un fichier hors du PC.
 //
+// Deux sortes de repères (issue #50). Les lieux du dossier ouvert, foncés. Et, d'une autre couleur,
+// les lieux situés des autres dossiers que l'acteur peut lire : la page les lui a déjà filtrés
+// (`listerLieuxVoisins`), ce composant ne décide de rien. La carte s'ouvre sur le dossier et sur
+// les biens du même secteur ; les plus lointains sont là aussi, et une phrase les compte. Un clic
+// sur un repère mène à la fiche du lieu : dans la page pour un lieu du dossier, dans son dossier
+// pour un autre.
+//
 // Deux gestes, pour qui peut écrire les lieux. Aucun n'enregistre tout seul : un formulaire montre
 // la nouvelle position, pose les deux questions de provenance, et c'est une Server Action reçue
 // en propriété qui écrit (les droits restent dans `lib`).
-// - Déplacer un repère, au doigt ou à la souris.
+// - Déplacer un repère du dossier, au doigt ou à la souris. Ceux des autres dossiers ne bougent pas.
 // - Choisir l'endroit d'un lieu en cliquant sur la carte (issue #48). Ce mode s'ouvre depuis la
 //   fiche du lieu, pour un lieu à la fois : sans lui, un clic sur la carte ne pose rien. Le point
 //   cliqué part alors vers le service d'adresses, qui renvoie l'adresse connue la plus proche.
@@ -24,13 +31,27 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { Map as CarteLeaflet, Marker } from "leaflet";
 import { FormulaireAction } from "./FormulaireAction";
-import { Champ, QuestionConfiance, QuestionSource, classeSaisie } from "./ui";
-import { FOND_DE_CARTE, NOM_SERVICE_ADRESSES, formaterCoordonnee, formaterDistance, formaterPosition, versDegres, versMicrodegres, type AdresseProche, type Position } from "@/domain/geo";
+import { Champ, QuestionConfiance, QuestionSource, ancreFicheLieu, classeSaisie } from "./ui";
+import {
+  FOND_DE_CARTE,
+  NOM_SERVICE_ADRESSES,
+  RAYON_SECTEUR_KM,
+  formaterCoordonnee,
+  formaterDistance,
+  formaterPosition,
+  versDegres,
+  versMicrodegres,
+  type AdresseProche,
+  type Position,
+} from "@/domain/geo";
 import { REPONSE_HABITUELLE } from "@/domain/provenance";
 import type { Reference } from "@/lib/references";
 import type { EtatAdresseProche, EtatFormulaire } from "@/app/dossiers/actions";
 
 export type LieuSurCarte = { id: string; nom: string; position: Position | null };
+
+/** Un lieu situé d'un autre dossier : montré d'une autre couleur, et lié à sa fiche. */
+export type VoisinSurCarte = { id: string; nom: string; dossierNom: string; lien: string; position: Position };
 
 /** Le lieu que l'utilisateur a demandé à situer en cliquant sur la carte, avec son adresse actuelle. */
 export type LieuAPlacer = { id: string; nom: string; adresse: string | null };
@@ -44,6 +65,8 @@ type ActionFormulaire = (etat: EtatFormulaire, donnees: FormData) => Promise<Eta
 type Proprietes = {
   dossierId: string;
   lieux: LieuSurCarte[];
+  /** Les lieux situés des autres dossiers que l'acteur peut lire. */
+  voisins: VoisinSurCarte[];
   peutEcrire: boolean;
   /** Enregistre un repère déplacé. */
   action: ActionFormulaire;
@@ -59,17 +82,56 @@ type Proprietes = {
   chemin: string;
 };
 
-// La `key` recrée la carte quand un repère change (lieu situé, déplacé, renommé, retiré) ou quand
-// le mode « choisir l'endroit » s'ouvre ou se ferme : elle se redessine sur les positions
-// enregistrées, et un geste en attente de confirmation s'efface. Tant que rien ne change, elle
-// reste en place : on peut zoomer sans qu'un rendu la remette à zéro.
+const ENTOURE = ["ring-2", "ring-neutral-900"];
+
+/** Amène la fiche d'un lieu sous les yeux et l'entoure un instant, pour qu'on la repère dans la liste. */
+function montrerFiche(lieuId: string) {
+  const fiche = document.getElementById(ancreFicheLieu(lieuId));
+  if (!fiche) return;
+  fiche.scrollIntoView({ behavior: "smooth", block: "start" });
+  fiche.classList.add(...ENTOURE);
+  window.setTimeout(() => fiche.classList.remove(...ENTOURE), 2500);
+}
+
+// La dernière arrivée déjà signalée : la carte se recrée à chaque changement de repère, et ne doit
+// pas ramener à la fiche à chaque fois.
+let arriveeSignalee: string | null = null;
+
+/**
+ * Un repère s'atteint au clavier (Leaflet lui donne un rang de tabulation et le rôle de bouton),
+ * mais Leaflet ne relie la touche Entrée qu'à ses bulles : sans ceci, un repère atteint au clavier
+ * ne mènerait nulle part. Entrée et Espace font donc ce que fait le clic.
+ *
+ * L'élément du repère n'existe pas encore quand on le pose sur une carte sans vue : Leaflet ne le
+ * crée qu'une fois la vue fixée, et le signale par l'événement `add`. On s'y branche à ce moment.
+ */
+function activerAuClavier(marqueur: Marker, geste: () => void) {
+  const brancher = () =>
+    marqueur.getElement()?.addEventListener("keydown", (evenement) => {
+      if (evenement.key !== "Enter" && evenement.key !== " ") return;
+      evenement.preventDefault();
+      geste();
+    });
+  if (marqueur.getElement()) brancher();
+  else marqueur.once("add", brancher);
+}
+
+/** « Nom du lieu · nom du dossier », sans répéter un nom identique. */
+function etiquetteVoisin(voisin: { nom: string; dossierNom: string }): string {
+  return voisin.dossierNom !== "" && voisin.dossierNom !== voisin.nom ? `${voisin.nom} · ${voisin.dossierNom}` : voisin.nom;
+}
+
+// La `key` recrée la carte quand un repère change (lieu situé, déplacé, renommé, retiré, ici ou
+// dans un autre dossier) ou quand le mode « choisir l'endroit » s'ouvre ou se ferme : elle se
+// redessine sur les positions enregistrées, et un geste en attente de confirmation s'efface. Tant
+// que rien ne change, elle reste en place : on peut zoomer sans qu'un rendu la remette à zéro.
 export function CarteLieux(props: Proprietes) {
   const reperes: Repere[] = props.lieux.flatMap((l) => (l.position ? [{ id: l.id, nom: l.nom, position: l.position }] : []));
-  const donnees = JSON.stringify({ reperes, aPlacerId: props.peutEcrire ? (props.aPlacer?.id ?? null) : null });
+  const donnees = JSON.stringify({ reperes, voisins: props.voisins, aPlacerId: props.peutEcrire ? (props.aPlacer?.id ?? null) : null });
   return <Carte key={donnees} {...props} donnees={donnees} />;
 }
 
-function Carte({ dossierId, peutEcrire, action, sources, confiances, donnees, aPlacer, actionAdresseProche, actionSituerParClic, chemin }: Proprietes & { donnees: string }) {
+function Carte({ dossierId, voisins, peutEcrire, action, sources, confiances, donnees, aPlacer, actionAdresseProche, actionSituerParClic, chemin }: Proprietes & { donnees: string }) {
   const router = useRouter();
   const conteneur = useRef<HTMLDivElement | null>(null);
   const marqueurs = useRef<Map<string, Marker>>(new Map());
@@ -78,36 +140,50 @@ function Carte({ dossierId, peutEcrire, action, sources, confiances, donnees, aP
   const [fondIndisponible, setFondIndisponible] = useState(false);
   const [deplacement, setDeplacement] = useState<Deplacement | null>(null);
   const [clic, setClic] = useState<Clic | null>(null);
+  const [voisinsLoin, setVoisinsLoin] = useState(0);
   const enPlacement = peutEcrire && aPlacer !== null;
 
-  // Ce que fait un clic en mode « choisir l'endroit ». Gardé dans une référence, mise à jour après
-  // chaque rendu : l'effet qui crée la carte ne dépend ainsi que des repères, et ne la recrée pas
-  // à chaque rendu. Le numéro écarte la réponse d'un clic que l'utilisateur a déjà remplacé.
-  const surClic = useRef<(position: Position) => void>(() => {});
+  // Ce que font un clic sur la carte (mode « choisir l'endroit ») et un clic sur le repère d'un
+  // autre dossier. Gardés dans une référence, mise à jour après chaque rendu : l'effet qui crée la
+  // carte ne dépend ainsi que des repères, et ne la recrée pas à chaque rendu. Le numéro écarte la
+  // réponse d'un clic que l'utilisateur a déjà remplacé.
+  const gestes = useRef<{ choisir: (position: Position) => void; ouvrir: (lien: string) => void }>({ choisir: () => {}, ouvrir: () => {} });
   useEffect(() => {
-    surClic.current = (position) => {
-      if (!aPlacer) return;
-      const numero = ++numeroClic.current;
-      setClic({ position, recherche: true, adresse: null, erreur: null });
-      const demande = new FormData();
-      demande.set("lieuId", aPlacer.id);
-      demande.set("latitude", formaterCoordonnee(position.latitudeMicrodeg));
-      demande.set("longitude", formaterCoordonnee(position.longitudeMicrodeg));
-      actionAdresseProche(demande)
-        .then((reponse) => {
-          if (numero === numeroClic.current) setClic({ position, recherche: false, adresse: reponse.adresse, erreur: reponse.erreur });
-        })
-        .catch(() => {
-          if (numero === numeroClic.current) setClic({ position, recherche: false, adresse: null, erreur: "Le service d'adresses ne répond pas." });
-        });
+    gestes.current = {
+      ouvrir: (lien) => router.push(lien),
+      choisir: (position) => {
+        if (!aPlacer) return;
+        const numero = ++numeroClic.current;
+        setClic({ position, recherche: true, adresse: null, erreur: null });
+        const demande = new FormData();
+        demande.set("lieuId", aPlacer.id);
+        demande.set("latitude", formaterCoordonnee(position.latitudeMicrodeg));
+        demande.set("longitude", formaterCoordonnee(position.longitudeMicrodeg));
+        actionAdresseProche(demande)
+          .then((reponse) => {
+            if (numero === numeroClic.current) setClic({ position, recherche: false, adresse: reponse.adresse, erreur: reponse.erreur });
+          })
+          .catch(() => {
+            if (numero === numeroClic.current) setClic({ position, recherche: false, adresse: null, erreur: "Le service d'adresses ne répond pas." });
+          });
+      },
     };
   });
+
+  // Arrivée depuis la carte d'un autre dossier : l'adresse de la page désigne une fiche.
+  useEffect(() => {
+    const arrivee = window.location.pathname + window.location.hash;
+    const prefixe = `#${ancreFicheLieu("")}`;
+    if (!window.location.hash.startsWith(prefixe) || arriveeSignalee === arrivee) return;
+    arriveeSignalee = arrivee;
+    montrerFiche(decodeURIComponent(window.location.hash.slice(prefixe.length)));
+  }, []);
 
   useEffect(() => {
     const element = conteneur.current;
     if (!element) return;
-    const { reperes, aPlacerId } = JSON.parse(donnees) as { reperes: Repere[]; aPlacerId: string | null };
-    const placement = aPlacerId !== null;
+    const lu = JSON.parse(donnees) as { reperes: Repere[]; voisins: VoisinSurCarte[]; aPlacerId: string | null };
+    const placement = lu.aPlacerId !== null;
     const poses = marqueurs.current;
     let carte: CarteLeaflet | null = null;
     let annule = false;
@@ -130,7 +206,7 @@ function Carte({ dossierId, peutEcrire, action, sources, confiances, donnees, aP
           const { lat, lng } = evenement.latlng.wrap();
           if (marqueurClic.current) marqueurClic.current.setLatLng([lat, lng]);
           else if (carte) marqueurClic.current = L.marker([lat, lng], { icon: anneau, interactive: false, keyboard: false }).addTo(carte);
-          surClic.current({ latitudeMicrodeg: versMicrodegres(lat), longitudeMicrodeg: versMicrodegres(lng) });
+          gestes.current.choisir({ latitudeMicrodeg: versMicrodegres(lat), longitudeMicrodeg: versMicrodegres(lng) });
         });
       } else {
         // La molette fait défiler la page tant qu'on n'a pas cliqué dans la carte : sinon on reste
@@ -142,23 +218,48 @@ function Carte({ dossierId, peutEcrire, action, sources, confiances, donnees, aP
         .on("tileerror", () => setFondIndisponible(true))
         .addTo(carte);
 
-      const icone = L.divIcon({
-        className: "",
-        html: '<span class="block h-[18px] w-[18px] rounded-full border-2 border-white bg-neutral-900 shadow-md"></span>',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
-      });
+      const rond = (taille: number, couleur: string) =>
+        L.divIcon({
+          className: "",
+          html: `<span class="block rounded-full border-2 border-white shadow-md ${couleur}" style="width:${taille}px;height:${taille}px"></span>`,
+          iconSize: [taille, taille],
+          iconAnchor: [taille / 2, taille / 2],
+        });
+      const icone = rond(18, "bg-neutral-900");
+      const iconeVoisin = rond(15, "bg-sky-600");
+
+      // Les biens des autres dossiers, posés d'abord : ceux du dossier passent au-dessus.
+      const pointsVoisins: Array<[number, number]> = [];
+      for (const voisin of lu.voisins) {
+        const point: [number, number] = [versDegres(voisin.position.latitudeMicrodeg), versDegres(voisin.position.longitudeMicrodeg)];
+        pointsVoisins.push(point);
+        const etiquette = etiquetteVoisin(voisin);
+        const marqueur = L.marker(point, { icon: iconeVoisin, interactive: !placement, keyboard: !placement, title: `${etiquette} : ouvrir sa fiche` }).addTo(carte);
+        marqueur.bindTooltip(etiquette, { permanent: true, direction: "top", offset: [0, -9], opacity: 0.85 });
+        if (!placement) {
+          const ouvrir = () => gestes.current.ouvrir(voisin.lien);
+          marqueur.on("click", ouvrir);
+          activerAuClavier(marqueur, ouvrir);
+        }
+      }
+
       const points: Array<[number, number]> = [];
       let pointAPlacer: [number, number] | null = null;
-      for (const repere of reperes) {
+      for (const repere of lu.reperes) {
         const point: [number, number] = [versDegres(repere.position.latitudeMicrodeg), versDegres(repere.position.longitudeMicrodeg)];
         points.push(point);
-        if (repere.id === aPlacerId) pointAPlacer = point;
+        if (repere.id === lu.aPlacerId) pointAPlacer = point;
         // En mode « choisir l'endroit », un seul geste à la fois : les repères ne se déplacent pas
         // et laissent passer le clic, pour qu'on puisse choisir un point tout près d'eux.
         const deplacable = peutEcrire && !placement;
-        const marqueur = L.marker(point, { icon: icone, draggable: deplacable, interactive: !placement, title: repere.nom, keyboard: false }).addTo(carte);
+        const marqueur = L.marker(point, { icon: icone, draggable: deplacable, interactive: !placement, keyboard: !placement, title: repere.nom, zIndexOffset: 1000 }).addTo(carte);
         marqueur.bindTooltip(repere.nom, { permanent: true, direction: "top", offset: [0, -10] });
+        // Un clic sans déplacement amène à la fiche du lieu, plus bas dans la page.
+        if (!placement) {
+          const montrer = () => montrerFiche(repere.id);
+          marqueur.on("click", montrer);
+          activerAuClavier(marqueur, montrer);
+        }
         if (deplacable) {
           marqueur.on("dragend", () => {
             const { lat, lng } = marqueur.getLatLng();
@@ -167,9 +268,17 @@ function Carte({ dossierId, peutEcrire, action, sources, confiances, donnees, aP
         }
         poses.set(repere.id, marqueur);
       }
+
+      // Le cadre : le dossier et son secteur. Un bien d'un autre dossier n'élargit le cadre que
+      // s'il est à portée d'un lieu du dossier ; sinon un bien lointain ferait dézoomer d'office
+      // jusqu'à perdre le quartier de vue.
+      const rayon = RAYON_SECTEUR_KM * 1000;
+      const proches = points.length === 0 ? pointsVoisins : pointsVoisins.filter((voisin) => points.some((point) => L.latLng(point).distanceTo(voisin) <= rayon));
+      setVoisinsLoin(pointsVoisins.length - proches.length);
+      const cadre = [...points, ...proches];
       if (pointAPlacer) carte.setView(pointAPlacer, 16);
-      else if (points.length === 1) carte.setView(points[0], placement ? 13 : 15);
-      else if (points.length > 1) carte.fitBounds(L.latLngBounds(points).pad(0.2), { maxZoom: 16 });
+      else if (cadre.length === 1) carte.setView(cadre[0], points.length === 1 && !placement ? 15 : 13);
+      else if (cadre.length > 1) carte.fitBounds(L.latLngBounds(cadre).pad(0.2), { maxZoom: 16 });
       else carte.setView([46.6, 2.4], 6);
     })();
 
@@ -215,8 +324,33 @@ function Carte({ dossierId, peutEcrire, action, sources, confiances, donnees, aP
       {fondIndisponible && <p className="text-xs text-amber-800">Le fond de carte ne se charge pas (pas de réseau ?). Les repères restent affichés.</p>}
       <p className="text-xs text-neutral-500">
         Fond de carte : {FOND_DE_CARTE.nom}, chargé depuis {FOND_DE_CARTE.hote} quand cet écran s&apos;affiche.
-        {peutEcrire && !enPlacement && " Un repère se déplace à la souris ou au doigt ; la nouvelle position se confirme ensuite."}
+        {!enPlacement && " Un clic sur un repère mène à sa fiche."}
+        {peutEcrire && !enPlacement && " Un repère de ce dossier se déplace à la souris ou au doigt ; la nouvelle position se confirme ensuite."}
       </p>
+      {voisins.length > 0 && (
+        <div className="flex flex-col gap-1 text-xs text-neutral-600">
+          <p>
+            <span aria-hidden className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-neutral-900 align-middle" />
+            ce dossier ;{" "}
+            <span aria-hidden className="mr-1 ml-1 inline-block h-2.5 w-2.5 rounded-full bg-sky-600 align-middle" />
+            vos autres dossiers : {voisins.length === 1 ? "1 bien" : `${voisins.length} biens`}
+            {voisinsLoin > 0 && `, dont ${voisinsLoin} à plus de ${RAYON_SECTEUR_KM} km (dézoomez pour ${voisinsLoin === 1 ? "le" : "les"} voir)`}.
+          </p>
+          <details>
+            <summary className="cursor-pointer text-neutral-500">Liste des biens de vos autres dossiers</summary>
+            <ul className="mt-1 flex flex-col gap-1">
+              {voisins.map((voisin) => (
+                <li key={voisin.id}>
+                  <Link href={voisin.lien} className="font-medium text-neutral-900 underline">
+                    {voisin.nom}
+                  </Link>{" "}
+                  · dossier « {voisin.dossierNom} »
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      )}
       {deplacement && (
         <FormulaireAction action={action} bouton="Enregistrer la position" compact className="rounded border border-neutral-200 bg-neutral-50 p-2">
           <input type="hidden" name="dossierId" value={dossierId} />

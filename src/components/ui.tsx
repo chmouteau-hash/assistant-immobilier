@@ -108,6 +108,11 @@ export function Section({ titre, children, sousTitre }: { titre: string; childre
   );
 }
 
+/** Ancre de la fiche d'un lieu dans l'écran Lieux : la carte y mène quand on clique sur son repère. */
+export function ancreFicheLieu(lieuId: string): string {
+  return `lieu-${lieuId}`;
+}
+
 export function Vide({ children }: { children: ReactNode }) {
   return <p className="text-sm text-neutral-500">{children}</p>;
 }
