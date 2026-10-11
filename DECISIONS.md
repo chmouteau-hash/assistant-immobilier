@@ -388,3 +388,60 @@ affichés : ces tables fournissent les codes proposés et leur ordre, le domaine
 **Ce qui n'est pas tranché.** Aligner les libellés de ces deux tables sur le domaine par une
 migration, qui modifierait la base existante ; préremplir les deux réponses avec la provenance
 actuelle quand on modifie une adresse ou une surface.
+
+## 2026-10-11 — Lieux : un lieu, un bâtiment et une pièce se corrigent après leur création
+
+**Décision.** Tranche le premier point laissé ouvert par l'entrée « un bâtiment se crée dans son
+lieu » du même jour, pour l'issue #22.
+
+1. Se corrigent depuis l'écran Lieux : le nom, le type, la parcelle et la description d'un lieu ;
+   le nom, le type, l'état et les usages d'un bâtiment ; le nom et l'usage d'une pièce.
+2. Une pièce posée dans le mauvais bâtiment se déplace dans un autre bâtiment du même dossier. Sa
+   surface la suit.
+3. Même droit qu'à la création (écrire les lieux), mêmes garde-fous : nom obligatoire, type de lieu
+   connu, bâtiment du même dossier. Seuls les champs changés sont tracés au journal d'audit, avec la
+   valeur d'avant et celle d'après ; aucun motif n'est demandé. Un champ facultatif vidé redevient
+   inconnu.
+4. L'adresse d'un lieu et la surface d'une pièce gardent leur propre formulaire : ce sont des
+   valeurs à provenance, modifiées avec leur origine et un motif.
+
+**Pourquoi.** Une faute de frappe dans un nom restait, et une pièce ajoutée au mauvais bâtiment y
+restait : la seule façon de rattraper une saisie était de supprimer le dossier entier.
+
+**Ce qui n'est pas tranché.** Retirer un lieu, un bâtiment ou une pièce : suppression ou mise à
+l'écart, et sort de ce qui y est rattaché (le schéma prévoit déjà qu'un bâtiment supprimé emporte
+ses pièces, et qu'un lieu supprimé laisse ses bâtiments sans lieu) ; les mêmes corrections sur une
+idée, un scénario et un poste.
+
+## 2026-10-11 — Lieux : un lieu, un bâtiment et une pièce ne se retirent que vides
+
+**Décision.** Tranche le point « retirer » laissé ouvert par l'entrée précédente, pour l'issue #22.
+Christophe a choisi entre trois options : supprimer seulement un objet vide (retenue), supprimer
+l'objet avec ce qu'il contient, ou le mettre à l'écart comme une ligne de budget.
+
+1. Retirer un lieu, un bâtiment ou une pièce est une suppression définitive, permise seulement quand
+   l'objet est vide : aucun bâtiment ni document rattaché à un lieu ; aucune pièce, idée, poste de
+   budget ni document rattaché à un bâtiment ; aucune idée ni document rattaché à une pièce.
+2. Rien n'est emporté ni détaché en silence. Le schéma laisserait faire (un bâtiment supprimé
+   emporte ses pièces ; idées, postes et documents perdent leur rattachement) : la règle est tenue
+   dans `src/lib/structure.ts`. Le refus nomme ce qui est encore rattaché ; il n'apprend rien à
+   personne, parce que les deux rôles qui écrivent les lieux lisent aussi les idées, le budget et
+   les documents (un test le garde).
+3. Même droit qu'à la création (écrire les lieux), sans motif ni nom à retaper : un objet vide ne
+   coûte que sa propre saisie. Le retrait est tracé au journal d'audit, action « suppression », avec
+   ce que l'objet contenait : chaque champ rempli, sa valeur d'avant, puis rien.
+4. L'écran Lieux porte « Retirer » sur chaque carte. Pour un objet non vide, il affiche la phrase
+   de refus à la place du bouton.
+
+**Pourquoi.** Un objet créé pour essayer restait dans le dossier : la seule suppression était celle
+du dossier entier. Supprimer un objet avec son contenu ferait payer cher une erreur de clic. La mise
+à l'écart demandait une migration de la base, et de définir ce qu'un lieu écarté ne compte plus.
+
+**Conséquences.** L'adresse d'un lieu retiré et la surface d'une pièce retirée restent lisibles au
+journal d'audit jusqu'à la suppression du dossier, qui purge son journal (entrée du 2026-10-09). Une
+idée, un poste de budget et un document se rattachent à leur création et ne se détachent pas
+encore : un objet qui en porte ne peut donc être ni vidé ni retiré, et l'écran le dit.
+
+**Ce qui n'est pas tranché.** Détacher ou déplacer une idée, un poste de budget ou un document ;
+corriger une idée, un scénario et un poste (issue #22) ; retirer une idée, un scénario, un poste ou
+une action.

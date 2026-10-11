@@ -7,8 +7,24 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { obtenirBase, reinitialiserBasePourTests } from "@/lib/db/client";
 import { creerDossier, creerScenario, changerStatutScenario, listerDecisions, configurerIA, modifierDossier, journalAudit, obtenirDossier } from "@/lib/dossiers";
-import { creerLieu, creerBatiment, creerPiece, modifierSurfacePiece, rattacherBatiment, listerBatiments } from "@/lib/structure";
-import { creerIdee, changerStatutIdee } from "@/lib/idees";
+import {
+  creerLieu,
+  creerBatiment,
+  creerPiece,
+  modifierSurfacePiece,
+  rattacherBatiment,
+  listerBatiments,
+  listerLieux,
+  listerPieces,
+  modifierLieu,
+  modifierBatiment,
+  modifierPiece,
+  objetsNonVides,
+  retirerLieu,
+  retirerBatiment,
+  retirerPiece,
+} from "@/lib/structure";
+import { creerIdee, changerStatutIdee, listerIdees } from "@/lib/idees";
 import { creerPoste, ajouterLigne, syntheseScenario, comparaisonDossier, listerLignes } from "@/lib/budget";
 import { creerTache, modifierTache, ajouterDependance, retirerDependance, listerDependances, changerStatutTache, classementDossier, timelineDossier } from "@/lib/taches";
 import { inviterPersonne } from "@/lib/personnes";
@@ -80,6 +96,150 @@ describe("parcours pilote", () => {
     const invite = inviterPersonne(moi, { dossierId: d.id, nom: "Ami", role: "lecteur" });
     expect(() => rattacherBatiment({ personneId: invite.personneId, nom: "Ami" }, { batimentId: bat.id, lieuId: terrain.id })).toThrow(ErreurApplicative);
     expect(listerBatiments(moi, d.id).find((b) => b.id === bat.id)?.lieuId).toBe(bien.id);
+  });
+
+  it("un lieu, un bâtiment et une pièce se corrigent après leur création, et la correction est tracée", () => {
+    const d = creerDossier(moi, { nom: "Pilote" });
+    const ailleurs = creerDossier(moi, { nom: "Autre dossier" });
+    const lieu = creerLieu(moi, { dossierId: d.id, nom: "Bien candidta", typeLieu: "bien_candidat", parcelle: "AB 12", description: "à visiter" });
+    const bat = creerBatiment(moi, { dossierId: d.id, lieuId: lieu.id, nom: "Batiment ancien", etat: "toiture refaite" });
+    const autreBat = creerBatiment(moi, { dossierId: d.id, lieuId: lieu.id, nom: "Atelier d'essai" });
+    const batAilleurs = creerBatiment(moi, { dossierId: ailleurs.id, nom: "Bâtiment d'un autre dossier" });
+    const piece = creerPiece(moi, { dossierId: d.id, batimentId: bat.id, nom: "Chambr", usage: "nuit", surfaceCentiemes: 1200, surfaceSource: "estimation" });
+
+    const changements = (entite: string) =>
+      journalAudit(moi, d.id)
+        .filter((e) => e.nomEntite === entite && e.action === "modification")
+        .flatMap((e) => e.changements ?? []);
+
+    // Lieu : un champ absent ne change pas, un champ vidé redevient inconnu.
+    const lieuCorrige = modifierLieu(moi, { lieuId: lieu.id, nom: "Bien candidat", typeLieu: "bien_acquis", parcelle: "" });
+    expect(lieuCorrige).toMatchObject({ nom: "Bien candidat", typeLieu: "bien_acquis", parcelle: null, description: "à visiter" });
+    expect(lieuCorrige.adresse).toEqual(lieu.adresse); // l'adresse porte une provenance : elle garde son propre formulaire
+    expect(changements("lieu")).toHaveLength(3);
+    expect(changements("lieu")).toEqual(
+      expect.arrayContaining([
+        { champ: "nom", avant: "Bien candidta", apres: "Bien candidat" },
+        { champ: "type_lieu", avant: "bien_candidat", apres: "bien_acquis" },
+        { champ: "parcelle", avant: "AB 12", apres: null },
+      ]),
+    );
+    modifierLieu(moi, { lieuId: lieu.id, nom: "Bien candidat" }); // rien ne change : rien n'est tracé
+    expect(changements("lieu")).toHaveLength(3);
+
+    // Bâtiment : son lieu se change à part (`rattacherBatiment`).
+    const batCorrige = modifierBatiment(moi, { batimentId: bat.id, nom: "Bâtiment ancien", type: "pierre", etat: "", usageEnvisage: "habitation" });
+    expect(batCorrige).toMatchObject({ nom: "Bâtiment ancien", type: "pierre", etat: null, usageActuel: null, usageEnvisage: "habitation", lieuId: lieu.id });
+    expect(changements("batiment")).toHaveLength(4);
+
+    // Pièce : une pièce posée dans le mauvais bâtiment se déplace, sa surface la suit.
+    const pieceCorrigee = modifierPiece(moi, { pieceId: piece.id, nom: "Chambre", usage: "", batimentId: autreBat.id });
+    expect(pieceCorrigee).toMatchObject({ nom: "Chambre", usage: null, batimentId: autreBat.id });
+    expect(pieceCorrigee.surface).toEqual(piece.surface);
+    expect(changements("piece")).toHaveLength(3);
+    expect(changements("piece")).toContainEqual({ champ: "batiment_id", avant: bat.id, apres: autreBat.id });
+
+    // Garde-fous de la création, même droit.
+    expect(() => modifierLieu(moi, { lieuId: lieu.id, nom: "  " })).toThrow(/obligatoire/);
+    expect(() => modifierLieu(moi, { lieuId: lieu.id, typeLieu: "chateau" })).toThrow(/type de lieu/i);
+    expect(() => modifierBatiment(moi, { batimentId: bat.id, nom: "" })).toThrow(/obligatoire/);
+    expect(() => modifierPiece(moi, { pieceId: piece.id, nom: " " })).toThrow(/obligatoire/);
+    expect(() => modifierPiece(moi, { pieceId: piece.id, batimentId: batAilleurs.id })).toThrow(/n'appartient pas/);
+    expect(() => modifierLieu(moi, { lieuId: "inconnu", nom: "x" })).toThrow(ErreurApplicative);
+    const invite = inviterPersonne(moi, { dossierId: d.id, nom: "Ami", role: "lecteur" });
+    const ami = { personneId: invite.personneId, nom: "Ami" };
+    expect(() => modifierLieu(ami, { lieuId: lieu.id, nom: "x" })).toThrow(ErreurApplicative);
+    expect(() => modifierBatiment(ami, { batimentId: bat.id, nom: "x" })).toThrow(ErreurApplicative);
+    expect(() => modifierPiece(ami, { pieceId: piece.id, nom: "x" })).toThrow(ErreurApplicative);
+    expect(listerLieux(moi, d.id)[0].nom).toBe("Bien candidat");
+  });
+
+  it("un lieu, un bâtiment et une pièce ne se retirent que vides, et le retrait est tracé", () => {
+    const d = creerDossier(moi, { nom: "Pilote" });
+    const essai = creerLieu(moi, { dossierId: d.id, nom: "Lieu d'essai (fictif)", typeLieu: "terrain", parcelle: "AB 12" });
+    const garde = creerLieu(moi, { dossierId: d.id, nom: "Bien candidat (fictif)", typeLieu: "bien_candidat" });
+    const abri = creerBatiment(moi, { dossierId: d.id, lieuId: essai.id, nom: "Abri d'essai", etat: "à démolir" });
+    const maison = creerBatiment(moi, { dossierId: d.id, lieuId: essai.id, nom: "Atelier d'essai" });
+    const cellier = creerPiece(moi, { dossierId: d.id, batimentId: abri.id, nom: "Cellier", surfaceCentiemes: 600, surfaceSource: "estimation" });
+    const sejour = creerPiece(moi, { dossierId: d.id, batimentId: maison.id, nom: "Séjour" });
+
+    // La maison et son séjour portent une idée, un poste de budget et des documents.
+    const scenario = creerScenario(moi, { dossierId: d.id, nom: "Rénover" });
+    const ideeMaison = creerIdee(moi, { dossierId: d.id, titre: "Auvent d'essai", batimentId: maison.id });
+    const ideeSejour = creerIdee(moi, { dossierId: d.id, titre: "Verrière", pieceId: sejour.id });
+    creerPoste(moi, { scenarioId: scenario.id, nom: "Toiture", batimentId: maison.id });
+    const fichier = { dossierId: d.id, nomOriginal: "plan.pdf", mime: "application/pdf", octets: Buffer.from("%PDF"), typeDocument: "autre" };
+    deposerDocument(moi, { ...fichier, batimentId: maison.id });
+    deposerDocument(moi, { ...fichier, pieceId: sejour.id });
+    deposerDocument(moi, { ...fichier, lieuId: garde.id });
+
+    // Rien ne part tant que quelque chose y est rattaché. Le schéma, lui, emporterait les pièces
+    // avec leur bâtiment et détacherait en silence idées, postes et documents.
+    expect(() => retirerLieu(moi, { lieuId: essai.id })).toThrow(/2 bâtiments/);
+    expect(() => retirerLieu(moi, { lieuId: garde.id })).toThrow(/1 document/);
+    expect(() => retirerBatiment(moi, { batimentId: abri.id })).toThrow(/1 pièce/);
+    expect(() => retirerBatiment(moi, { batimentId: maison.id })).toThrow(
+      "Ce bâtiment n'est pas vide (1 pièce, 1 idée, 1 poste de budget, 1 document) : seul un bâtiment vide se retire.",
+    );
+    expect(() => retirerPiece(moi, { pieceId: sejour.id })).toThrow("Cette pièce n'est pas vide (1 idée, 1 document) : seule une pièce vide se retire.");
+    expect(listerLieux(moi, d.id)).toHaveLength(2);
+    expect(listerBatiments(moi, d.id)).toHaveLength(2);
+    expect(listerPieces(moi, d.id)).toHaveLength(2);
+    expect(listerIdees(moi, d.id).find((i) => i.id === ideeMaison.id)?.batimentId).toBe(maison.id);
+    expect(listerIdees(moi, d.id).find((i) => i.id === ideeSejour.id)?.pieceId).toBe(sejour.id);
+
+    // L'écran lit la même phrase que le contrôle ; un objet vide n'y figure pas.
+    const nonVides = objetsNonVides(moi, d.id);
+    expect(Object.keys(nonVides).sort()).toEqual([essai.id, garde.id, abri.id, maison.id, sejour.id].sort());
+    expect(nonVides[maison.id]).toMatch(/1 poste de budget/);
+
+    const retraits = (entite: string) => journalAudit(moi, d.id).filter((e) => e.nomEntite === entite && e.action === "suppression");
+
+    // Une pièce vide part ; le journal garde ce qu'elle contenait.
+    retirerPiece(moi, { pieceId: cellier.id });
+    expect(listerPieces(moi, d.id).map((p) => p.nom)).toEqual(["Séjour"]);
+    expect(retraits("piece")).toHaveLength(1);
+    expect(retraits("piece")[0].entiteId).toBe(cellier.id);
+    expect(retraits("piece")[0].changements).toEqual([
+      { champ: "nom", avant: "Cellier", apres: null },
+      { champ: "batiment_id", avant: abri.id, apres: null },
+      { champ: "surface_centiemes", avant: 600, apres: null },
+      { champ: "surface_source", avant: "estimation", apres: null },
+      { champ: "surface_confiance", avant: "estime", apres: null },
+    ]);
+    expect(() => retirerPiece(moi, { pieceId: cellier.id })).toThrow(ErreurApplicative); // déjà retirée
+
+    // Le bâtiment, une fois vide, part à son tour.
+    retirerBatiment(moi, { batimentId: abri.id });
+    expect(listerBatiments(moi, d.id).map((b) => b.nom)).toEqual(["Atelier d'essai"]);
+    expect(retraits("batiment")[0].changements).toEqual([
+      { champ: "nom", avant: "Abri d'essai", apres: null },
+      { champ: "lieu_id", avant: essai.id, apres: null },
+      { champ: "etat", avant: "à démolir", apres: null },
+    ]);
+
+    // Le lieu ne part qu'une fois son dernier bâtiment déplacé.
+    expect(() => retirerLieu(moi, { lieuId: essai.id })).toThrow(/1 bâtiment\)/);
+    rattacherBatiment(moi, { batimentId: maison.id, lieuId: garde.id });
+    retirerLieu(moi, { lieuId: essai.id });
+    expect(listerLieux(moi, d.id).map((l) => l.nom)).toEqual(["Bien candidat (fictif)"]);
+    expect(retraits("lieu")[0].changements).toEqual([
+      { champ: "nom", avant: "Lieu d'essai (fictif)", apres: null },
+      { champ: "type_lieu", avant: "terrain", apres: null },
+      { champ: "parcelle", avant: "AB 12", apres: null },
+    ]);
+    expect(listerBatiments(moi, d.id)[0].lieuId).toBe(garde.id);
+
+    // Même droit qu'à la création ; qui ne peut pas retirer ne lit pas non plus ce qui est rattaché.
+    const invite = inviterPersonne(moi, { dossierId: d.id, nom: "Ami", role: "lecteur" });
+    const ami = { personneId: invite.personneId, nom: "Ami" };
+    const vide = creerLieu(moi, { dossierId: d.id, nom: "Lieu vide (fictif)", typeLieu: "terrain" });
+    expect(() => retirerLieu(ami, { lieuId: vide.id })).toThrow(ErreurApplicative);
+    expect(() => retirerBatiment(ami, { batimentId: maison.id })).toThrow(ErreurApplicative);
+    expect(() => retirerPiece(ami, { pieceId: sejour.id })).toThrow(ErreurApplicative);
+    expect(() => objetsNonVides(ami, d.id)).toThrow(ErreurApplicative);
+    expect(() => retirerLieu(moi, { lieuId: "inconnu" })).toThrow(ErreurApplicative);
+    expect(listerLieux(moi, d.id)).toHaveLength(2);
   });
 
   it("chaque code des tables « source » et « confiance » a sa réponse en clair", () => {

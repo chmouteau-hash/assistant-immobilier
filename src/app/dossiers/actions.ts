@@ -140,6 +140,12 @@ export async function actionCreerLieu(_e: EtatFormulaire, fd: FormData): Promise
   });
 }
 
+export async function actionModifierLieu(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.modifierLieu(acteur, { lieuId: texte(fd, "lieuId"), nom: texte(fd, "nom"), typeLieu: texte(fd, "typeLieu"), parcelle: texte(fd, "parcelle"), description: texte(fd, "description") });
+  });
+}
+
 export async function actionModifierAdresse(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     structure.modifierAdresseLieu(acteur, { lieuId: texte(fd, "lieuId"), adresse: texte(fd, "adresse"), adresseSource: texte(fd, "adresseSource"), adresseConfiance: texte(fd, "adresseConfiance"), motif: texte(fd, "motif") });
@@ -150,6 +156,12 @@ export async function actionCreerBatiment(_e: EtatFormulaire, fd: FormData): Pro
   const dossierId = texte(fd, "dossierId");
   return executer(dossierId, (acteur) => {
     structure.creerBatiment(acteur, { dossierId, lieuId: texteOuNull(fd, "lieuId"), nom: texte(fd, "nom"), type: texte(fd, "type"), usageActuel: texte(fd, "usageActuel"), usageEnvisage: texte(fd, "usageEnvisage"), etat: texte(fd, "etat"), description: texte(fd, "description") });
+  });
+}
+
+export async function actionModifierBatiment(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.modifierBatiment(acteur, { batimentId: texte(fd, "batimentId"), nom: texte(fd, "nom"), type: texte(fd, "type"), etat: texte(fd, "etat"), usageActuel: texte(fd, "usageActuel"), usageEnvisage: texte(fd, "usageEnvisage") });
   });
 }
 
@@ -175,9 +187,33 @@ export async function actionCreerPiece(_e: EtatFormulaire, fd: FormData): Promis
   });
 }
 
+export async function actionModifierPiece(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.modifierPiece(acteur, { pieceId: texte(fd, "pieceId"), nom: texte(fd, "nom"), usage: texte(fd, "usage"), batimentId: texte(fd, "batimentId") });
+  });
+}
+
 export async function actionModifierSurface(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     structure.modifierSurfacePiece(acteur, { pieceId: texte(fd, "pieceId"), surfaceCentiemes: surfaceDepuis(fd), surfaceSource: texte(fd, "surfaceSource"), surfaceConfiance: texte(fd, "surfaceConfiance"), motif: texte(fd, "motif") });
+  });
+}
+
+export async function actionRetirerLieu(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.retirerLieu(acteur, { lieuId: texte(fd, "lieuId") });
+  });
+}
+
+export async function actionRetirerBatiment(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.retirerBatiment(acteur, { batimentId: texte(fd, "batimentId") });
+  });
+}
+
+export async function actionRetirerPiece(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.retirerPiece(acteur, { pieceId: texte(fd, "pieceId") });
   });
 }
 
