@@ -539,3 +539,38 @@ réserve sur la vue d'ensemble, et garde son tableau de comparaison dans l'ongle
 **Ce qui n'est pas tranché.** Mettre en avant ou reléguer d'autres éléments selon le stade ou le
 type de projet (bloc 4 de l'issue #3) ; la phrase de l'écran Lieux qui parle de recherche à un
 dossier de travaux (issue #43).
+
+## 2026-10-11 — Budget : un poste se solde à la main, l'estimation tient lieu de montant prévu
+
+**Décision.** Tranche les deux points laissés ouverts par l'entrée du 2026-10-10 « une facture
+partielle ne fait pas baisser le total », pour le bloc 2 de l'issue #4. Christophe a choisi entre
+les options qui lui étaient soumises.
+
+1. Un poste devient « soldé » à la main, depuis l'écran Budget, avec un motif obligatoire. Il se
+   rouvre de la même façon. L'application ne le déduit jamais : elle ne peut pas savoir qu'aucune
+   facture n'arrivera plus, et une règle automatique (soldé quand le facturé atteint le devis) ne
+   solderait jamais un poste dont la facture finale est inférieure au devis.
+2. Le montant prévu d'un poste est sa nature la plus engageante avant la facture : l'engagement,
+   sinon le devis, sinon l'estimation. Un poste facturé qui n'a qu'une estimation suit donc la règle
+   commune : tant qu'il n'est pas soldé, sa référence est le plus élevé entre l'estimation et le
+   total facturé, et elle reste signalée « estimation ».
+3. Un poste ne se solde que s'il porte au moins une facture retenue. Solder et rouvrir demandent le
+   droit d'écrire le budget, et sont tracés au journal d'audit avec leur motif.
+4. Un poste soldé n'accepte plus de facture, qu'elle soit saisie, issue d'un document validé ou
+   obtenue en modifiant une ligne : il faut d'abord le rouvrir. Les autres natures restent permises
+   (un paiement règle les factures reçues), et une facture déjà saisie se corrige ou s'écarte.
+
+**Pourquoi.** Pendant le test pilote, sur des données fictives, un poste devisé à 10 000 € est tombé
+à 3 000 € à sa première facture, et un poste estimé à 18 000 € à 4 200 € : le total du scénario
+baissait alors que le reste était à venir (commentaire de l'issue #4). Refuser une facture sur un
+poste soldé évite que la mention « plus aucune facture attendue » soit contredite en silence.
+
+**Conséquences.** Migration 004 : colonne `solde` sur `poste_budget`, 0 ou 1, contrôlée en base.
+Quand un engagement et un devis coexistent, l'engagement tient lieu de montant prévu, même s'il est
+inférieur au devis : c'est la hiérarchie du 2026-10-09. Dès que le total facturé atteint le montant
+prévu, il devient la référence sans que le poste soit soldé. L'assistant lit les mêmes montants de
+référence que l'écran Budget.
+
+**Ce qui n'est pas tranché.** Afficher l'engagement et les sous-totaux par nature (bloc 2 de
+l'issue #4) ; signaler à l'écran un poste « facturé en partie » ; solder plusieurs postes d'un coup,
+ou tout un scénario à la clôture (bloc 4 de l'issue #4).

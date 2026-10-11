@@ -11,13 +11,27 @@
 // Plusieurs lignes d'une même nature sur un poste s'ADDITIONNENT (deux factures partielles, deux
 // acomptes). Un devis concurrent non retenu se marque « écarté » (`ecartee: true`) : il reste
 // visible et tracé, mais n'entre dans aucune somme.
+//
+// Montant de référence d'un poste (DECISIONS, 2026-10-10 et 2026-10-11). Le montant PRÉVU est la
+// nature la plus engageante avant la facture : engagement, sinon devis, sinon estimation. Tant que
+// le poste n'est pas SOLDÉ, sa référence est le plus élevé entre ce montant prévu et le total
+// facturé : une facture partielle (un acompte) ne fait pas baisser le budget alors que le reste
+// est à venir. Une fois soldé (plus aucune facture attendue), la référence est le total facturé,
+// même inférieur au devis. « Soldé » n'est pas « payé » : payé dit que les paiements couvrent les
+// factures reçues.
 
 import type { Confiance, Source } from "./provenance";
 
 export const TYPES_MONTANT = ["estimation", "devis", "engagement", "facture", "paiement"] as const;
 export type TypeMontant = (typeof TYPES_MONTANT)[number];
 
-export type Poste = { id: string; nom: string; scenarioId: string };
+export type Poste = {
+  id: string;
+  nom: string;
+  scenarioId: string;
+  /** Plus aucune facture n'est attendue sur ce poste. Absent = non soldé. */
+  solde?: boolean;
+};
 
 export type LigneMontant = {
   posteId: string;
@@ -41,11 +55,14 @@ export type SynthesePoste = {
   engagementCentimes: number | null;
   factureCentimes: number | null;
   paiementCentimes: number | null;
-  /** Montant de référence = la nature la plus avancée disponible (facture > engagement > devis > estimation). */
+  /** Montant de référence : le plus élevé entre le prévu et le facturé ; le facturé seul une fois le poste soldé. */
   referenceCentimes: number | null;
+  /** Nature du montant retenu comme référence. */
   natureReference: TypeMontant | null;
   /** La référence repose-t-elle uniquement sur une estimation ? */
   referenceEstEstimation: boolean;
+  /** Le poste est marqué soldé : plus aucune facture n'est attendue. */
+  solde: boolean;
   ecartDevisEstimationCentimes: number | null;
   ecartFactureDevisCentimes: number | null;
   resteAPayerCentimes: number | null;
@@ -110,12 +127,19 @@ export function synthetiserPoste(poste: Poste, lignes: LigneMontant[]): Synthese
   const facture = parNature("facture");
   const paiement = parNature("paiement");
 
-  let reference: number | null = null;
-  let natureReference: TypeMontant | null = null;
-  if (facture !== null) [reference, natureReference] = [facture, "facture"];
-  else if (engagement !== null) [reference, natureReference] = [engagement, "engagement"];
-  else if (devis !== null) [reference, natureReference] = [devis, "devis"];
-  else if (estimation !== null) [reference, natureReference] = [estimation, "estimation"];
+  // Montant prévu : la nature la plus engageante avant la facture.
+  let prevu: number | null = null;
+  let naturePrevu: TypeMontant | null = null;
+  if (engagement !== null) [prevu, naturePrevu] = [engagement, "engagement"];
+  else if (devis !== null) [prevu, naturePrevu] = [devis, "devis"];
+  else if (estimation !== null) [prevu, naturePrevu] = [estimation, "estimation"];
+
+  // Le facturé devient la référence quand le poste est soldé, quand rien n'était prévu, ou quand il
+  // atteint le prévu. Sinon le prévu reste la référence : le reste des factures est à venir.
+  const solde = poste.solde === true;
+  let reference: number | null = prevu;
+  let natureReference: TypeMontant | null = naturePrevu;
+  if (facture !== null && (solde || prevu === null || facture >= prevu)) [reference, natureReference] = [facture, "facture"];
 
   let statut: StatutPoste = "a_renseigner";
   if (paiement !== null && facture !== null && paiement >= facture) statut = "paye";
@@ -135,6 +159,7 @@ export function synthetiserPoste(poste: Poste, lignes: LigneMontant[]): Synthese
     referenceCentimes: reference,
     natureReference,
     referenceEstEstimation: natureReference === "estimation",
+    solde,
     ecartDevisEstimationCentimes: devis !== null && estimation !== null ? devis - estimation : null,
     ecartFactureDevisCentimes: facture !== null && devis !== null ? facture - devis : null,
     resteAPayerCentimes: facture !== null ? facture - (paiement ?? 0) : null,

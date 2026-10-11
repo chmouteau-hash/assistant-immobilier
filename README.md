@@ -174,7 +174,9 @@ d'autres.
   lit ; l'assistant ne lit pas encore les PDF/photos (amélioration proposée).
 - **Plusieurs lignes d'une même nature sur un poste s'additionnent** (acomptes, factures
   partielles). Un devis concurrent non retenu se marque « écarté » (Budget → Lignes détaillées →
-  Modifier ou écarter) : il reste visible mais ne compte plus.
+  Modifier ou écarter) : il reste visible mais ne compte plus. Tant qu'un poste n'est pas marqué
+  « soldé » (Budget → Postes détaillés → Solder le poste), une facture partielle ne fait pas baisser
+  son montant de référence ; une fois soldé, sa référence est son total facturé.
 - **Pas de simulation de financement ni de fiscalité** : hors des six priorités ; prévue comme
   module paramétrable avec hypothèses visibles.
 - **Pas d'import d'un export** : l'archive zip (Vue d'ensemble → Vos données) sert à la

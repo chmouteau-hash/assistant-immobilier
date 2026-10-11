@@ -86,7 +86,7 @@ export default async function PageVueEnsemble({ params }: { params: Promise<{ id
       </Section>
 
       {comparaison && (
-        <Section titre="Scénarios en un coup d'œil" sousTitre="Totaux de référence (nature la plus avancée : facture > engagement > devis > estimation).">
+        <Section titre="Scénarios en un coup d'œil" sousTitre="Totaux de référence : par poste, le plus élevé entre le prévu et le facturé ; le facturé seul une fois le poste soldé.">
           {comparaison.lignes.length === 0 ? (
             <Vide>Aucun scénario. Un dossier simple (une chambre à refaire) peut n&apos;en avoir qu&apos;un.</Vide>
           ) : (

@@ -98,9 +98,10 @@ export function construireContexte(acteur: Acteur, dossier: Dossier): ContexteAu
   }
 
   if (sections.includes("scenarios") || sections.includes("budget")) {
-    const postes = versObjets<{ id: string; nom: string; scenarioId: string }>(
-      db.prepare(`SELECT id, nom, scenario_id FROM poste_budget WHERE dossier_id = ?`).all(dossier.id),
-    );
+    // `solde` entre dans le calcul de la référence : sans lui, l'assistant lirait d'autres totaux que l'écran Budget.
+    const postes = versObjets<{ id: string; nom: string; scenarioId: string; solde: number }>(
+      db.prepare(`SELECT id, nom, scenario_id, solde FROM poste_budget WHERE dossier_id = ?`).all(dossier.id),
+    ).map((p) => ({ ...p, solde: p.solde === 1 }));
     const lignes = versObjets<{ posteId: string; typeMontant: string; montantCentimes: number; source: string; confiance: string; statut: string }>(
       db.prepare(`SELECT poste_id, type_montant, montant_centimes, source, confiance, statut FROM ligne_budget WHERE scenario_id IN (SELECT id FROM scenario WHERE dossier_id = ?)`).all(dossier.id),
     );
