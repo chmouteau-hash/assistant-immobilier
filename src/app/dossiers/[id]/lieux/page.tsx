@@ -3,7 +3,17 @@ import { autorise } from "@/lib/acces";
 import { listerLieux, listerBatiments, listerPieces, type Batiment } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterSurface } from "@/domain/mesure";
-import { actionCreerLieu, actionCreerBatiment, actionCreerPiece, actionModifierSurface, actionModifierAdresse, actionRattacherBatiment } from "../../actions";
+import {
+  actionCreerLieu,
+  actionCreerBatiment,
+  actionCreerPiece,
+  actionModifierSurface,
+  actionModifierAdresse,
+  actionRattacherBatiment,
+  actionModifierLieu,
+  actionModifierBatiment,
+  actionModifierPiece,
+} from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
 import { REPONSE_HABITUELLE } from "@/domain/provenance";
 import { Champ, Pastille, Provenance, QuestionConfiance, QuestionSource, Section, Select, Vide, classeSaisie } from "@/components/ui";
@@ -15,7 +25,9 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // Un lieu contient ses bâtiments, un bâtiment contient ses pièces : l'écran les emboîte dans cet
 // ordre. Deux listes séparées, l'une sous l'autre, laissaient douter que les bâtiments fassent
 // partie du lieu (issue #14). Un bâtiment se crée donc dans la carte de son lieu ; ceux qui n'en
-// ont pas sont montrés à part, avec de quoi les y rattacher.
+// ont pas sont montrés à part, avec de quoi les y rattacher. Chaque carte porte un formulaire
+// « Corriger » : une faute de frappe ne se rattrapait qu'en supprimant le dossier (issue #22).
+// L'adresse et la surface gardent leur propre formulaire, parce qu'elles portent une provenance.
 export default async function PageLieux({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const acteur = await obtenirActeurPourSection(id, "lieux");
@@ -27,6 +39,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
   const confiances = listerReference("ref_confiance").filter((c) => c.code !== "a_renseigner");
   const peutEcrire = autorise(acteur, id, "ecrire", "lieux");
   const sansLieu = batiments.filter((b) => !lieux.some((l) => l.id === b.lieuId));
+  const choixBatiments = batiments.map((b) => ({ code: b.id, libelle: b.nom }));
 
   // Les deux questions n'apparaissent qu'une fois la valeur saisie : tant que le champ marqué
   // `valeur-tracee` est vide dans son groupe, une règle CSS les masque (issue #15).
@@ -103,6 +116,30 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
         <p className="text-neutral-600">
           {b.etat ? `État : ${b.etat}` : "État : à renseigner"} · usage actuel : {b.usageActuel ?? "à renseigner"} · usage envisagé : {b.usageEnvisage ?? "à renseigner"}
         </p>
+        {peutEcrire && (
+          <details className="mt-1">
+            <summary className="cursor-pointer text-xs text-neutral-500">Corriger le bâtiment</summary>
+            <FormulaireAction action={actionModifierBatiment} bouton="Enregistrer" compact className="mt-1">
+              <input type="hidden" name="dossierId" value={id} />
+              <input type="hidden" name="batimentId" value={b.id} />
+              <Champ label="Nom" large>
+                <input name="nom" required defaultValue={b.nom} className={classeSaisie} />
+              </Champ>
+              <Champ label="Type">
+                <input name="type" defaultValue={b.type ?? ""} className={classeSaisie} />
+              </Champ>
+              <Champ label="État">
+                <input name="etat" defaultValue={b.etat ?? ""} className={classeSaisie} />
+              </Champ>
+              <Champ label="Usage actuel">
+                <input name="usageActuel" defaultValue={b.usageActuel ?? ""} className={classeSaisie} />
+              </Champ>
+              <Champ label="Usage envisagé">
+                <input name="usageEnvisage" defaultValue={b.usageEnvisage ?? ""} className={classeSaisie} />
+              </Champ>
+            </FormulaireAction>
+          </details>
+        )}
         {peutEcrire && !rattache && lieux.length > 0 && formulaireRattachement(b, "Rattacher")}
         {peutEcrire && rattache && autresLieux > 0 && (
           <details className="mt-1">
@@ -122,20 +159,40 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                   {p.usage && <span className="text-neutral-500"> ({p.usage})</span>} — surface : <Provenance valeur={p.surface} formater={formaterSurface} />
                 </span>
                 {peutEcrire && (
-                  <details className="max-w-full min-w-0">
-                    <summary className="cursor-pointer text-xs text-neutral-500">Surface</summary>
-                    <FormulaireAction action={actionModifierSurface} bouton="Enregistrer" compact className="group mt-1">
-                      <input type="hidden" name="dossierId" value={id} />
-                      <input type="hidden" name="pieceId" value={p.id} />
-                      <Champ label="m² (vide = à renseigner)">
-                        <input name="surface" className={`${classeSaisie} valeur-tracee w-24`} placeholder="92,5" />
-                      </Champ>
-                      {champsProvenance("surface")}
-                      <Champ label="Motif">
-                        <input name="motif" className={classeSaisie} />
-                      </Champ>
-                    </FormulaireAction>
-                  </details>
+                  <div className="flex max-w-full min-w-0 flex-wrap justify-end gap-x-4 gap-y-1">
+                    <details className="max-w-full min-w-0">
+                      <summary className="cursor-pointer text-xs text-neutral-500">Corriger</summary>
+                      <FormulaireAction action={actionModifierPiece} bouton="Enregistrer" compact className="mt-1">
+                        <input type="hidden" name="dossierId" value={id} />
+                        <input type="hidden" name="pieceId" value={p.id} />
+                        <Champ label="Nom" large>
+                          <input name="nom" required defaultValue={p.nom} className={classeSaisie} />
+                        </Champ>
+                        <Champ label="Usage">
+                          <input name="usage" defaultValue={p.usage ?? ""} className={`${classeSaisie} w-28`} />
+                        </Champ>
+                        {batiments.length > 1 && (
+                          <Champ label="Bâtiment">
+                            <Select name="batimentId" options={choixBatiments} defaultValue={p.batimentId} />
+                          </Champ>
+                        )}
+                      </FormulaireAction>
+                    </details>
+                    <details className="max-w-full min-w-0">
+                      <summary className="cursor-pointer text-xs text-neutral-500">Surface</summary>
+                      <FormulaireAction action={actionModifierSurface} bouton="Enregistrer" compact className="group mt-1">
+                        <input type="hidden" name="dossierId" value={id} />
+                        <input type="hidden" name="pieceId" value={p.id} />
+                        <Champ label="m² (vide = à renseigner)">
+                          <input name="surface" className={`${classeSaisie} valeur-tracee w-24`} placeholder="92,5" />
+                        </Champ>
+                        {champsProvenance("surface")}
+                        <Champ label="Motif">
+                          <input name="motif" className={classeSaisie} />
+                        </Champ>
+                      </FormulaireAction>
+                    </details>
+                  </div>
                 )}
               </li>
             ))}
@@ -183,6 +240,27 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
                 {l.description && <p className="text-neutral-600">{l.description}</p>}
                 {peutEcrire && (
                   <details className="mt-2">
+                    <summary className="cursor-pointer text-xs text-neutral-500">Corriger le lieu</summary>
+                    <FormulaireAction action={actionModifierLieu} bouton="Enregistrer" compact className="mt-2">
+                      <input type="hidden" name="dossierId" value={id} />
+                      <input type="hidden" name="lieuId" value={l.id} />
+                      <Champ label="Nom" large>
+                        <input name="nom" required defaultValue={l.nom} className={classeSaisie} />
+                      </Champ>
+                      <Champ label="Type">
+                        <Select name="typeLieu" options={typesLieu} defaultValue={l.typeLieu} />
+                      </Champ>
+                      <Champ label="Parcelle">
+                        <input name="parcelle" defaultValue={l.parcelle ?? ""} className={classeSaisie} />
+                      </Champ>
+                      <Champ label="Description libre" large>
+                        <textarea name="description" defaultValue={l.description ?? ""} className={classeSaisie} rows={2} />
+                      </Champ>
+                    </FormulaireAction>
+                  </details>
+                )}
+                {peutEcrire && (
+                  <details className="mt-1">
                     <summary className="cursor-pointer text-xs text-neutral-500">Modifier l&apos;adresse</summary>
                     <FormulaireAction action={actionModifierAdresse} bouton="Enregistrer" compact className="group mt-2">
                       <input type="hidden" name="dossierId" value={id} />

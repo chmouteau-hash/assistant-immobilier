@@ -388,3 +388,27 @@ affichés : ces tables fournissent les codes proposés et leur ordre, le domaine
 **Ce qui n'est pas tranché.** Aligner les libellés de ces deux tables sur le domaine par une
 migration, qui modifierait la base existante ; préremplir les deux réponses avec la provenance
 actuelle quand on modifie une adresse ou une surface.
+
+## 2026-10-11 — Lieux : un lieu, un bâtiment et une pièce se corrigent après leur création
+
+**Décision.** Tranche le premier point laissé ouvert par l'entrée « un bâtiment se crée dans son
+lieu » du même jour, pour l'issue #22.
+
+1. Se corrigent depuis l'écran Lieux : le nom, le type, la parcelle et la description d'un lieu ;
+   le nom, le type, l'état et les usages d'un bâtiment ; le nom et l'usage d'une pièce.
+2. Une pièce posée dans le mauvais bâtiment se déplace dans un autre bâtiment du même dossier. Sa
+   surface la suit.
+3. Même droit qu'à la création (écrire les lieux), mêmes garde-fous : nom obligatoire, type de lieu
+   connu, bâtiment du même dossier. Seuls les champs changés sont tracés au journal d'audit, avec la
+   valeur d'avant et celle d'après ; aucun motif n'est demandé. Un champ facultatif vidé redevient
+   inconnu.
+4. L'adresse d'un lieu et la surface d'une pièce gardent leur propre formulaire : ce sont des
+   valeurs à provenance, modifiées avec leur origine et un motif.
+
+**Pourquoi.** Une faute de frappe dans un nom restait, et une pièce ajoutée au mauvais bâtiment y
+restait : la seule façon de rattraper une saisie était de supprimer le dossier entier.
+
+**Ce qui n'est pas tranché.** Retirer un lieu, un bâtiment ou une pièce : suppression ou mise à
+l'écart, et sort de ce qui y est rattaché (le schéma prévoit déjà qu'un bâtiment supprimé emporte
+ses pièces, et qu'un lieu supprimé laisse ses bâtiments sans lieu) ; les mêmes corrections sur une
+idée, un scénario et un poste.
