@@ -231,6 +231,34 @@ export function creerBatiment(
   });
 }
 
+/**
+ * Rattacher un bâtiment à un lieu, ou le changer de lieu : même droit et même garde-fou qu'à la
+ * création, tracé avec avant/après. Sans effet si le lieu ne change pas.
+ */
+export function rattacherBatiment(acteur: Acteur, params: { batimentId: string; lieuId: string }): Batiment {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId);
+  if (!ligne) throw interdit();
+  const avant = versObjet<Batiment>(ligne as Record<string, unknown>);
+  exiger(acteur, avant.dossierId, "ecrire", "lieux");
+  if (params.lieuId === "") throw invalide("Choisissez le lieu auquel rattacher le bâtiment.");
+  const lieu = obtenirBase().prepare(`SELECT dossier_id FROM lieu WHERE id = ?`).get(params.lieuId) as { dossier_id: string } | undefined;
+  if (!lieu || lieu.dossier_id !== avant.dossierId) throw invalide("Le lieu indiqué n'appartient pas à ce dossier.");
+  if (params.lieuId === avant.lieuId) return avant;
+
+  return transaction((db) => {
+    db.prepare(`UPDATE batiment SET lieu_id = ? WHERE id = ?`).run(params.lieuId, params.batimentId);
+    enregistrerEvenement(db, {
+      nomEntite: "batiment",
+      entiteId: params.batimentId,
+      action: "modification",
+      acteurId: acteur.personneId,
+      dossierId: avant.dossierId,
+      changements: [{ champ: "lieu_id", avant: avant.lieuId, apres: params.lieuId }],
+    });
+    return versObjet<Batiment>(db.prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId) as Record<string, unknown>);
+  });
+}
+
 // --- Pièces ------------------------------------------------------------------------------------------
 
 type PieceBrute = {

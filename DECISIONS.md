@@ -341,3 +341,24 @@ une description ou la question partent tels quels. L'écran le dit sous le texte
 **Ce qui n'est pas tranché.** Conserver avec chaque échange le texte exact transmis (seuls la
 question, les sections et la réponse le sont aujourd'hui) ; la consigne envoyée au modèle distant,
 qui dit encore « ni noms de personnes ».
+
+## 2026-10-11 — Lieux : un bâtiment se crée dans son lieu, et peut en changer
+
+**Décision.** Trois règles venues de l'issue #14 :
+
+1. L'écran Lieux emboîte ce qui s'emboîte : un lieu contient ses bâtiments, un bâtiment contient
+   ses pièces. Un bâtiment se crée dans la carte de son lieu.
+2. Le lieu d'un bâtiment se modifie après coup (`rattacherBatiment`) : même droit qu'à la création
+   (écrire les lieux), lieu du même dossier, trace au journal d'audit avec le lieu d'avant et celui
+   d'après, sans motif.
+3. Un bâtiment sans lieu reste permis. L'écran ne propose d'en créer un que tant que le dossier n'a
+   aucun lieu. Dès qu'un lieu existe, les bâtiments sans lieu sont montrés à part, signalés, avec
+   de quoi les rattacher.
+
+**Pourquoi.** Lieux et bâtiments formaient deux listes l'une sous l'autre : rien ne montrait qu'un
+bâtiment fait partie d'un lieu. Le champ « Lieu » d'un nouveau bâtiment valait « aucun » par
+défaut, si bien qu'un bâtiment a été créé sans lieu pendant le test pilote, sans moyen de le
+corriger depuis l'écran.
+
+**Ce qui n'est pas tranché.** Détacher un bâtiment de tout lieu depuis l'écran ; corriger le nom,
+le type ou l'état d'un lieu, d'un bâtiment ou d'une pièce, et les retirer (issue #22).

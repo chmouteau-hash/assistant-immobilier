@@ -1,14 +1,20 @@
 import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
-import { listerLieux, listerBatiments, listerPieces } from "@/lib/structure";
+import { listerLieux, listerBatiments, listerPieces, type Batiment } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterSurface } from "@/domain/mesure";
-import { actionCreerLieu, actionCreerBatiment, actionCreerPiece, actionModifierSurface, actionModifierAdresse } from "../../actions";
+import { actionCreerLieu, actionCreerBatiment, actionCreerPiece, actionModifierSurface, actionModifierAdresse, actionRattacherBatiment } from "../../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
-import { Champ, Provenance, Section, Select, Vide, classeSaisie } from "@/components/ui";
+import { Champ, Pastille, Provenance, Section, Select, Vide, classeSaisie } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
+const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-500";
+
+// Un lieu contient ses bâtiments, un bâtiment contient ses pièces : l'écran les emboîte dans cet
+// ordre. Deux listes séparées, l'une sous l'autre, laissaient douter que les bâtiments fassent
+// partie du lieu (issue #14). Un bâtiment se crée donc dans la carte de son lieu ; ceux qui n'en
+// ont pas sont montrés à part, avec de quoi les y rattacher.
 export default async function PageLieux({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const acteur = await obtenirActeurPourSection(id, "lieux");
@@ -19,6 +25,7 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
   const sources = listerReference("ref_source_donnee").filter((s) => s.code !== "suggestion_ia");
   const confiances = listerReference("ref_confiance").filter((c) => c.code !== "a_renseigner");
   const peutEcrire = autorise(acteur, id, "ecrire", "lieux");
+  const sansLieu = batiments.filter((b) => !lieux.some((l) => l.id === b.lieuId));
 
   const champsProvenance = (prefixe: string) => (
     <>
@@ -31,39 +38,181 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
     </>
   );
 
+  // Sans `lieuId`, le bâtiment est créé hors de tout lieu : proposé seulement quand le dossier
+  // n'a encore aucun lieu.
+  const formulaireBatiment = (lieuId: string | null) => (
+    <FormulaireAction action={actionCreerBatiment} bouton="Ajouter le bâtiment" titre={lieuId ? undefined : "Nouveau bâtiment"} className="mt-2">
+      <input type="hidden" name="dossierId" value={id} />
+      {lieuId && <input type="hidden" name="lieuId" value={lieuId} />}
+      <div className="flex flex-wrap gap-3">
+        <Champ label="Nom" large>
+          <input name="nom" required className={classeSaisie} placeholder="ex. Bâtiment ancien, Maison bois" />
+        </Champ>
+        <Champ label="Type">
+          <input name="type" className={classeSaisie} placeholder="ancien, bois, extension…" />
+        </Champ>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <Champ label="État">
+          <input name="etat" className={classeSaisie} placeholder="toiture refaite (à vérifier)" />
+        </Champ>
+        <Champ label="Usage actuel">
+          <input name="usageActuel" className={classeSaisie} />
+        </Champ>
+        <Champ label="Usage envisagé">
+          <input name="usageEnvisage" className={classeSaisie} />
+        </Champ>
+      </div>
+    </FormulaireAction>
+  );
+
+  const formulaireRattachement = (b: Batiment, bouton: string) => (
+    <FormulaireAction action={actionRattacherBatiment} bouton={bouton} compact className="mt-1">
+      <input type="hidden" name="dossierId" value={id} />
+      <input type="hidden" name="batimentId" value={b.id} />
+      <Champ label="Lieu">
+        <select name="lieuId" required defaultValue="" className={classeSaisie}>
+          <option value="">— choisir —</option>
+          {lieux
+            .filter((l) => l.id !== b.lieuId)
+            .map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.nom}
+              </option>
+            ))}
+        </select>
+      </Champ>
+    </FormulaireAction>
+  );
+
+  const carteBatiment = (b: Batiment) => {
+    const siennes = pieces.filter((p) => p.batimentId === b.id);
+    const rattache = lieux.some((l) => l.id === b.lieuId);
+    const autresLieux = lieux.filter((l) => l.id !== b.lieuId).length;
+    return (
+      <li key={b.id} className="rounded border border-neutral-200 bg-neutral-50 p-3">
+        <p>
+          <span className={classeNiveau}>Bâtiment</span> <span className="font-medium">{b.nom}</span>
+          {b.type && <span className="text-neutral-500"> · {b.type}</span>}
+          {!rattache && lieux.length > 0 && (
+            <>
+              {" "}
+              <Pastille ton="attention">sans lieu</Pastille>
+            </>
+          )}
+        </p>
+        <p className="text-neutral-600">
+          {b.etat ? `État : ${b.etat}` : "État : à renseigner"} · usage actuel : {b.usageActuel ?? "à renseigner"} · usage envisagé : {b.usageEnvisage ?? "à renseigner"}
+        </p>
+        {peutEcrire && !rattache && lieux.length > 0 && formulaireRattachement(b, "Rattacher")}
+        {peutEcrire && rattache && autresLieux > 0 && (
+          <details className="mt-1">
+            <summary className="cursor-pointer text-xs text-neutral-500">Changer de lieu</summary>
+            {formulaireRattachement(b, "Déplacer")}
+          </details>
+        )}
+        <p className="mt-2 text-xs font-medium text-neutral-500">Pièces et espaces</p>
+        {siennes.length === 0 ? (
+          <p className="text-xs text-neutral-400">Aucune pièce.</p>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {siennes.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 py-1">
+                <span>
+                  {p.nom}
+                  {p.usage && <span className="text-neutral-500"> ({p.usage})</span>} — surface : <Provenance valeur={p.surface} formater={formaterSurface} />
+                </span>
+                {peutEcrire && (
+                  <details>
+                    <summary className="cursor-pointer text-xs text-neutral-500">Surface</summary>
+                    <FormulaireAction action={actionModifierSurface} bouton="Enregistrer" compact className="mt-1">
+                      <input type="hidden" name="dossierId" value={id} />
+                      <input type="hidden" name="pieceId" value={p.id} />
+                      <Champ label="m² (vide = à renseigner)">
+                        <input name="surface" className={`${classeSaisie} w-24`} placeholder="92,5" />
+                      </Champ>
+                      {champsProvenance("surface")}
+                      <Champ label="Motif">
+                        <input name="motif" className={classeSaisie} />
+                      </Champ>
+                    </FormulaireAction>
+                  </details>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {peutEcrire && (
+          <FormulaireAction action={actionCreerPiece} bouton="Ajouter" compact className="mt-2">
+            <input type="hidden" name="dossierId" value={id} />
+            <input type="hidden" name="batimentId" value={b.id} />
+            <Champ label="Nouvelle pièce / espace" large>
+              <input name="nom" required className={classeSaisie} placeholder="ex. Grande pièce principale, Terrasse" />
+            </Champ>
+            <Champ label="Usage">
+              <input name="usage" className={`${classeSaisie} w-28`} />
+            </Champ>
+            <Champ label="m²">
+              <input name="surface" className={`${classeSaisie} w-20`} />
+            </Champ>
+            {champsProvenance("surface")}
+          </FormulaireAction>
+        )}
+      </li>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-8">
-      <Section titre="Lieux" sousTitre="Bien candidat, bien acquis, terrain. L'adresse reste « à renseigner » tant qu'elle n'est pas connue.">
+      <Section
+        titre="Lieux, bâtiments, pièces"
+        sousTitre="Un lieu (bien candidat, bien acquis, terrain) contient ses bâtiments, un bâtiment contient ses pièces. L'adresse reste « à renseigner » tant qu'elle n'est pas connue."
+      >
         {lieux.length === 0 && <Vide>Aucun lieu. En phase de recherche, on peut créer un bien candidat fictif clairement nommé.</Vide>}
-        <ul className="flex flex-col gap-2 text-sm">
-          {lieux.map((l) => (
-            <li key={l.id} className="rounded border border-neutral-200 bg-white p-3">
-              <p>
-                <span className="font-medium">{l.nom}</span> <span className="text-neutral-500">· {libelle(typesLieu, l.typeLieu)}</span>
-              </p>
-              <p>
-                Adresse : <Provenance valeur={l.adresse} formater={(v) => v} />
-                {l.parcelle && <span className="ml-2 text-neutral-500">parcelle {l.parcelle}</span>}
-              </p>
-              {l.description && <p className="text-neutral-600">{l.description}</p>}
-              {peutEcrire && (
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-xs text-neutral-500">Modifier l&apos;adresse</summary>
-                  <FormulaireAction action={actionModifierAdresse} bouton="Enregistrer" compact className="mt-2">
-                    <input type="hidden" name="dossierId" value={id} />
-                    <input type="hidden" name="lieuId" value={l.id} />
-                    <Champ label="Adresse (vide = à renseigner)" large>
-                      <input name="adresse" defaultValue={l.adresse.valeur ?? ""} className={classeSaisie} />
-                    </Champ>
-                    {champsProvenance("adresse")}
-                    <Champ label="Motif">
-                      <input name="motif" className={classeSaisie} />
-                    </Champ>
-                  </FormulaireAction>
-                </details>
-              )}
-            </li>
-          ))}
+        <ul className="flex flex-col gap-4 text-sm">
+          {lieux.map((l) => {
+            const siens = batiments.filter((b) => b.lieuId === l.id);
+            return (
+              <li key={l.id} className="rounded border border-neutral-200 bg-white p-3">
+                <p>
+                  <span className={classeNiveau}>Lieu</span> <span className="font-medium">{l.nom}</span> <span className="text-neutral-500">· {libelle(typesLieu, l.typeLieu)}</span>
+                </p>
+                <p>
+                  Adresse : <Provenance valeur={l.adresse} formater={(v) => v} />
+                  {l.parcelle && <span className="ml-2 text-neutral-500">parcelle {l.parcelle}</span>}
+                </p>
+                {l.description && <p className="text-neutral-600">{l.description}</p>}
+                {peutEcrire && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs text-neutral-500">Modifier l&apos;adresse</summary>
+                    <FormulaireAction action={actionModifierAdresse} bouton="Enregistrer" compact className="mt-2">
+                      <input type="hidden" name="dossierId" value={id} />
+                      <input type="hidden" name="lieuId" value={l.id} />
+                      <Champ label="Adresse (vide = à renseigner)" large>
+                        <input name="adresse" defaultValue={l.adresse.valeur ?? ""} className={classeSaisie} />
+                      </Champ>
+                      {champsProvenance("adresse")}
+                      <Champ label="Motif">
+                        <input name="motif" className={classeSaisie} />
+                      </Champ>
+                    </FormulaireAction>
+                  </details>
+                )}
+                <div className="mt-3 flex flex-col gap-3 border-l-2 border-neutral-200 pl-3">
+                  <p className="text-xs font-medium text-neutral-500">
+                    {siens.length === 0 ? "Aucun bâtiment dans ce lieu." : siens.length === 1 ? "1 bâtiment dans ce lieu" : `${siens.length} bâtiments dans ce lieu`}
+                  </p>
+                  {siens.length > 0 && <ul className="flex flex-col gap-3">{siens.map(carteBatiment)}</ul>}
+                  {peutEcrire && (
+                    <details open={siens.length === 0}>
+                      <summary className="cursor-pointer text-xs text-neutral-500">Ajouter un bâtiment à ce lieu</summary>
+                      {formulaireBatiment(l.id)}
+                    </details>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
         {peutEcrire && (
           <FormulaireAction action={actionCreerLieu} bouton="Ajouter le lieu" titre="Nouveau lieu">
@@ -92,108 +241,19 @@ export default async function PageLieux({ params }: { params: Promise<{ id: stri
         )}
       </Section>
 
-      <Section titre="Bâtiments" sousTitre="Description libre : « bâtiment ancien, toiture refaite », « maison bois à côté »…">
-        {batiments.length === 0 && <Vide>Aucun bâtiment.</Vide>}
-        <ul className="flex flex-col gap-3 text-sm">
-          {batiments.map((b) => {
-            const siennes = pieces.filter((p) => p.batimentId === b.id);
-            const lieu = lieux.find((l) => l.id === b.lieuId);
-            return (
-              <li key={b.id} className="rounded border border-neutral-200 bg-white p-3">
-                <p>
-                  <span className="font-medium">{b.nom}</span>
-                  {b.type && <span className="text-neutral-500"> · {b.type}</span>}
-                  {lieu && <span className="text-neutral-500"> · {lieu.nom}</span>}
-                </p>
-                <p className="text-neutral-600">
-                  {b.etat ? `État : ${b.etat}` : "État : à renseigner"} · usage actuel : {b.usageActuel ?? "à renseigner"} · usage envisagé : {b.usageEnvisage ?? "à renseigner"}
-                </p>
-                <p className="mt-2 text-xs font-medium text-neutral-500">Pièces et espaces</p>
-                {siennes.length === 0 ? (
-                  <p className="text-xs text-neutral-400">Aucune pièce.</p>
-                ) : (
-                  <ul className="flex flex-col gap-1">
-                    {siennes.map((p) => (
-                      <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 py-1">
-                        <span>
-                          {p.nom}
-                          {p.usage && <span className="text-neutral-500"> ({p.usage})</span>} — surface : <Provenance valeur={p.surface} formater={formaterSurface} />
-                        </span>
-                        {peutEcrire && (
-                          <details>
-                            <summary className="cursor-pointer text-xs text-neutral-500">Surface</summary>
-                            <FormulaireAction action={actionModifierSurface} bouton="Enregistrer" compact className="mt-1">
-                              <input type="hidden" name="dossierId" value={id} />
-                              <input type="hidden" name="pieceId" value={p.id} />
-                              <Champ label="m² (vide = à renseigner)">
-                                <input name="surface" className={`${classeSaisie} w-24`} placeholder="92,5" />
-                              </Champ>
-                              {champsProvenance("surface")}
-                              <Champ label="Motif">
-                                <input name="motif" className={classeSaisie} />
-                              </Champ>
-                            </FormulaireAction>
-                          </details>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {peutEcrire && (
-                  <FormulaireAction action={actionCreerPiece} bouton="Ajouter" compact className="mt-2">
-                    <input type="hidden" name="dossierId" value={id} />
-                    <input type="hidden" name="batimentId" value={b.id} />
-                    <Champ label="Nouvelle pièce / espace" large>
-                      <input name="nom" required className={classeSaisie} placeholder="ex. Grande pièce principale, Terrasse" />
-                    </Champ>
-                    <Champ label="Usage">
-                      <input name="usage" className={`${classeSaisie} w-28`} />
-                    </Champ>
-                    <Champ label="m²">
-                      <input name="surface" className={`${classeSaisie} w-20`} />
-                    </Champ>
-                    {champsProvenance("surface")}
-                  </FormulaireAction>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        {peutEcrire && (
-          <FormulaireAction action={actionCreerBatiment} bouton="Ajouter le bâtiment" titre="Nouveau bâtiment">
-            <input type="hidden" name="dossierId" value={id} />
-            <div className="flex flex-wrap gap-3">
-              <Champ label="Nom" large>
-                <input name="nom" required className={classeSaisie} placeholder="ex. Bâtiment ancien, Maison bois" />
-              </Champ>
-              <Champ label="Lieu">
-                <select name="lieuId" className={classeSaisie} defaultValue="">
-                  <option value="">— aucun —</option>
-                  {lieux.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.nom}
-                    </option>
-                  ))}
-                </select>
-              </Champ>
-              <Champ label="Type">
-                <input name="type" className={classeSaisie} placeholder="ancien, bois, extension…" />
-              </Champ>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Champ label="État">
-                <input name="etat" className={classeSaisie} placeholder="toiture refaite (à vérifier)" />
-              </Champ>
-              <Champ label="Usage actuel">
-                <input name="usageActuel" className={classeSaisie} />
-              </Champ>
-              <Champ label="Usage envisagé">
-                <input name="usageEnvisage" className={classeSaisie} />
-              </Champ>
-            </div>
-          </FormulaireAction>
-        )}
-      </Section>
+      {(sansLieu.length > 0 || (lieux.length === 0 && peutEcrire)) && (
+        <Section
+          titre="Bâtiments sans lieu"
+          sousTitre={
+            lieux.length === 0
+              ? "Tant qu'aucun lieu n'existe, un bâtiment n'est rangé nulle part. Créez un lieu pour l'y rattacher."
+              : "Ces bâtiments ne sont rangés dans aucun lieu. Rattachez chacun au lieu dont il fait partie."
+          }
+        >
+          {sansLieu.length > 0 && <ul className="flex flex-col gap-3 text-sm">{sansLieu.map(carteBatiment)}</ul>}
+          {lieux.length === 0 && peutEcrire && formulaireBatiment(null)}
+        </Section>
+      )}
     </div>
   );
 }
