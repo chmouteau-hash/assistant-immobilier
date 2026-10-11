@@ -40,3 +40,26 @@ Préparation : `npm install`, `npm run dev`, ouvrir http://localhost:3000. Faire
 Résultat global attendu : aucune valeur affichée sans source ni statut ; aucun total partiel
 présenté comme comparable ; aucune écriture faite par l'assistant ; aucun accès hors périmètre.
 Noter chaque écart dans une issue **sans** donnée personnelle (adresse, montant réel, nom).
+
+## Second parcours : chambre à refaire
+
+Le cadrage demande un second parcours : créer directement un dossier au stade travaux, définir les
+espaces, un budget, deux tâches et un document, sans écrans d'achat inutiles. Durée indicative : un
+quart d'heure, sur un dossier neuf et des données fictives. Les étapes C1 à C9 se jouent assistant
+désactivé.
+
+| # | Étape | Action | Résultat attendu |
+| --- | --- | --- | --- |
+| C1 | Créer le dossier au stade travaux | Mes dossiers → Nouveau dossier : nom « Chambre d'amis à refaire (fictif) », type « Travaux ciblés », stade « Travaux », objectif vide | Redirection vers la vue d'ensemble ; type et stade affichés ; Objectif « À renseigner » ; aucun onglet de recherche ni d'achat à traverser |
+| C2 | Les espaces, sans lieu | Lieux → « Bâtiments sans lieu » → Nouveau bâtiment « Maison (fictive) » ; dans sa carte, pièce « Chambre d'amis », m² = 11,5, « C'est une estimation » | Aucun lieu n'est exigé ; les deux questions n'apparaissent qu'une fois la surface saisie ; la pièce affiche « 11,5 m² · estimation · estimé » |
+| C3 | Un seul scénario | Ouvrir Budget, puis Scénarios → « Refaire la chambre d'amis » | Avant : le budget invite à créer un scénario, « même unique » ; après : une carte, et le budget s'ouvre pour ce scénario |
+| C4 | Postes sans montant | Budget → postes « Peinture » et « Revêtement de sol » | Chaque poste « à renseigner » ; total « — » et pastille « partiel » ; rien ne vaut 0 |
+| C5 | Estimation, puis devis | Peinture : 600, nature Estimation, « C'est une estimation » ; puis 740, nature Devis, « Je l'ai saisie moi-même », fournisseur « Peintre (fictif) » | Après l'estimation : poste « estimé », référence « (estimation) » ; après le devis : « chiffré (devis) », référence 740 « (devis) », écart devis/estimation 140 ; le total reste « partiel » tant que le second poste est à renseigner |
+| C6 | Deux tâches | Actions → « Choisir la teinte » (responsable : moi) ; « Peindre les murs », qui dépend de la précédente | « Choisir la teinte » en À explorer ; « Peindre les murs » en À débloquer ; les deux « sans date connue » dans la timeline |
+| C7 | Faire avancer | Passer « Peindre les murs » à « Faite », puis « Choisir la teinte » à « Faite » | Refus pour la première (prérequis) ; ensuite « Peindre les murs » passe en À explorer, et « Choisir la teinte » rejoint « Actions faites », marquée « fait » dans la timeline |
+| C8 | Un document | Documents → déposer une photo, type Photo, pièce « Chambre d'amis » | Photo listée avec sa pièce ; sa fiche l'affiche et dit « Classé dans : pièce : Chambre d'amis » ; « ouvrir l'original » fonctionne |
+| C9 | Vue d'ensemble et accueil | Vue d'ensemble du dossier, puis Accueil | Le scénario et son total « partiel : 1 poste(s) à renseigner » ; la tâche restante dans la liste du jour du dossier et sur l'accueil |
+| C10 | Règles locales (facultatif) | Assistant IA → activer, « Règles locales », toutes les sections ; « Que manque-t-il pour avancer ? » | Constats sur le poste sans montant, la surface estimée et l'action sans responsable ; aucune donnée modifiée |
+
+Résultat global attendu : un petit chantier se suit sans lieu, sans bien candidat et avec un seul
+scénario ; rien n'est inventé ; aucun écran d'achat ou de recherche n'est à traverser.
