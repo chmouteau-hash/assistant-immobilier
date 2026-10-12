@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/*
+ * Aucune police n'est téléchargée : le texte s'affiche avec une police du poste. `next/font/google`
+ * faisait chercher Geist chez Google par le PC, à la première page compilée sans cache
+ * (DECISIONS.md, 2026-10-12). La police se déclare ici, dans le thème, et nulle part ailleurs.
+ */
+@theme {
+  --font-sans: Arial, Helvetica, sans-serif;
 }
 
 /*
@@ -13,8 +17,4 @@
  */
 :root {
   color-scheme: light;
-}
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
 }

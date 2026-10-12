@@ -859,3 +859,40 @@ de carte (décision du 2026-10-11) : elles viennent en dernier dans le menu et n
 lancement. Les pages de `src/app` n'ont pas d'histoire : elles lisent la base. L'interface de
 Storybook est en anglais. Ni contrôle d'accessibilité, ni tests joués depuis les histoires : ces
 extensions ne sont pas installées.
+
+## 2026-10-12 — Police : aucune n'est téléchargée, l'application prend celles du poste
+
+**Décision.** Christophe a demandé de retirer le chargement de la police Geist, après un relevé de
+la charte graphique et une mesure faite le même jour.
+
+1. L'application ne télécharge aucune police. Le texte s'affiche en Arial, à défaut dans la police
+   sans empattement du poste ; le texte à chasse fixe, dans celle du poste.
+2. La police se déclare à un seul endroit : le thème de Tailwind, dans `src/app/globals.css`
+   (`--font-sans`). La règle `body` qui la fixait hors couche est retirée.
+3. `next/font/google` n'est plus importé nulle part.
+
+**Pourquoi.** `layout.tsx` chargeait Geist et Geist Mono par `next/font/google` depuis le premier
+commit : le modèle de départ de Next.js, pas un choix. Mesuré le 2026-10-12 sur une copie du dépôt,
+en relevant les connexions du serveur de développement : au démarrage, rien ne part ; à la première
+page compilée sans cache (`.next/` absent), le serveur ouvre deux connexions vers Google
+(`fonts.googleapis.com`, `fonts.gstatic.com`) et écrit onze fichiers de police ; à la relance,
+cache présent, aucune. Le navigateur, lui, ne demandait rien à Google : Next.js lui sert ces
+fichiers. Ce service externe n'avait ni entrée dans ce journal ni ligne dans la checklist de
+`docs/05-securite-rgpd.md`, alors que l'accueil affiche « rien n'est envoyé ailleurs ». Et Geist ne
+s'affichait pas : la règle `body` de `globals.css`, écrite hors couche, imposait Arial à tout le
+texte, contre le commentaire du même fichier (« Pas de règle `body` ici »). Seul le texte à chasse
+fixe était en Geist Mono. Retirer la police supprime la sortie au lieu de la documenter.
+
+**Conséquences.** `src/app/layout.tsx` et `src/app/globals.css`. Mesuré après la modification, sur
+la même copie : sans cache, ni le serveur de développement ni `npm run build` n'ouvrent de
+connexion sortante, et aucun fichier de police n'est écrit. À l'écran, l'accueil est identique
+(mêmes polices rendues, mêmes largeurs de texte), sauf le texte à chasse fixe, qui passe de Geist
+Mono à la police à chasse fixe du poste (Consolas sous Windows) : mesuré sur le mot `data/` de
+l'accueil ; l'aperçu du texte envoyé à l'assistant suit la même règle. Le navigateur ne charge plus
+les deux fichiers de police de l'application à chaque page. Pas de migration.
+
+**Ce qui n'est pas tranché.** Aucun test n'empêche `next/font/google` de revenir. Les statistiques
+d'usage de Next.js ne sont pas désactivées sur le PC (réglage d'origine) : d'après son code, un
+événement part vers `telemetry.nextjs.org` à l'arrêt du serveur de développement ; lu, pas mesuré.
+Si l'application prend un jour une police à elle, ses fichiers se rangent dans le dépôt
+(`next/font/local`), sans téléchargement.
