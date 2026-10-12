@@ -34,6 +34,7 @@ npm test           # tests automatisés (vitest, base SQLite en mémoire)
 npm run typecheck  # TypeScript
 npm run lint       # ESLint
 npm run build      # construction de production, puis : npm start
+npm run storybook  # atelier des composants, http://127.0.0.1:6006 (données fictives, rien ne s'enregistre)
 ```
 
 Variables d'environnement facultatives : voir [`.env.example`](.env.example). Aucune n'est requise.
@@ -78,6 +79,8 @@ src/lib/           Accès aux données + contrôle des droits CÔTÉ SERVEUR
 src/app/           Interface Next.js (App Router) : pages serveur + Server Actions (actions.ts)
   api/fichiers/[id]  sert un fichier déposé après contrôle des droits
 src/components/    FormulaireAction (client), CarteLieux (client, carte Leaflet), RechercheEndroit (client), ui.tsx (étiquettes de provenance, pastilles)
+  *.stories.tsx      histoires Storybook : chaque composant dans ses états, avec des données fictives
+.storybook/        réglages de Storybook, et doublures des Server Actions (une histoire n'écrit rien)
 tests/             vitest : domaine, droits, parcours de bout en bout (base en mémoire)
 scripts/           sauvegarde.mjs, restauration.mjs
 docs/              cadrage, choix techniques, architecture, modèle de données, RGPD, plan de test
@@ -121,7 +124,15 @@ Détail et alternatives comparées : [docs/02-choix-techniques.md](docs/02-choix
 Dépendances ajoutées en V1, et pourquoi : `vitest` (tests, résout `@/` et les imports TypeScript
 comme Next.js — `node --test` ne le fait pas), `@anthropic-ai/sdk` (client officiel, erreurs typées,
 sorties structurées), `zod` (schéma de la réponse IA, exigé par l'aide `zodOutputFormat` du SDK).
-Ajoutées ensuite : `leaflet` (carte des lieux, sans clé ni compte) et ses types `@types/leaflet`.
+Ajoutées ensuite : `leaflet` (carte des lieux, sans clé ni compte) et ses types `@types/leaflet` ;
+`storybook`, `@storybook/nextjs-vite` et `@storybook/addon-docs` (atelier des composants, en
+développement seulement).
+
+Storybook affiche chaque composant de `src/components` seul, dans ses différents états, sans lancer
+l'application ni ouvrir la base. Il n'écoute que sur le PC (`127.0.0.1`), son serveur refuse les
+fichiers de `data/` et de `sauvegardes/`, et il n'envoie rien à son éditeur. Seule sortie : les
+histoires de la carte des lieux demandent les tuiles du fond de carte, comme l'écran Lieux.
+Décision du 2026-10-12.
 
 ## Bonnes pratiques appliquées
 

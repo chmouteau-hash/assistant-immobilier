@@ -819,3 +819,43 @@ sont rouvertes avec `à-tester`. Rien ne change dans l'application.
 **Ce qui n'est pas tranché.** Sur une issue livrée en plusieurs PR (#1 à #5), l'étiquette dit
 seulement qu'un point est à essayer : un commentaire dit lequel, rien de plus structuré. Aucun
 rappel si une issue reste longtemps en `à-tester`.
+
+## 2026-10-12 — Storybook : un atelier des composants, qui ne sert ni n'envoie rien
+
+**Décision.** Christophe a demandé Storybook : un atelier, lancé par `npm run storybook`, qui
+affiche chaque composant de `src/components` seul, dans ses différents états, sans lancer
+l'application ni ouvrir la base. Les réglages qui suivent lui ont été proposés avec la PR.
+
+1. Storybook 10, avec `@storybook/nextjs-vite` et une seule extension, `@storybook/addon-docs`.
+   Installé à la main : l'assistant d'installation ajoute des exemples, une extension de
+   publication chez l'éditeur et une configuration de tests qui modifie celle de `vitest`.
+2. Une histoire par état, à côté du composant (`*.stories.tsx`), en français, avec des données
+   fictives.
+3. Une histoire n'écrit rien et n'appelle aucun service. Les Server Actions y sont des doublures,
+   qui montrent dans l'onglet « Actions » ce qu'un formulaire a envoyé.
+4. Storybook n'écoute que sur le PC (`--host 127.0.0.1`), et son serveur refuse les données
+   privées (`DONNEES_PRIVEES` dans `.storybook/main.ts`).
+5. Rien ne part vers l'éditeur de Storybook : ni statistiques d'usage, ni recherche de nouveautés
+   ou de mise à jour. Son guide de démarrage, qui propose de publier l'atelier, est retiré.
+6. La CI ne construit pas Storybook.
+
+**Pourquoi.** Un état difficile à provoquer dans l'application (un formulaire refusé, un service
+d'adresses muet, une lecture seule) se voit ici sans préparer un dossier. Les points 4 et 5
+viennent d'un essai du 2026-10-12, sur une copie du dépôt et avec des fichiers factices. Laissé à
+ses réglages d'origine, Storybook écoutait sur toutes les interfaces du PC, et son serveur rendait
+`data/dossier.sqlite`, un fichier de `data/fichiers/` et une sauvegarde à qui les demandait, y
+compris par l'adresse réseau du PC. Avec les deux verrous, les mêmes demandes sont refusées et
+l'adresse réseau ne répond plus.
+
+**Conséquences.** Le dossier `.storybook/` (réglages, doublures), neuf fichiers d'histoires, deux
+scripts dans `package.json`, un test qui échoue si un verrou disparaît
+(`tests/outillage/storybook.test.ts`). `storybook-static/` est ignoré par git et par ESLint ;
+`.storybook/` est contrôlé par TypeScript. Les histoires de la carte demandent les tuiles du fond
+de carte (décision du 2026-10-11) : elles viennent en dernier dans le menu et n'ont pas de page
+« Docs ». La checklist de `docs/05-securite-rgpd.md` a une ligne pour l'atelier. Pas de migration.
+
+**Ce qui n'est pas tranché.** La CI ne vérifie pas que Storybook se construit : `typecheck` et
+`lint` couvrent les histoires, mais un import qui casse l'atelier ne se verrait qu'à son
+lancement. Les pages de `src/app` n'ont pas d'histoire : elles lisent la base. L'interface de
+Storybook est en anglais. Ni contrôle d'accessibilité, ni tests joués depuis les histoires : ces
+extensions ne sont pas installées.
