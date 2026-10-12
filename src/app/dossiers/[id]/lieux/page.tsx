@@ -4,7 +4,7 @@ import { autorise } from "@/lib/acces";
 import { listerLieux, listerLieuxVoisins, listerBatiments, listerPieces, objetsNonVides, type Batiment } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterSurface } from "@/domain/mesure";
-import { formaterCoordonnee, formaterPosition } from "@/domain/geo";
+import { formaterAdresseComplete, formaterCommune, formaterCoordonnee, formaterPosition } from "@/domain/geo";
 import { NOM_SERVICE_GEOCODAGE } from "@/lib/geocodage";
 import {
   actionCreerLieu,
@@ -15,6 +15,7 @@ import {
   actionModifierPosition,
   actionSituerDepuisAdresse,
   actionChercherEndroit,
+  actionSituerSurEndroit,
   actionAdresseLaPlusProche,
   actionSituerParClic,
   actionRattacherBatiment,
@@ -48,10 +49,16 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // montée que si au moins un lieu a une position, ou si l'utilisateur demande à en situer un sur la
 // carte : sans cela, l'écran ne demande aucun fond de carte au réseau.
 //
-// Rien ne part vers le service d'adresses sans un geste (DECISIONS.md, 2026-10-11, deux entrées) :
-// l'adresse du lieu sur « Situer d'après l'adresse », le texte saisi sur « Chercher », le point
-// cliqué en mode « Choisir l'endroit sur la carte ». Ce mode s'ouvre par le paramètre `placer` de
-// l'adresse de la page, pour un lieu à la fois : c'est un lien ordinaire, lu ici côté serveur.
+// Rien ne part vers le service d'adresses sans un geste (DECISIONS.md, 2026-10-11 et 2026-10-12) :
+// l'adresse du lieu, avec son code postal et sa ville, sur « Situer d'après l'adresse » ; le texte
+// saisi sur « Chercher » ; le point cliqué en mode « Choisir l'endroit sur la carte ». Ce mode
+// s'ouvre par le paramètre `placer` de l'adresse de la page, pour un lieu à la fois : c'est un lien
+// ordinaire, lu ici côté serveur.
+//
+// L'adresse d'un lieu tient en trois champs : la voie, le code postal et la ville (issue #52). Le
+// champ de recherche d'un endroit reste visible sur chaque fiche, que le lieu soit situé ou non :
+// replié dans « Situer sur la carte », il ne se trouvait pas. Les autres façons de situer un lieu
+// restent repliées, sous « Situer sur la carte autrement ».
 //
 // La carte montre aussi, d'une autre couleur, les lieux situés des autres dossiers que l'acteur
 // peut lire (issue #50) : plusieurs biens étudiés dans un même secteur se voient ensemble. Un clic
@@ -108,9 +115,11 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
   );
 
   // Les deux questions n'apparaissent qu'une fois la valeur saisie : tant que le champ marqué
-  // `valeur-tracee` est vide dans son groupe, une règle CSS les masque (issue #15).
-  const champsProvenance = (prefixe: string) => (
-    <div className="contents group-has-[.valeur-tracee:placeholder-shown]:hidden">
+  // `valeur-tracee` est vide dans son groupe, une règle CSS les masque (issue #15). Une position
+  // demande ses deux champs. Une adresse se contente d'une de ses trois parties (`uneSuffit`) : la
+  // ville seule suffit à dire d'où vient l'information.
+  const champsProvenance = (prefixe: string, uneSuffit = false) => (
+    <div className={uneSuffit ? "hidden group-has-[.valeur-tracee:not(:placeholder-shown)]:contents" : "contents group-has-[.valeur-tracee:placeholder-shown]:hidden"}>
       <QuestionSource name={`${prefixe}Source`} sources={sources} vide="— à choisir —" />
       <QuestionConfiance name={`${prefixe}Confiance`} confiances={confiances} vide={REPONSE_HABITUELLE} />
     </div>
@@ -304,7 +313,7 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
               action={actionModifierPosition}
               sources={sources}
               confiances={confiances}
-              aPlacer={lieuAPlacer ? { id: lieuAPlacer.id, nom: lieuAPlacer.nom, adresse: lieuAPlacer.adresse.valeur } : null}
+              aPlacer={lieuAPlacer ? { id: lieuAPlacer.id, nom: lieuAPlacer.nom, adresse: formaterAdresseComplete(lieuAPlacer.adresse.valeur, lieuAPlacer.commune.valeur) } : null}
               actionAdresseProche={actionAdresseLaPlusProche}
               actionSituerParClic={actionSituerParClic}
               chemin={cheminLieux}
@@ -313,7 +322,7 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
         )}
         {lieux.length > 0 && !auMoinsUnSitue && !lieuAPlacer && (
           <Vide>
-            Aucun lieu n&apos;est encore situé : la carte apparaît dès qu&apos;un lieu a une position{peutEcrire ? " (« Situer sur la carte », dans la fiche du lieu)" : ""}.
+            Aucun lieu n&apos;est encore situé : la carte apparaît dès qu&apos;un lieu a une position{peutEcrire ? " (cherchez un endroit dans la fiche du lieu, ou ouvrez « Situer sur la carte autrement »)" : ""}.
           </Vide>
         )}
         <ul className="flex flex-col gap-4 text-sm">
@@ -329,10 +338,22 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
                   {l.parcelle && <span className="ml-2 text-neutral-500">parcelle {l.parcelle}</span>}
                 </p>
                 <p>
+                  Code postal et ville : <Provenance valeur={l.commune} formater={formaterCommune} />
+                </p>
+                <p>
                   Position : <Provenance valeur={l.position} formater={formaterPosition} />
                   {l.position.note && <span className="ml-2 text-neutral-500">d&apos;après « {l.position.note} »</span>}
                 </p>
                 {l.description && <p className="text-neutral-600">{l.description}</p>}
+                {peutEcrire && (
+                  <RechercheEndroit
+                    dossierId={id}
+                    lieuId={l.id}
+                    adresseActuelle={formaterAdresseComplete(l.adresse.valeur, l.commune.valeur)}
+                    actionChercher={actionChercherEndroit}
+                    actionSituer={actionSituerSurEndroit}
+                  />
+                )}
                 {peutEcrire && (
                   <details className="mt-2">
                     <summary className="cursor-pointer text-xs text-neutral-500">Corriger le lieu</summary>
@@ -356,14 +377,27 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
                 )}
                 {peutEcrire && (
                   <details className="mt-1">
-                    <summary className="cursor-pointer text-xs text-neutral-500">Modifier l&apos;adresse</summary>
+                    <summary className="cursor-pointer text-xs text-neutral-500">Modifier l&apos;adresse, le code postal ou la ville</summary>
                     <FormulaireAction action={actionModifierAdresse} bouton="Enregistrer" compact className="group mt-2">
                       <input type="hidden" name="dossierId" value={id} />
                       <input type="hidden" name="lieuId" value={l.id} />
-                      <Champ label="Adresse (vide = à renseigner)" large>
+                      <Champ label="Adresse : numéro et voie (vide = à renseigner)" large>
                         <input name="adresse" defaultValue={l.adresse.valeur ?? ""} className={`${classeSaisie} valeur-tracee`} placeholder=" " />
                       </Champ>
-                      {champsProvenance("adresse")}
+                      <Champ label="Code postal">
+                        <input
+                          name="codePostal"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          defaultValue={l.commune.valeur?.codePostal ?? ""}
+                          className={`${classeSaisie} valeur-tracee w-28`}
+                          placeholder=" "
+                        />
+                      </Champ>
+                      <Champ label="Ville">
+                        <input name="ville" defaultValue={l.commune.valeur?.ville ?? ""} className={`${classeSaisie} valeur-tracee`} placeholder=" " />
+                      </Champ>
+                      {champsProvenance("adresse", true)}
                       <Champ label="Motif">
                         <input name="motif" className={classeSaisie} />
                       </Champ>
@@ -372,25 +406,26 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
                 )}
                 {peutEcrire && (
                   <details className="mt-1">
-                    <summary className="cursor-pointer text-xs text-neutral-500">Situer sur la carte</summary>
+                    <summary className="cursor-pointer text-xs text-neutral-500">Situer sur la carte autrement</summary>
                     <p className="mt-2 text-xs text-neutral-600">
                       <Link href={`${cheminLieux}?placer=${l.id}#carte-des-lieux`} prefetch={false} className="font-medium text-neutral-900 underline">
                         Choisir l&apos;endroit sur la carte
                       </Link>{" "}
                       : vous cliquez à l&apos;endroit du lieu, l&apos;écran montre l&apos;adresse connue la plus proche, puis vous enregistrez.
                     </p>
-                    <RechercheEndroit dossierId={id} lieuId={l.id} actionChercher={actionChercherEndroit} actionSituer={actionModifierPosition} />
-                    {l.adresse.valeur !== null ? (
+                    {l.adresse.valeur !== null || l.commune.valeur !== null ? (
                       <FormulaireAction action={actionSituerDepuisAdresse} bouton="Situer d'après l'adresse" compact className="mt-2">
                         <input type="hidden" name="dossierId" value={id} />
                         <input type="hidden" name="lieuId" value={l.id} />
                         <p className="w-full text-xs text-neutral-600">
-                          L&apos;adresse de ce lieu, et rien d&apos;autre, est envoyée à la {NOM_SERVICE_GEOCODAGE}, un service public sans compte. La position obtenue est notée « source externe ·
-                          à confirmer » : vérifiez le repère sur la carte.{l.position.valeur !== null && " Elle remplace la position actuelle."}
+                          Ce qui est renseigné de l&apos;adresse de ce lieu (voie, code postal, ville), et rien d&apos;autre, est envoyé à la {NOM_SERVICE_GEOCODAGE}, un service public sans compte. La
+                          position obtenue est notée « source externe · à confirmer » : vérifiez le repère sur la carte.{l.position.valeur !== null && " Elle remplace la position actuelle."}
                         </p>
                       </FormulaireAction>
                     ) : (
-                      <p className="mt-2 text-xs text-neutral-600">Ce lieu n&apos;a pas d&apos;adresse : choisissez l&apos;endroit sur la carte, cherchez-le ci-dessus, ou saisissez sa position ci-dessous.</p>
+                      <p className="mt-2 text-xs text-neutral-600">
+                        Ce lieu n&apos;a ni adresse, ni code postal, ni ville : cherchez l&apos;endroit ci-dessus, choisissez-le sur la carte, ou saisissez sa position ci-dessous.
+                      </p>
                     )}
                     <FormulaireAction action={actionModifierPosition} bouton="Enregistrer" compact className="group mt-2">
                       <input type="hidden" name="dossierId" value={id} />
@@ -448,10 +483,16 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
               </Champ>
             </div>
             <div className="group flex flex-wrap gap-3">
-              <Champ label="Adresse (facultatif)" large>
+              <Champ label="Adresse : numéro et voie (facultatif)" large>
                 <input name="adresse" className={`${classeSaisie} valeur-tracee`} placeholder=" " />
               </Champ>
-              {champsProvenance("adresse")}
+              <Champ label="Code postal (facultatif)">
+                <input name="codePostal" inputMode="numeric" autoComplete="off" className={`${classeSaisie} valeur-tracee w-28`} placeholder=" " />
+              </Champ>
+              <Champ label="Ville (facultatif)">
+                <input name="ville" className={`${classeSaisie} valeur-tracee`} placeholder=" " />
+              </Champ>
+              {champsProvenance("adresse", true)}
               <Champ label="Parcelle (facultatif)">
                 <input name="parcelle" className={classeSaisie} />
               </Champ>

@@ -704,3 +704,54 @@ celui du dossier ouvert. Pas de migration.
 **Ce qui n'est pas tranché.** Une carte sur « Mes dossiers ». Un réglage du seuil de 30 km. Les
 étiquettes de deux biens très proches se chevauchent à petite échelle. Un dossier sans lieu situé
 n'affiche pas la carte, même si d'autres dossiers ont des biens dans le secteur.
+
+## 2026-10-12 — Lieux : le code postal et la ville ont leur champ, la recherche reste visible
+
+**Décision.** Vient de l'issue #52. Christophe ne trouvait ni case pour le code postal, ni case
+pour la ville, ni le champ de recherche livré la veille. Il a demandé les deux, et choisi où
+montrer la recherche. Cette entrée précise le point 5 de l'entrée « une carte des lieux » et le
+point 4 de l'entrée « chercher par code postal », toutes deux du 2026-10-11.
+
+1. L'adresse d'un lieu tient en trois champs : la voie, le code postal et la ville. Le code postal
+   est français, cinq chiffres. L'un des deux peut manquer.
+2. Le code postal et la ville forment une valeur tracée à part de la voie, avec sa source et sa
+   confiance : on connaît souvent la commune avant l'adresse. Le formulaire ne pose les deux
+   questions de provenance qu'une fois : la réponse vaut pour toutes les parties qu'il écrit.
+3. Le champ de recherche d'un endroit est visible sur chaque fiche de lieu, que le lieu soit situé
+   ou non. Option retenue contre un bloc ouvert seulement tant que le lieu n'est pas situé. Les
+   autres façons de situer un lieu restent repliées, sous « Situer sur la carte autrement ».
+4. Sous la liste des endroits trouvés, une case propose d'enregistrer aussi l'adresse de l'endroit
+   choisi. Elle n'est cochée d'avance que si le lieu n'a encore ni voie, ni code postal, ni ville.
+   C'est la règle du 2026-10-11 pour le clic sur la carte, étendue à la liste : Claude l'a annoncé
+   à Christophe avant de le réaliser, sans lui poser de nouvelle question.
+5. Ce que le service rend va dans le bon champ : la voie, le code postal, la ville. Une partie
+   qu'il ne donne pas n'est pas touchée : une commune choisie complète une voie saisie sans
+   l'effacer.
+6. « Situer d'après l'adresse » envoie ce qui est renseigné des trois champs, et fonctionne sans
+   voie. Quand plusieurs communes conviennent, aucune n'est choisie : un code postal seul qui en
+   couvre plusieurs, ou une ville dont plusieurs communes portent le nom. L'écran demande alors
+   de préciser, ou de passer par la recherche.
+7. Les adresses déjà saisies ne sont pas découpées : elles restent entières dans le champ de la
+   voie. Les découper serait deviner.
+
+**Pourquoi.** En recherche d'un bien, une annonce donne une commune avant une adresse. Jusqu'ici,
+une commune connue ne pouvait s'écrire que dans le champ de l'adresse, qui restait sinon « à
+renseigner ». Et un champ de recherche replié ne se trouve pas : celui qui l'avait demandé ne l'a
+pas vu.
+
+**Conséquences.** Migration 006 : `code_postal`, `ville`, `commune_source` et
+`commune_confiance` sur `lieu`. La commune ne peut pas partager la provenance de l'adresse : la
+contrainte de la migration 002 interdit toute source tant que `adresse` est vide, et une
+contrainte SQLite ne se modifie pas sans reconstruire la table. Les règles sont dans
+`domain/geo.ts` (`lireCommune`, `demandeDepuisAdresse`, `communeDesignee`). L'endroit choisi
+dans la liste passe par `situerLieuSurEndroit` (`lib/geocodage.ts`), qui pose la provenance côté
+serveur : le formulaire ne la porte plus. Rien de nouveau ne sort du PC : « Situer d'après
+l'adresse » envoie le code postal et la ville avec la voie, vers le même service. Le code postal
+et la ville ne partent pas vers l'IA.
+
+**Ce qui n'est pas tranché.** Un bien hors de France n'a pas de champ pour son code postal : tout
+va dans l'adresse. Rien n'aide à ranger une adresse déjà saisie dans les trois champs. Avec une
+voie, « Situer d'après l'adresse » garde la première réponse du service, sans liste. Corriger une
+seule partie par le formulaire redonne sa provenance à toutes les parties qu'il écrit. Pour
+l'assistant, un lieu dont on ne connaît que la commune reste « sans adresse renseignée » : il ne
+regarde que la voie.

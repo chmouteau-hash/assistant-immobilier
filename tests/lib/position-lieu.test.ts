@@ -127,7 +127,7 @@ describe("position d'un lieu", () => {
     const sansAdresse = creerLieu(moi, { dossierId: d.id, nom: "Terrain (fictif)", typeLieu: "terrain" });
     const faux = vi.fn(async () => reponseBan([]));
     vi.stubGlobal("fetch", faux);
-    await expect(situerLieuDepuisAdresse(moi, { lieuId: sansAdresse.id })).rejects.toThrow(/pas d'adresse/);
+    await expect(situerLieuDepuisAdresse(moi, { lieuId: sansAdresse.id })).rejects.toThrow(/ni adresse, ni code postal, ni ville/);
     expect(faux).not.toHaveBeenCalled();
 
     const { lieu } = lieuAvecAdresse();

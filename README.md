@@ -109,11 +109,13 @@ Détail et alternatives comparées : [docs/02-choix-techniques.md](docs/02-choix
   rien écrire.
 - **Carte des lieux : Leaflet et deux services publics.** L'écran Lieux montre un repère par lieu
   situé, sur le fond « Plan IGN », et, d'une autre couleur, les lieux situés des autres dossiers que
-  l'on peut déjà lire. Un clic sur un repère mène à sa fiche. Un lieu se situe en cherchant un code
-  postal, une commune ou une adresse, en cliquant sur la carte, ou par ses coordonnées. La position
-  est une donnée tracée, en microdegrés entiers. Rien ne sort du PC sans un geste : l'adresse du
-  lieu, le texte cherché ou le point cliqué, vers la Base Adresse Nationale ; les demandes de tuiles
-  du fond de carte, quand la carte s'affiche. Ni clé ni compte. Décisions du 2026-10-11 (voir
+  l'on peut déjà lire. Un clic sur un repère mène à sa fiche. L'adresse d'un lieu tient en trois
+  champs : la voie, le code postal et la ville. Un lieu se situe en cherchant un code postal, une
+  commune ou une adresse dans le champ de sa fiche, d'après son adresse, en cliquant sur la carte,
+  ou par ses coordonnées. La position est une donnée tracée, en microdegrés entiers. Rien ne sort du
+  PC sans un geste : l'adresse du lieu avec son code postal et sa ville, le texte cherché ou le
+  point cliqué, vers la Base Adresse Nationale ; les demandes de tuiles du fond de carte, quand la
+  carte s'affiche. Ni clé ni compte. Décisions des 2026-10-11 et 2026-10-12 (voir
   [DECISIONS.md](DECISIONS.md)).
 
 Dépendances ajoutées en V1, et pourquoi : `vitest` (tests, résout `@/` et les imports TypeScript

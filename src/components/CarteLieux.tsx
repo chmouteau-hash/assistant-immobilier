@@ -23,7 +23,8 @@
 //   fiche du lieu, pour un lieu à la fois : sans lui, un clic sur la carte ne pose rien. Le point
 //   cliqué part alors vers le service d'adresses, qui renvoie l'adresse connue la plus proche.
 //   L'écran la montre avec sa distance ; elle ne s'enregistre que si la case est cochée, et une
-//   adresse déjà saisie n'est jamais remplacée d'office (décision du 2026-10-11).
+//   adresse déjà saisie n'est jamais remplacée d'office (décision du 2026-10-11). Sa voie, son code
+//   postal et sa ville vont chacun dans leur champ (issue #52).
 
 import "leaflet/dist/leaflet.css";
 import Link from "next/link";
@@ -53,7 +54,10 @@ export type LieuSurCarte = { id: string; nom: string; position: Position | null 
 /** Un lieu situé d'un autre dossier : montré d'une autre couleur, et lié à sa fiche. */
 export type VoisinSurCarte = { id: string; nom: string; dossierNom: string; lien: string; position: Position };
 
-/** Le lieu que l'utilisateur a demandé à situer en cliquant sur la carte, avec son adresse actuelle. */
+/**
+ * Le lieu que l'utilisateur a demandé à situer en cliquant sur la carte. `adresse` : son adresse
+ * actuelle sur une ligne (voie, code postal, ville), ou null s'il n'en a aucune partie.
+ */
 export type LieuAPlacer = { id: string; nom: string; adresse: string | null };
 
 type Repere = { id: string; nom: string; position: Position };
