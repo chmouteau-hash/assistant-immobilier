@@ -755,3 +755,39 @@ voie, « Situer d'après l'adresse » garde la première réponse du service, sa
 seule partie par le formulaire redonne sa provenance à toutes les parties qu'il écrit. Pour
 l'assistant, un lieu dont on ne connaît que la commune reste « sans adresse renseignée » : il ne
 regarde que la voie.
+
+## 2026-10-12 — Lieux : ils se retrouvent dans la vue d'ensemble et dans « Mes dossiers »
+
+**Décision.** Vient de l'issue #54. Christophe a enregistré un lieu et ne l'a retrouvé ni dans la
+vue d'ensemble du dossier, ni dans « Mes dossiers » : aucun de ces deux écrans ne montrait de
+lieu. Il a choisi entre les options qui lui étaient soumises.
+
+1. La vue d'ensemble d'un dossier a une section « Lieux », sous l'identité du dossier : pour
+   chaque lieu, son nom, son type, son adresse sur une ligne, s'il est situé ou non, et un lien
+   vers sa fiche. Option retenue contre un simple compteur, et contre la liste accompagnée de la
+   carte.
+2. La carte n'est pas montrée dans la vue d'ensemble : le fond de carte reste demandé au réseau
+   dans le seul écran Lieux. La règle « la carte ne fait rien sortir sans un geste » est inchangée.
+3. « Mes dossiers » montre, sous chaque dossier, le nom de ses lieux, suivi de leur code postal et
+   de leur ville quand ils sont connus. Option retenue contre le seul nombre de lieux.
+4. Règle de droits, la même que pour les biens voisins sur la carte : un acteur n'y trouve rien de
+   plus que ce qu'il lirait en ouvrant chaque dossier. Sans le droit de lire la section « lieux »,
+   la vue d'ensemble n'a pas de section « Lieux », et « Mes dossiers » ne dit rien des lieux de ce
+   dossier : ni liste, ni « aucun lieu », qui serait faux.
+5. L'adresse d'un résumé tient sur une ligne, sans les pastilles de provenance de la fiche. Une
+   seule réserve la suit quand une partie n'est pas « connue » : « à confirmer », qui l'emporte,
+   ou « estimé ». Dans « Mes dossiers », la commune est donnée sans réserve : c'est un repère pour
+   retrouver un bien, la provenance se lit dans la fiche.
+
+**Pourquoi.** En recherche d'un bien, le lieu est ce qu'on veut retrouver en premier. Il fallait
+ouvrir le dossier, puis l'onglet Lieux : un lieu fraîchement enregistré semblait perdu.
+
+**Conséquences.** `listerLieuxParDossier` dans `lib/structure.ts`, qui lit les droits avec
+`autorise` : un dossier dont l'acteur ne lit pas les lieux est absent de son résultat, et ne pas
+les lire n'est pas journalisé comme un refus. `reserveDeConfiance` dans `domain/provenance.ts`.
+Pas de migration, rien de nouveau ne sort du PC.
+
+**Ce qui n'est pas tranché.** La section « Lieux » vient après le bloc « Identité du dossier » et
+son formulaire : sur un petit écran, il faut descendre pour la voir. Les bâtiments et les pièces
+ne sont pas résumés dans la vue d'ensemble. Un dossier aux nombreux lieux allonge sa ligne dans
+« Mes dossiers » : rien ne la coupe.

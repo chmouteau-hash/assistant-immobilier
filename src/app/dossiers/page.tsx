@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { obtenirActeurCourant } from "@/lib/acteur-courant";
 import { listerDossiers } from "@/lib/dossiers";
+import { listerLieuxParDossier } from "@/lib/structure";
+import { formaterCommune } from "@/domain/geo";
 import { listerReference, libelle } from "@/lib/references";
 import { actionCreerDossier } from "./actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
@@ -11,6 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function PageDossiers() {
   const acteur = await obtenirActeurCourant();
   const dossiers = listerDossiers(acteur);
+  // Les lieux de chaque dossier dont l'acteur peut lire la section « lieux » (issue #54). Un
+  // dossier absent de cette liste n'affiche rien : ce n'est pas « aucun lieu ».
+  const lieuxParDossier = listerLieuxParDossier(acteur);
   const types = listerReference("ref_type_projet");
   const stades = listerReference("ref_stade");
 
@@ -26,16 +31,24 @@ export default async function PageDossiers() {
         <p className="text-neutral-500">Aucun dossier pour l&apos;instant.</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {dossiers.map((d) => (
-            <li key={d.id}>
-              <Link href={`/dossiers/${d.id}`} className="block rounded-lg border border-neutral-200 bg-white p-3 hover:border-neutral-400">
-                <span className="font-medium">{d.nom}</span>
-                <span className="ml-2 text-sm text-neutral-500">
-                  {libelle(types, d.typeProjet)} · {libelle(stades, d.stade)}
-                </span>
-              </Link>
-            </li>
-          ))}
+          {dossiers.map((d) => {
+            const lieux = lieuxParDossier.get(d.id);
+            return (
+              <li key={d.id}>
+                <Link href={`/dossiers/${d.id}`} className="block rounded-lg border border-neutral-200 bg-white p-3 hover:border-neutral-400">
+                  <span className="font-medium">{d.nom}</span>
+                  <span className="ml-2 text-sm text-neutral-500">
+                    {libelle(types, d.typeProjet)} · {libelle(stades, d.stade)}
+                  </span>
+                  {lieux && (
+                    <span className="mt-1 block text-sm text-neutral-600">
+                      {lieux.length === 0 ? "Aucun lieu pour l'instant" : `Lieux : ${lieux.map((l) => (l.commune ? `${l.nom} (${formaterCommune(l.commune)})` : l.nom)).join(", ")}`}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
 

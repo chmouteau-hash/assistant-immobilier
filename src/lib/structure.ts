@@ -209,6 +209,38 @@ export function listerLieuxVoisins(acteur: Acteur, dossierId: string): LieuVoisi
   return lignes.map((l) => ({ id: l.id, nom: l.nom, dossierId: l.dossierId, dossierNom: l.dossierNom, position: { latitudeMicrodeg: l.latitudeMicrodeg, longitudeMicrodeg: l.longitudeMicrodeg } }));
 }
 
+/** Ce que « Mes dossiers » montre d'un lieu : son nom et sa commune. */
+export type LieuResume = { id: string; nom: string; commune: Commune | null };
+
+/**
+ * Les lieux de chacun des dossiers de l'acteur, pour « Mes dossiers » (issue #54) : on y cherche
+ * un bien, pas seulement le nom du dossier qui le range.
+ *
+ * Même règle que pour les biens voisins sur la carte : l'acteur n'y trouve rien de plus que ce
+ * qu'il lirait en ouvrant chaque dossier. Un dossier dont il ne lit pas la section « lieux » est
+ * ABSENT du résultat, ce qui ne veut pas dire « sans lieu » : l'écran n'en dit alors rien. Un
+ * dossier lisible et sans lieu y figure, avec une liste vide. De chaque lieu : son nom et sa
+ * commune (code postal et ville). Ni voie, ni position, ni description, ni provenance : celle-ci
+ * se lit dans la fiche. Les lieux suivent l'ordre de leur création.
+ *
+ * Les droits se lisent avec `autorise`, pas `exiger` : ne pas lire les lieux d'un dossier auquel
+ * on participe n'est pas une tentative d'accès, et ne s'écrit pas au journal.
+ */
+export function listerLieuxParDossier(acteur: Acteur): Map<string, LieuResume[]> {
+  const lisibles = dossiersAccessibles(acteur).filter((id) => autorise(acteur, id, "lire", "lieux"));
+  const parDossier = new Map<string, LieuResume[]>(lisibles.map((id) => [id, []]));
+  if (lisibles.length === 0) return parDossier;
+  const lignes = versObjets<{ id: string; nom: string; dossierId: string; codePostal: string | null; ville: string | null }>(
+    obtenirBase()
+      .prepare(`SELECT id, nom, dossier_id, code_postal, ville FROM lieu WHERE dossier_id IN (${lisibles.map(() => "?").join(", ")}) ORDER BY created_at, rowid`)
+      .all(...lisibles),
+  );
+  for (const l of lignes) {
+    parDossier.get(l.dossierId)?.push({ id: l.id, nom: l.nom, commune: l.codePostal === null && l.ville === null ? null : { codePostal: l.codePostal, ville: l.ville } });
+  }
+  return parDossier;
+}
+
 export function creerLieu(
   acteur: Acteur,
   params: {

@@ -152,6 +152,19 @@ export function estUnFait<T>(v: ValeurTracee<T>): boolean {
   return v.valeur !== null && v.valeur !== undefined && v.confiance === "connu";
 }
 
+/**
+ * La réserve à afficher quand plusieurs valeurs sont montrées ensemble, sur une seule ligne (une
+ * adresse et sa commune dans un résumé) : la confiance la plus faible parmi celles qui sont
+ * renseignées. « À confirmer » l'emporte sur « estimé ». `null` si tout est connu, ou si rien
+ * n'est renseigné : il n'y a alors aucune réserve à dire.
+ */
+export function reserveDeConfiance(valeurs: ReadonlyArray<ValeurTracee<unknown>>): Confiance | null {
+  const confiances = valeurs.filter((v) => v.valeur !== null && v.valeur !== undefined).map((v) => v.confiance);
+  if (confiances.includes("a_confirmer")) return "a_confirmer";
+  if (confiances.includes("estime")) return "estime";
+  return null;
+}
+
 export function estSource(x: string): x is Source {
   return (SOURCES as readonly string[]).includes(x);
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { obtenirActeurCourant } from "@/lib/acteur-courant";
 import { obtenirDossier, listerScenarios, listerDecisions } from "@/lib/dossiers";
 import { autorise, sectionsVisibles } from "@/lib/acces";
@@ -5,11 +6,14 @@ import { notFound, redirect } from "next/navigation";
 import type { Section as SectionDroit } from "@/domain/droits";
 import { comparaisonDossier } from "@/lib/budget";
 import { classementDossier } from "@/lib/taches";
+import { listerLieux } from "@/lib/structure";
+import { formaterAdresseComplete } from "@/domain/geo";
+import { LIBELLES_CONFIANCE, reserveDeConfiance } from "@/domain/provenance";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterMontant } from "@/lib/montant";
 import { actionModifierDossier, actionSupprimerDossier } from "../actions";
 import { FormulaireAction } from "@/components/FormulaireAction";
-import { Champ, Pastille, Section, Select, Vide, classeSaisie, formaterDateHeure } from "@/components/ui";
+import { Champ, Pastille, Section, Select, Vide, ancreFicheLieu, classeSaisie, formaterDateHeure } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +46,11 @@ export default async function PageVueEnsemble({ params }: { params: Promise<{ id
   const peutSupprimer = autorise(acteur, id, "supprimer_dossier", "identite");
   const voitBudget = autorise(acteur, id, "lire", "budget") && autorise(acteur, id, "lire", "scenarios");
   const voitTaches = autorise(acteur, id, "lire", "taches");
+  // Les lieux ne se montrent qu'à qui peut lire leur section (issue #54) : un résumé, la fiche
+  // complète et sa provenance restent dans l'onglet Lieux.
+  const voitLieux = autorise(acteur, id, "lire", "lieux");
+  const lieux = voitLieux ? listerLieux(acteur, id) : [];
+  const typesLieu = listerReference("ref_type_lieu");
 
   const comparaison = voitBudget ? comparaisonDossier(acteur, id) : null;
   const classement = voitTaches ? classementDossier(acteur, id) : null;
@@ -84,6 +93,44 @@ export default async function PageVueEnsemble({ params }: { params: Promise<{ id
           </FormulaireAction>
         )}
       </Section>
+
+      {voitLieux && (
+        <Section titre="Lieux" sousTitre="Les biens et terrains du dossier. Les bâtiments, les pièces et la carte sont dans l'onglet « Lieux, bâtiments, pièces ».">
+          {lieux.length === 0 ? (
+            <Vide>Aucun lieu. Un lieu s&apos;ajoute dans l&apos;onglet « Lieux, bâtiments, pièces ».</Vide>
+          ) : (
+            <ul className="flex flex-col gap-2 text-sm">
+              {lieux.map((l) => {
+                const adresse = formaterAdresseComplete(l.adresse.valeur, l.commune.valeur);
+                const reserve = reserveDeConfiance([l.adresse, l.commune]);
+                return (
+                  <li key={l.id} className="rounded border border-neutral-200 bg-white p-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                      <span>
+                        <span className="font-medium">{l.nom}</span> <span className="text-neutral-500">· {libelle(typesLieu, l.typeLieu)}</span>
+                      </span>
+                      <Link href={`/dossiers/${id}/lieux#${ancreFicheLieu(l.id)}`} prefetch={false} className="text-xs font-medium underline">
+                        Voir sa fiche
+                      </Link>
+                    </div>
+                    <p className="mt-1">
+                      {adresse === null ? (
+                        <Pastille ton="attention">Adresse à renseigner</Pastille>
+                      ) : (
+                        <span className="inline-flex flex-wrap items-center gap-1">
+                          <span>{adresse}</span>
+                          {reserve && <Pastille ton="attention">{LIBELLES_CONFIANCE[reserve]}</Pastille>}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-neutral-500">{l.position.valeur === null ? "Pas encore situé sur la carte" : "Situé sur la carte"}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Section>
+      )}
 
       {comparaison && (
         <Section titre="Scénarios en un coup d'œil" sousTitre="Totaux de référence : par poste, le plus élevé entre le prévu et le facturé ; le facturé seul une fois le poste soldé.">

@@ -47,7 +47,7 @@ fichiers déposés, sauvegardes).
 
 | # | Priorité | Où dans l'application |
 | --- | --- | --- |
-| 1 | Dossier flexible : type de projet, stade, personnes, lieux, bâtiments, pièces, idées | Mes dossiers → Vue d'ensemble, Lieux, Idées, Personnes |
+| 1 | Dossier flexible : type de projet, stade, personnes, lieux, bâtiments, pièces, idées | Mes dossiers (avec les lieux de chaque dossier) → Vue d'ensemble (identité, résumé des lieux), Lieux, Idées, Personnes |
 | 2 | Organiser : saisie structurée, photos et fichiers, classement, statuts connu / estimé / à confirmer / à renseigner | Lieux (surfaces, adresses et positions tracées, carte des lieux), Documents |
 | 3 | Faire avancer : actions, responsables, dates, dépendances, timeline, liste du jour | Actions et planning ; Accueil (Aujourd'hui / À débloquer / À explorer) |
 | 4 | Suivre les coûts : budget par poste et par scénario ; devis, factures, paiements reliés | Budget ; Documents (extraction validée → ligne de budget) |
