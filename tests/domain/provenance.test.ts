@@ -4,6 +4,7 @@ import {
   confianceParDefaut,
   estUnFait,
   etiquetteProvenance,
+  reserveDeConfiance,
   validerValeurTracee,
   CONFIANCES,
   LIBELLES_CONFIANCE,
@@ -125,5 +126,27 @@ describe("questions de provenance (issue #15)", () => {
   it("un document importé porte un seul nom, sans le mot « pièce » qui désigne aussi une salle", () => {
     expect(LIBELLES_SOURCE.import).toBe("document importé");
     for (const s of SOURCES) expect(LIBELLES_SOURCE[s] + REPONSES_SOURCE[s]).not.toMatch(/pièce/i);
+  });
+});
+
+describe("réserve à dire quand plusieurs valeurs tiennent sur une ligne", () => {
+  const valeur = (confiance: "connu" | "estime" | "a_confirmer") => ({ valeur: "texte (fictif)", source: "saisie" as const, confiance });
+
+  it("tout est connu : aucune réserve", () => {
+    expect(reserveDeConfiance([valeur("connu"), valeur("connu")])).toBeNull();
+    expect(reserveDeConfiance([valeur("connu")])).toBeNull();
+  });
+
+  it("la confiance la plus faible l'emporte, et « à confirmer » passe avant « estimé »", () => {
+    expect(reserveDeConfiance([valeur("connu"), valeur("estime")])).toBe("estime");
+    expect(reserveDeConfiance([valeur("estime"), valeur("a_confirmer")])).toBe("a_confirmer");
+    expect(reserveDeConfiance([valeur("a_confirmer"), valeur("connu")])).toBe("a_confirmer");
+  });
+
+  it("une valeur absente ne compte pas : rien de renseigné, rien à réserver", () => {
+    expect(reserveDeConfiance([aRenseigner(), valeur("connu")])).toBeNull();
+    expect(reserveDeConfiance([aRenseigner(), valeur("estime")])).toBe("estime");
+    expect(reserveDeConfiance([aRenseigner(), aRenseigner()])).toBeNull();
+    expect(reserveDeConfiance([])).toBeNull();
   });
 });

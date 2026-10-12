@@ -77,6 +77,7 @@ Monolithe modulaire en trois couches, règle de dépendance stricte `app → lib
 - Section voisine : le budget et les idées citent leur scénario. Qui ne lit pas les scénarios les voit sous un libellé neutre (« Scénario 1 »), sans statut ; un écran n'écrit jamais « aucun » pour ce qui existe sans être lisible. Un professionnel limité au budget peut donc y déposer un montant.
 - Sans participation active : aucun accès, et un dossier inconnu répond comme un dossier interdit (pas de fuite d'existence).
 - Carte des lieux : elle réunit les lieux situés des autres dossiers que l'acteur peut lire (`structure.listerLieuxVoisins` : participation active et section « lieux » lisible, vérifiées dossier par dossier avec `autorise`). Elle n'ouvre aucun accès : nom du lieu, position, nom du dossier, rien d'autre.
+- Résumés des lieux : la vue d'ensemble d'un dossier liste ses lieux si l'acteur peut en lire la section (`autorise`, puis `structure.listerLieux`) ; « Mes dossiers » montre sous chaque dossier le nom et la commune de ses lieux (`structure.listerLieuxParDossier` : participation active et section « lieux » lisible, vérifiées dossier par dossier avec `autorise`). Un dossier dont l'acteur ne lit pas les lieux n'en montre rien, pas même « aucun lieu ». Aucune carte dans ces deux écrans : le fond de carte n'est demandé que dans l'écran Lieux.
 - Le dernier propriétaire ne peut être ni révoqué ni rétrogradé.
 - L'interface masque ce qui est refusé ; le serveur refuse quand même (`exiger`), et journalise (`acces_refuse`).
 
