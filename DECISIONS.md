@@ -791,3 +791,31 @@ Pas de migration, rien de nouveau ne sort du PC.
 son formulaire : sur un petit écran, il faut descendre pour la voir. Les bâtiments et les pièces
 ne sont pas résumés dans la vue d'ensemble. Un dossier aux nombreux lieux allonge sa ligne dans
 « Mes dossiers » : rien ne la coupe.
+
+## 2026-10-12 — Issues : une étiquette `à-tester`, et une issue ne se ferme qu'essayée
+
+**Décision.** Le dépôt prend une étiquette d'avancement, une seule : `à-tester`, reprise
+d'Ergonomia. Elle dit qu'un travail est fusionné et attend l'essai de Christophe. Elle renverse la
+règle écrite le 2026-10-10 dans `AGENTS.md` (« pas d'étiquette d'avancement : les cases à cocher le
+disent déjà »), qui n'avait pas d'entrée dans ce journal.
+
+1. Une PR ne ferme plus l'issue qu'elle livre : elle la cite (`Réf. #N`), sans mot-clé de
+   fermeture (`Closes`, `Fixes`).
+2. À la fusion, l'issue reste ouverte et reçoit `à-tester`.
+3. Christophe essaie dans son usage. Sur son accord, les cases « Résultat attendu » se cochent,
+   l'étiquette se retire, et l'issue se ferme s'il ne lui reste rien à réaliser.
+4. Les autres étapes d'Ergonomia ne sont pas reprises : ni `en attente de PR`, ni `à clôturer`, ni
+   `livré`, ni rappel automatique.
+
+**Pourquoi.** Les cases ne se lisent qu'en ouvrant l'issue, et une issue fermée sort de la liste.
+Le 2026-10-12, quatre retours (#48, #50, #52, #54) étaient fermés par leur PR (`Closes`), toutes
+leurs cases « Résultat attendu » vides : neuf points à essayer, visibles nulle part. Une case
+« Reste à réaliser » cochée dit « fusionné » ; rien ne disait « essayé ». Sur Ergonomia, c'est
+cette étiquette qui montre à Christophe ses essais à faire.
+
+**Conséquences.** `AGENTS.md` décrit l'étiquette et son trajet. Les issues #48, #50, #52 et #54
+sont rouvertes avec `à-tester`. Rien ne change dans l'application.
+
+**Ce qui n'est pas tranché.** Sur une issue livrée en plusieurs PR (#1 à #5), l'étiquette dit
+seulement qu'un point est à essayer : un commentaire dit lequel, rien de plus structuré. Aucun
+rappel si une issue reste longtemps en `à-tester`.

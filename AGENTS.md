@@ -29,4 +29,19 @@ en ligne de commande : ajouter `--label` à `gh issue create`.
 - `réalisation` : issue au modèle « Réalisation ».
 - `retour` : issue au modèle « Retour d'utilisation ».
 - `idée` : piste non engagée ; s'ajoute à `retour` quand le retour est une idée.
-- Pas d'étiquette d'avancement : les cases à cocher le disent déjà.
+
+Une seule étiquette dit l'avancement : `à-tester`. Le travail est fusionné et attend l'essai de
+Christophe. Tout le reste de l'avancement se lit dans les cases.
+
+- Une PR ne ferme pas l'issue qu'elle livre. Elle la cite (`Réf. #N`), sans mot-clé de fermeture
+  (`Closes #N`, `Fixes #N`), ni dans son texte ni dans un commit : GitHub fermerait l'issue à la
+  fusion. « Fermée » veut dire « essayée », pas « fusionnée ».
+- À la fusion, l'issue reste ouverte et reçoit `à-tester`, sans demander. Sur une issue livrée en
+  plusieurs PR, un commentaire dit quel point est à essayer.
+- L'essai est celui de Christophe, dans son usage. Les essais à l'écran faits avant la PR ne le
+  remplacent pas.
+- Sur son accord, les cases « Résultat attendu » d'un retour se cochent, l'étiquette se retire, et
+  l'issue se ferme s'il ne lui reste rien à réaliser. Si l'essai échoue, l'étiquette se retire et
+  un commentaire dit ce qui ne va pas.
+- Les essais à faire se listent avec `gh issue list --label à-tester`, ou avec le filtre
+  `label:à-tester` sur GitHub.
