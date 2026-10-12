@@ -141,7 +141,7 @@ export async function actionRevoquerParticipation(_e: EtatFormulaire, fd: FormDa
 export async function actionCreerLieu(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   const dossierId = texte(fd, "dossierId");
   return executer(dossierId, (acteur) => {
-    structure.creerLieu(acteur, { dossierId, nom: texte(fd, "nom"), typeLieu: texte(fd, "typeLieu"), adresse: texte(fd, "adresse"), adresseSource: texte(fd, "adresseSource"), adresseConfiance: texte(fd, "adresseConfiance"), parcelle: texte(fd, "parcelle"), description: texte(fd, "description") });
+    structure.creerLieu(acteur, { dossierId, nom: texte(fd, "nom"), typeLieu: texte(fd, "typeLieu"), adresse: texte(fd, "adresse"), codePostal: texte(fd, "codePostal"), ville: texte(fd, "ville"), adresseSource: texte(fd, "adresseSource"), adresseConfiance: texte(fd, "adresseConfiance"), parcelle: texte(fd, "parcelle"), description: texte(fd, "description") });
   });
 }
 
@@ -153,7 +153,15 @@ export async function actionModifierLieu(_e: EtatFormulaire, fd: FormData): Prom
 
 export async function actionModifierAdresse(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
-    structure.modifierAdresseLieu(acteur, { lieuId: texte(fd, "lieuId"), adresse: texte(fd, "adresse"), adresseSource: texte(fd, "adresseSource"), adresseConfiance: texte(fd, "adresseConfiance"), motif: texte(fd, "motif") });
+    structure.modifierAdresseLieu(acteur, {
+      lieuId: texte(fd, "lieuId"),
+      adresse: texte(fd, "adresse"),
+      // Un formulaire sans ces deux champs ne touche ni au code postal ni à la ville.
+      commune: fd.has("codePostal") || fd.has("ville") ? { codePostal: texte(fd, "codePostal"), ville: texte(fd, "ville") } : undefined,
+      adresseSource: texte(fd, "adresseSource"),
+      adresseConfiance: texte(fd, "adresseConfiance"),
+      motif: texte(fd, "motif"),
+    });
   });
 }
 
@@ -180,7 +188,8 @@ export async function actionModifierPosition(_e: EtatFormulaire, fd: FormData): 
   });
 }
 
-// L'adresse part vers le service d'adresses seulement ici, sur ce bouton (lib/geocodage.ts).
+// L'adresse du lieu, avec son code postal et sa ville, part vers le service d'adresses seulement
+// ici, sur ce bouton (lib/geocodage.ts).
 export async function actionSituerDepuisAdresse(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), async (acteur) => {
     await geocodage.situerLieuDepuisAdresse(acteur, { lieuId: texte(fd, "lieuId") });
@@ -189,8 +198,8 @@ export async function actionSituerDepuisAdresse(_e: EtatFormulaire, fd: FormData
 
 // Chercher un endroit (code postal, commune, adresse) : seul le texte saisi part, et rien n'est
 // écrit. La liste revient au composant ; choisir un endroit passe ensuite par
-// `actionModifierPosition`, avec sa provenance. Cette action renvoie des données : elle n'emploie
-// donc pas `executer`, mais traite les erreurs de la même façon.
+// `actionSituerSurEndroit`. Cette action renvoie des données : elle n'emploie donc pas `executer`,
+// mais traite les erreurs de la même façon.
 export type EtatRecherche = { erreur: string | null; texte: string; resultats: Endroit[] | null };
 
 export async function actionChercherEndroit(_e: EtatRecherche, fd: FormData): Promise<EtatRecherche> {
@@ -209,6 +218,21 @@ function positionDepuis(fd: FormData): Position {
   const longitudeMicrodeg = coordonneeDepuis(fd, "longitude", "2,33031");
   if (latitudeMicrodeg === null || longitudeMicrodeg === null) throw new ErreurApplicative("VALIDATION", "Choisissez un point sur la carte.");
   return { latitudeMicrodeg, longitudeMicrodeg };
+}
+
+// Situer un lieu sur un endroit choisi dans la liste de recherche. Rien ne part : la proposition
+// est celle que la liste affichait. La provenance (« source externe · à confirmer ») est posée
+// dans `lib`, pas par le formulaire. L'adresse de l'endroit n'est écrite que si la case est cochée.
+export async function actionSituerSurEndroit(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    geocodage.situerLieuSurEndroit(acteur, {
+      lieuId: texte(fd, "lieuId"),
+      ...positionDepuis(fd),
+      note: texte(fd, "note"),
+      texteCherche: texte(fd, "texteCherche"),
+      adresse: fd.get("adopterAdresse") === "on" ? { voie: texte(fd, "voie"), codePostal: texte(fd, "codePostal"), ville: texte(fd, "ville") } : null,
+    });
+  });
 }
 
 // L'adresse connue la plus proche d'un point cliqué sur la carte : seul le point part, et rien

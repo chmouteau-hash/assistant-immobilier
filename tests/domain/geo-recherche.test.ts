@@ -27,6 +27,7 @@ const endroit = (id: string, libelle: string, nature: Endroit["nature"] = "commu
   nature,
   codePostal,
   position: { latitudeMicrodeg: 46_500_000, longitudeMicrodeg: 2_500_000 },
+  parties: { voie: null, commune: null },
 });
 
 describe("propositions du service pour un texte cherché", () => {
@@ -41,7 +42,7 @@ describe("propositions du service pour un texte cherché", () => {
         element("inconnu", "Ailleurs 00100 Ville-Fictive", "00100", [2.53, 46.53], "x1"),
       ],
     };
-    expect(interpreterResultatsRecherche(reponse)).toEqual([
+    expect(interpreterResultatsRecherche(reponse)).toMatchObject([
       { id: "commune:00101", libelle: "00100 Ville-Fictive", nature: "commune", codePostal: "00100", position: { latitudeMicrodeg: 46_500_000, longitudeMicrodeg: 2_500_000 } },
       { id: "rue:00101_0042", libelle: "Rue des Tilleuls 00100 Ville-Fictive", nature: "rue", codePostal: "00100", position: { latitudeMicrodeg: 46_510_000, longitudeMicrodeg: 2_510_000 } },
       { id: "adresse:00101_0042_00012", libelle: "12 Rue des Tilleuls 00100 Ville-Fictive", nature: "adresse", codePostal: "00100", position: { latitudeMicrodeg: 46_512_000, longitudeMicrodeg: 2_512_000 } },
@@ -119,12 +120,12 @@ describe("adresse connue la plus proche d'un point", () => {
   const proche = (label: unknown, distance: unknown) => ({ features: [{ geometry: { coordinates: [2.5, 46.5] }, properties: { type: "housenumber", label, distance } }] });
 
   it("lit le libellé et la distance, arrondie au mètre", () => {
-    expect(interpreterReponseInverse(proche("12 Rue des Tilleuls 00100 Ville-Fictive", 34.6))).toEqual({ libelle: "12 Rue des Tilleuls 00100 Ville-Fictive", distanceMetres: 35 });
-    expect(interpreterReponseInverse(proche("12 Rue des Tilleuls 00100 Ville-Fictive", 0))).toEqual({ libelle: "12 Rue des Tilleuls 00100 Ville-Fictive", distanceMetres: 0 });
+    expect(interpreterReponseInverse(proche("12 Rue des Tilleuls 00100 Ville-Fictive", 34.6))).toMatchObject({ libelle: "12 Rue des Tilleuls 00100 Ville-Fictive", distanceMetres: 35 });
+    expect(interpreterReponseInverse(proche("12 Rue des Tilleuls 00100 Ville-Fictive", 0))).toMatchObject({ libelle: "12 Rue des Tilleuls 00100 Ville-Fictive", distanceMetres: 0 });
   });
 
   it("garde l'adresse sans distance si le service n'en donne pas une lisible", () => {
-    expect(interpreterReponseInverse(proche("12 Rue des Tilleuls 00100 Ville-Fictive", undefined))).toEqual({ libelle: "12 Rue des Tilleuls 00100 Ville-Fictive", distanceMetres: null });
+    expect(interpreterReponseInverse(proche("12 Rue des Tilleuls 00100 Ville-Fictive", undefined))).toMatchObject({ libelle: "12 Rue des Tilleuls 00100 Ville-Fictive", distanceMetres: null });
     expect(interpreterReponseInverse(proche("12 Rue des Tilleuls 00100 Ville-Fictive", -3))?.distanceMetres).toBeNull();
     expect(interpreterReponseInverse(proche("12 Rue des Tilleuls 00100 Ville-Fictive", "près"))?.distanceMetres).toBeNull();
   });

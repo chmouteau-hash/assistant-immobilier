@@ -7,6 +7,9 @@
 //
 // Ce module lit aussi la réponse du service d'adresses (format GeoJSON de la Base Adresse
 // Nationale) : lire, pas appeler — l'appel réseau est dans `lib/geocodage.ts`.
+//
+// Il tient enfin les règles de l'adresse d'un lieu, en trois parties : la voie, puis le code postal
+// et la ville, qui forment ensemble la commune (issue #52).
 
 export const MICRODEGRES_PAR_DEGRE = 1_000_000;
 
@@ -156,6 +159,8 @@ export type Endroit = {
   nature: NatureEndroit;
   codePostal: string | null;
   position: Position;
+  /** La voie, le code postal et la ville, tels que le service les donne séparément. */
+  parties: PartiesAdresse;
 };
 
 const NATURES: Record<string, NatureEndroit> = { municipality: "commune", street: "rue", housenumber: "adresse", locality: "lieu-dit" };
@@ -187,7 +192,7 @@ export function interpreterResultatsRecherche(reponse: unknown): Endroit[] {
     const codePostal = texteDe(element.properties?.postcode);
     const libelle = nature === "commune" && codePostal && !label.includes(codePostal) ? `${codePostal} ${label}` : label;
     const identifiant = texteDe(element.properties?.id) ?? `${position.latitudeMicrodeg},${position.longitudeMicrodeg}`;
-    endroits.push({ id: `${nature}:${identifiant}`, libelle, nature, codePostal, position });
+    endroits.push({ id: `${nature}:${identifiant}`, libelle, nature, codePostal, position, parties: partiesDe(element, label) });
   }
   return endroits;
 }
@@ -229,7 +234,7 @@ export function noteEndroit(endroit: Endroit): string {
 // --- Trouver l'adresse la plus proche d'un point --------------------------------------------------------
 
 /** L'adresse connue la plus proche d'un point, et à quelle distance : ce n'est pas forcément celle du bien. */
-export type AdresseProche = { libelle: string; distanceMetres: number | null };
+export type AdresseProche = { libelle: string; distanceMetres: number | null; parties: PartiesAdresse };
 
 /**
  * Lit la réponse de la recherche inverse (un point → l'adresse la plus proche). Retourne null si
@@ -240,11 +245,143 @@ export function interpreterReponseInverse(reponse: unknown): AdresseProche | nul
   const libelle = premier ? texteDe(premier.properties?.label) : null;
   if (!premier || !libelle) return null;
   const distance = premier.properties?.distance;
-  return { libelle, distanceMetres: typeof distance === "number" && Number.isFinite(distance) && distance >= 0 ? Math.round(distance) : null };
+  return { libelle, distanceMetres: typeof distance === "number" && Number.isFinite(distance) && distance >= 0 ? Math.round(distance) : null, parties: partiesDe(premier, libelle) };
 }
 
 /** 35 → "35 m" ; 1240 → "1,2 km" (affichage seul). */
 export function formaterDistance(metres: number): string {
   if (metres < 1000) return `${metres} m`;
   return `${(Math.round(metres / 100) / 10).toLocaleString("fr-FR")} km`;
+}
+
+// --- L'adresse d'un lieu, en trois parties : voie, code postal, ville ------------------------------------
+
+/**
+ * Le code postal et la ville d'un lieu. Une seule information, tracée à part de la voie : en
+ * recherche d'un bien, on connaît souvent la commune sans connaître l'adresse. L'un des deux peut
+ * manquer ; les deux absents, la valeur entière est « à renseigner ».
+ */
+export type Commune = { codePostal: string | null; ville: string | null };
+
+/** Une adresse découpée : la voie (« 12 rue des Tilleuls »), et la commune. */
+export type PartiesAdresse = { voie: string | null; commune: Commune | null };
+
+const LONGUEUR_MAX_VILLE = 100;
+
+export type LectureCommune = { valide: true; commune: Commune | null } | { valide: false; motif: string };
+
+/**
+ * Lit la saisie d'un code postal et d'une ville. Deux champs vides donnent `null` : « à
+ * renseigner ». Le code postal est français, cinq chiffres ; les espaces mis par habitude
+ * (« 75 002 ») sont retirés. Rien n'est complété ni deviné : un code postal ne donne pas sa ville.
+ */
+export function lireCommune(codePostalBrut: string, villeBrute: string): LectureCommune {
+  const codePostal = codePostalBrut.replace(/\s+/g, "");
+  const ville = villeBrute.trim().replace(/\s+/g, " ");
+  if (codePostal !== "" && !estCodePostal(codePostal)) {
+    return { valide: false, motif: "Le code postal s'écrit en cinq chiffres, par exemple 75002. Pour un bien hors de France, laissez-le vide et écrivez tout dans l'adresse." };
+  }
+  if (ville !== "" && !/\p{L}/u.test(ville)) return { valide: false, motif: "Le nom de la ville doit contenir au moins une lettre." };
+  if (ville.length > LONGUEUR_MAX_VILLE) return { valide: false, motif: `Le nom de la ville est trop long : ${LONGUEUR_MAX_VILLE} caractères au plus.` };
+  if (codePostal === "" && ville === "") return { valide: true, commune: null };
+  return { valide: true, commune: { codePostal: codePostal || null, ville: ville || null } };
+}
+
+/** « 75002 Paris », « 75002 » ou « Paris » : affichage seul. */
+export function formaterCommune(commune: Commune): string {
+  return [commune.codePostal, commune.ville].filter((partie) => partie !== null).join(" ");
+}
+
+/** L'adresse sur une ligne : « 1 rue de la Paix, 75002 Paris ». `null` si rien n'est renseigné. */
+export function formaterAdresseComplete(voie: string | null, commune: Commune | null): string | null {
+  const parties = [voie, commune ? formaterCommune(commune) : null].filter((partie): partie is string => partie !== null && partie !== "");
+  return parties.length > 0 ? parties.join(", ") : null;
+}
+
+/**
+ * Découpe une adresse rendue par le service, qui donne la voie (`name`), le code postal
+ * (`postcode`) et la ville (`city`) à part. Pour une commune, le nom est celui de la ville : il
+ * n'y a pas de voie. Sans code postal ni ville lisibles, rien ne permet de découper : le libellé
+ * entier reste dans la voie, comme avant l'issue #52.
+ */
+function partiesDe(element: Element, libelle: string): PartiesAdresse {
+  const proprietes = element.properties ?? {};
+  const estCommune = texteDe(proprietes.type) === "municipality";
+  const nom = texteDe(proprietes.name);
+  const brut = texteDe(proprietes.postcode);
+  const codePostal = brut !== null && estCodePostal(brut) ? brut : null;
+  const ville = texteDe(proprietes.city) ?? (estCommune ? (nom ?? libelle) : null);
+  if (codePostal === null && ville === null) return { voie: libelle, commune: null };
+  return { voie: estCommune ? null : nom, commune: { codePostal, ville } };
+}
+
+// --- Situer un lieu d'après son adresse ----------------------------------------------------------------
+
+/** Nombre de communes demandées pour une ville : assez pour voir que plusieurs portent ce nom. */
+const NB_HOMONYMES = 10;
+
+/**
+ * Ce qu'on demande au service pour situer un lieu d'après son adresse. `mode` dit comment lire la
+ * réponse : une adresse (la première réponse), une commune désignée par sa ville, ou toutes les
+ * communes d'un code postal quand la ville manque.
+ */
+export type DemandeAdresse = { mode: "adresse" | "commune" | "code-postal"; parametres: Record<string, string> };
+
+/**
+ * Compose la demande depuis ce qui est renseigné, sans rien ajouter. `null` si tout manque.
+ * - Avec une voie : la voie et la ville forment le texte, le code postal part en filtre (le
+ *   service ne cherche alors que dans ce code postal).
+ * - Sans voie : seules les communes sont demandées. Le code postal précède la ville dans le texte,
+ *   parce que le service refuse un texte de moins de trois caractères et qu'une ville peut n'en
+ *   compter que deux.
+ */
+export function demandeDepuisAdresse(voie: string | null, commune: Commune | null): DemandeAdresse | null {
+  const texteVoie = voie?.trim() ?? "";
+  const codePostal = commune?.codePostal ?? null;
+  const ville = commune?.ville ?? null;
+  const filtre: Record<string, string> = codePostal === null ? {} : { postcode: codePostal };
+  if (texteVoie !== "") {
+    const q = [texteVoie, ville]
+      .filter((partie) => partie !== null)
+      .join(" ")
+      .slice(0, 200);
+    return { mode: "adresse", parametres: { q, ...filtre, limit: "1" } };
+  }
+  if (ville !== null) {
+    const q = [codePostal, ville]
+      .filter((partie) => partie !== null)
+      .join(" ")
+      .slice(0, 200);
+    return { mode: "commune", parametres: { q, type: "municipality", ...filtre, limit: String(NB_HOMONYMES) } };
+  }
+  if (codePostal !== null) return { mode: "code-postal", parametres: { q: codePostal, type: "municipality", limit: String(NB_COMMUNES_MAX) } };
+  return null;
+}
+
+/** Compare deux noms de commune sans tenir compte des majuscules, des accents ni des traits d'union. */
+function memeNom(a: string, b: string): boolean {
+  const reduire = (texte: string) =>
+    texte
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  return reduire(a) === reduire(b);
+}
+
+/**
+ * La commune qu'une ville saisie désigne, parmi les propositions du service. `homonymes` compte
+ * les communes qui portent exactement ce nom.
+ * - Une seule : c'est elle.
+ * - Plusieurs : aucune n'est choisie. Un nom de commune sert souvent plusieurs fois en France, et
+ *   en prendre une serait en inventer le choix.
+ * - Aucune : la première proposition du service, que la note du repère montrera.
+ */
+export function communeDesignee(ville: string, endroits: Endroit[]): { endroit: Endroit | null; homonymes: number } {
+  const communes = endroits.filter((endroit) => endroit.nature === "commune");
+  const memes = communes.filter((endroit) => endroit.parties.commune?.ville != null && memeNom(endroit.parties.commune.ville, ville));
+  if (memes.length === 1) return { endroit: memes[0], homonymes: 1 };
+  if (memes.length > 1) return { endroit: null, homonymes: memes.length };
+  return { endroit: communes[0] ?? null, homonymes: 0 };
 }

@@ -117,7 +117,7 @@ describe("chercher un endroit, situer un lieu en cliquant", () => {
     const { d, lieu } = dossierEtLieu();
     const appels = fauxService({ inverse: () => [adresseProche(ADRESSE_PROCHE, 34.6)] });
 
-    expect(await adresseLaPlusProche(moi, { lieuId: lieu.id, ...POINT })).toEqual({ libelle: ADRESSE_PROCHE, distanceMetres: 35 });
+    expect(await adresseLaPlusProche(moi, { lieuId: lieu.id, ...POINT })).toMatchObject({ libelle: ADRESSE_PROCHE, distanceMetres: 35 });
     expect(appels).toHaveLength(1);
     expect(appels[0].pathname).toBe("/geocodage/reverse");
     expect(Object.fromEntries(appels[0].searchParams)).toEqual({ lon: "2.5", lat: "46.5", limit: "1" });

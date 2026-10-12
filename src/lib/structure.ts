@@ -1,8 +1,9 @@
 // Lieux (biens, terrains), bâtiments, pièces — priorité 1 (« ajouter… lieux, bâtiments, pièces »)
 // et priorité 2 (saisie structurée avec statuts connu / estimé / à confirmer / à renseigner).
 //
-// Les surfaces et adresses sont des `ValeurTracee` : valeur + source + confiance, validées par
-// le domaine AVANT d'être écrites, et re-vérifiées par les CHECK de la base.
+// Les surfaces, les adresses, les communes (code postal et ville) et les positions sont des
+// `ValeurTracee` : valeur + source + confiance, validées par le domaine AVANT d'être écrites, et
+// re-vérifiées par les CHECK de la base.
 
 import { randomUUID } from "node:crypto";
 import { obtenirBase, transaction, versObjet, versObjets } from "./db/client";
@@ -19,14 +20,17 @@ import {
   type Source,
   type ValeurTracee,
 } from "../domain/provenance";
-import { validerPosition, type Position } from "../domain/geo";
+import { lireCommune, validerPosition, type Commune, type Position } from "../domain/geo";
 
 export type Lieu = {
   id: string;
   dossierId: string;
   nom: string;
   typeLieu: string;
+  /** La voie : « 12 rue des Tilleuls ». Une adresse saisie avant l'issue #52 y tient tout entière. */
   adresse: ValeurTracee<string>;
+  /** Le code postal et la ville : une valeur tracée à part, connue souvent avant la voie. */
+  commune: ValeurTracee<Commune>;
   /** Repère sur la carte, en microdegrés. `note` : ce que le service d'adresses a compris, s'il a servi. */
   position: ValeurTracee<Position>;
   parcelle: string | null;
@@ -113,6 +117,10 @@ type LieuBrut = {
   adresse: string | null;
   adresseSource: Source | null;
   adresseConfiance: Confiance;
+  codePostal: string | null;
+  ville: string | null;
+  communeSource: Source | null;
+  communeConfiance: Confiance;
   latitudeMicrodeg: number | null;
   longitudeMicrodeg: number | null;
   positionSource: Source | null;
@@ -124,7 +132,15 @@ type LieuBrut = {
   createdAt: string;
 };
 const COLONNES_LIEU = `id, dossier_id, nom, type_lieu, adresse, adresse_source, adresse_confiance,
+  code_postal, ville, commune_source, commune_confiance,
   latitude_microdeg, longitude_microdeg, position_source, position_confiance, position_note, parcelle, description, source, created_at`;
+
+/** Lit et valide la saisie d'un code postal et d'une ville ; lève `VALIDATION` si elle est mal formée. */
+function communeSaisie(codePostal: string | undefined, ville: string | undefined): Commune | null {
+  const lecture = lireCommune(codePostal ?? "", ville ?? "");
+  if (!lecture.valide) throw invalide(lecture.motif);
+  return lecture.commune;
+}
 
 function hydraterLieu(ligne: unknown): Lieu {
   const b = versObjet<LieuBrut>(ligne as Record<string, unknown>);
@@ -135,6 +151,7 @@ function hydraterLieu(ligne: unknown): Lieu {
     nom: b.nom,
     typeLieu: b.typeLieu,
     adresse: { valeur: b.adresse, source: b.adresseSource, confiance: b.adresseConfiance },
+    commune: { valeur: b.codePostal === null && b.ville === null ? null : { codePostal: b.codePostal, ville: b.ville }, source: b.communeSource, confiance: b.communeConfiance },
     position: { valeur: position, source: b.positionSource, confiance: b.positionConfiance, note: b.positionNote },
     parcelle: b.parcelle,
     description: b.description,
@@ -199,6 +216,8 @@ export function creerLieu(
     nom: string;
     typeLieu: string;
     adresse?: string;
+    codePostal?: string;
+    ville?: string;
     adresseSource?: string;
     adresseConfiance?: string;
     parcelle?: string;
@@ -209,33 +228,62 @@ export function creerLieu(
   const nom = nomExige(params.nom, "Le nom du lieu est obligatoire.");
   exigerTypeLieu(params.typeLieu);
   const adresse = construireValeurTracee<string>(params.adresse?.trim() || null, params.adresseSource, params.adresseConfiance);
+  // Le code postal et la ville reçoivent la même réponse de provenance que la voie : le formulaire
+  // ne la demande qu'une fois.
+  const commune = construireValeurTracee<Commune>(communeSaisie(params.codePostal, params.ville), params.adresseSource, params.adresseConfiance);
 
   return transaction((db) => {
     const id = randomUUID();
     db.prepare(
-      `INSERT INTO lieu (id, dossier_id, nom, type_lieu, adresse, adresse_source, adresse_confiance, parcelle, description)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(id, params.dossierId, nom, params.typeLieu, adresse.valeur, adresse.source, adresse.confiance, params.parcelle?.trim() || null, params.description?.trim() || null);
+      `INSERT INTO lieu (id, dossier_id, nom, type_lieu, adresse, adresse_source, adresse_confiance, code_postal, ville, commune_source, commune_confiance, parcelle, description)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      params.dossierId,
+      nom,
+      params.typeLieu,
+      adresse.valeur,
+      adresse.source,
+      adresse.confiance,
+      commune.valeur?.codePostal ?? null,
+      commune.valeur?.ville ?? null,
+      commune.source,
+      commune.confiance,
+      params.parcelle?.trim() || null,
+      params.description?.trim() || null,
+    );
     enregistrerEvenement(db, { nomEntite: "lieu", entiteId: id, action: "creation", acteurId: acteur.personneId, dossierId: params.dossierId });
     return hydraterLieu(db.prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(id));
   });
 }
 
+/**
+ * Renseigner, corriger ou effacer l'adresse d'un lieu : la voie (`adresse`) et la commune (code
+ * postal et ville). Une partie absente des paramètres n'est pas touchée ; une partie vide redevient
+ * « à renseigner ». La voie et la commune sont deux valeurs tracées, mais la provenance donnée ici
+ * vaut pour toutes les parties écrites : le formulaire ne la demande qu'une fois.
+ */
 export function modifierAdresseLieu(
   acteur: Acteur,
-  params: { lieuId: string; adresse: string; adresseSource?: string; adresseConfiance?: string; motif?: string },
+  params: { lieuId: string; adresse?: string; commune?: { codePostal: string; ville: string }; adresseSource?: string; adresseConfiance?: string; motif?: string },
 ): Lieu {
   const ligne = obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId);
   if (!ligne) throw interdit();
   const avant = hydraterLieu(ligne);
   exiger(acteur, avant.dossierId, "ecrire", "lieux");
-  const adresse = construireValeurTracee<string>(params.adresse.trim() || null, params.adresseSource, params.adresseConfiance);
+  const adresse = params.adresse === undefined ? avant.adresse : construireValeurTracee<string>(params.adresse.trim() || null, params.adresseSource, params.adresseConfiance);
+  const commune =
+    params.commune === undefined ? avant.commune : construireValeurTracee<Commune>(communeSaisie(params.commune.codePostal, params.commune.ville), params.adresseSource, params.adresseConfiance);
 
   return transaction((db) => {
-    db.prepare(`UPDATE lieu SET adresse = ?, adresse_source = ?, adresse_confiance = ? WHERE id = ?`).run(
+    db.prepare(`UPDATE lieu SET adresse = ?, adresse_source = ?, adresse_confiance = ?, code_postal = ?, ville = ?, commune_source = ?, commune_confiance = ? WHERE id = ?`).run(
       adresse.valeur,
       adresse.source,
       adresse.confiance,
+      commune.valeur?.codePostal ?? null,
+      commune.valeur?.ville ?? null,
+      commune.source,
+      commune.confiance,
       params.lieuId,
     );
     enregistrerEvenement(db, {
@@ -246,9 +294,21 @@ export function modifierAdresseLieu(
       dossierId: avant.dossierId,
       motif: params.motif?.trim() || undefined,
       changements: [
-        { champ: "adresse", avant: avant.adresse.valeur, apres: adresse.valeur },
-        { champ: "adresse_source", avant: avant.adresse.source, apres: adresse.source },
-        { champ: "adresse_confiance", avant: avant.adresse.confiance, apres: adresse.confiance },
+        ...(params.adresse === undefined
+          ? []
+          : [
+              { champ: "adresse", avant: avant.adresse.valeur, apres: adresse.valeur },
+              { champ: "adresse_source", avant: avant.adresse.source, apres: adresse.source },
+              { champ: "adresse_confiance", avant: avant.adresse.confiance, apres: adresse.confiance },
+            ]),
+        ...(params.commune === undefined
+          ? []
+          : [
+              { champ: "code_postal", avant: avant.commune.valeur?.codePostal ?? null, apres: commune.valeur?.codePostal ?? null },
+              { champ: "ville", avant: avant.commune.valeur?.ville ?? null, apres: commune.valeur?.ville ?? null },
+              { champ: "commune_source", avant: avant.commune.source, apres: commune.source },
+              { champ: "commune_confiance", avant: avant.commune.confiance, apres: commune.confiance },
+            ]),
       ],
     });
     return hydraterLieu(db.prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId));
@@ -729,6 +789,10 @@ export function retirerLieu(acteur: Acteur, params: { lieuId: string }): void {
     adresse: l.adresse.valeur,
     adresse_source: l.adresse.source,
     adresse_confiance: l.adresse.valeur === null ? null : l.adresse.confiance,
+    code_postal: l.commune.valeur?.codePostal ?? null,
+    ville: l.commune.valeur?.ville ?? null,
+    commune_source: l.commune.source,
+    commune_confiance: l.commune.valeur === null ? null : l.commune.confiance,
     latitude_microdeg: l.position.valeur?.latitudeMicrodeg ?? null,
     longitude_microdeg: l.position.valeur?.longitudeMicrodeg ?? null,
     position_source: l.position.source,
