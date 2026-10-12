@@ -52,6 +52,10 @@ next-env.d.ts
 # Captures du navigateur de test (Playwright MCP)
 /.playwright-mcp/
 
+# Site statique de Storybook (npm run build-storybook) et journal de débogage
+/storybook-static/
+debug-storybook.log
+
 # Sauvegardes locales (données privées)
 /sauvegardes/
 /data/avant-restauration-*/

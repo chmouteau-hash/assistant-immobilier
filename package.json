@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "dev:reseau": "next dev -H 0.0.0.0",
     "start:reseau": "next start -H 0.0.0.0",
-    "adresse": "node scripts/adresse-reseau.mjs"
+    "adresse": "node scripts/adresse-reseau.mjs",
+    "storybook": "storybook dev -p 6006 --host 127.0.0.1 --disable-telemetry --no-version-updates",
+    "build-storybook": "storybook build --disable-telemetry"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
@@ -26,6 +28,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@storybook/addon-docs": "10.6.1",
+    "@storybook/nextjs-vite": "10.6.1",
     "@tailwindcss/postcss": "^4",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26",
@@ -33,6 +37,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "storybook": "10.6.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.7"

@@ -17,9 +17,11 @@ npm run typecheck    # next typegen, puis tsc --noEmit
 npm run lint
 npm run build
 node scripts/sauvegarde.mjs   # copie la base et les fichiers déposés dans sauvegardes/<horodatage>/
+npm run storybook    # atelier des composants, http://127.0.0.1:6006
+npm run build-storybook   # le même atelier en site statique, dans storybook-static/ (ignoré par git)
 ```
 
-La CI (`.github/workflows/ci.yml`) joue `typecheck`, `lint`, `test` puis `build` sur chaque PR et sur `main`.
+La CI (`.github/workflows/ci.yml`) joue `typecheck`, `lint`, `test` puis `build` sur chaque PR et sur `main`. Elle ne construit pas Storybook.
 
 ## Architecture
 
@@ -68,6 +70,14 @@ Application Next.js (App Router) locale, mono-poste, sans authentification. Troi
 - Base SQLite en mémoire, une seule connexion partagée (`fileParallelism: false`). Un test qui touche la base appelle `reinitialiserBasePourTests()` dans `beforeEach`, puis appelle `lib` directement avec un `Acteur` écrit à la main : Next.js n'est pas nécessaire.
 - `next/headers` et `next/navigation` n'existent que pendant une requête : un test qui en dépend les remplace (modèle : `tests/lib/sections-interdites.test.ts`).
 - Deux tests lisent le code source et échouent sur un oubli. Un `<select>` dont `defaultValue` est calculé doit porter une `key` (issue #16). Une page de section doit appeler `obtenirActeurPourSection` (issue #20).
+- Un troisième garde Storybook (`tests/outillage/storybook.test.ts`) : écoute sur le PC seul, rien vers son éditeur, données privées refusées par son serveur.
+
+### Storybook
+
+- Une histoire (`src/components/<fichier>.stories.tsx`, à côté du composant) montre un composant seul, dans un état. Titres, noms et commentaires en français ; données fictives seulement.
+- Une histoire n'écrit rien et n'appelle aucun service : elle n'importe ni `lib` ni `actions.ts`. Un composant qui reçoit ses Server Actions en propriété reçoit une `actionFictive` (`.storybook/doublures/action-fictive.ts`), qui montre dans l'onglet « Actions » les champs envoyés. Un composant qui les importe reçoit les doublures de `.storybook/doublures/actions.ts`, que `main.ts` met à la place du vrai fichier : chaque action nouvellement importée par un composant à histoire s'y ajoute.
+- Storybook se lance par `npm run storybook`, jamais avec un autre `--host`. Laissé à ses réglages d'origine, il écoute sur tout le réseau local et sert tout fichier du dossier du projet, `data/` compris. Deux verrous : `--host 127.0.0.1` dans `package.json`, `DONNEES_PRIVEES` dans `.storybook/main.ts`. Une donnée privée ajoutée à `.gitignore` s'ajoute aussi à `DONNEES_PRIVEES`.
+- Rien ne part vers l'éditeur de Storybook (statistiques d'usage, nouveautés, mises à jour). Les histoires de `CarteLieux` demandent les tuiles du fond de carte : elles viennent en dernier dans le menu et n'ont pas de page « Docs ».
 
 ## Conventions du dépôt
 
