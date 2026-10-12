@@ -79,6 +79,8 @@ Application Next.js (App Router) locale, mono-poste, sans authentification. Troi
 
 ## Claude Code
 
-- Un commit, un push ou une PR attend l'accord explicite de Christophe, donné après avoir vu le diff ou le texte complet. L'accord vaut pour l'opération montrée, pas pour la suivante. Christophe fusionne lui-même les PR, une fois la CI verte.
+- Un commit, un push ou une PR attend l'accord explicite de Christophe, donné après avoir vu le diff ou le texte complet. L'accord vaut pour l'opération montrée, pas pour la suivante.
+- Une PR ouverte avec cet accord se fusionne sans demander dès que la CI est verte, par un commit de fusion (`gh pr merge --merge`). `main` n'est pas protégée : GitHub laisserait fusionner sur une CI rouge ou encore en cours, donc `gh pr checks` se lit avant chaque fusion. CI rouge : rien ne se fusionne, l'échec est rapporté avec sa sortie. Une PR dont Christophe n'a pas vu tout le contenu attend son accord.
+- Après la fusion, `main` se met à jour sur le PC sans demander, sauf si la PR apporte une migration : le `git pull` attend alors l'accord de Christophe, serveur de développement arrêté, parce que c'est ce `git pull` qui amène la migration sur la base réelle.
 - Réécrire le texte d'une issue existante attend le même accord. Créer une issue de retour d'utilisation n'en demande pas.
 - Une branche dont la PR est fusionnée se supprime sans demander, sur le PC et sur GitHub, après avoir vérifié qu'elle ne contient aucun commit absent de `main`. Toute autre branche (sans PR, PR fermée sans fusion, commits non fusionnés) attend l'accord.
