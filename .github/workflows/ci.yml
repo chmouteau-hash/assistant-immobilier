@@ -1,27 +1,44 @@
 name: CI
 
-# Minimale, volontairement : typecheck + lint + tests + build. Rien de la machinerie de gouvernance
-# documentaire d'Ergonomia (pas de spec ACTIVE/PROPOSITION, pas de traçabilité exigence↔code) —
-# disproportionnée pour un dossier personnel à un seul utilisateur. À durcir seulement sur un
-# déclencheur réel (un second contributeur, un premier abonné) — voir DECISIONS.md, entrée du
-# 2026-10-10.
+# Ce que le projet sait vérifier seul : typecheck, lint, tests, build, plus deux contrôles qui lui
+# sont propres. Une migration déjà livrée ne change plus (elle est déjà passée sur la base réelle),
+# et l'atelier Storybook se construit. Rien de la machinerie de gouvernance documentaire
+# d'Ergonomia (pas de spec ACTIVE/PROPOSITION, pas de traçabilité exigence↔code) : disproportionnée
+# pour un dossier personnel à un seul utilisateur, voir DECISIONS.md, entrée du 2026-10-10.
+#
+# Pas de déploiement : l'application ne tourne que sur le PC, et aucune machine de GitHub ne voit
+# la base. Voir DECISIONS.md, entrée du 2026-10-12 sur la CI.
 
 on:
   push:
     branches: [main]
   pull_request:
 
+# Le dépôt est public : le jeton remis aux étapes ne sert qu'à lire le code.
+permissions:
+  contents: read
+
 jobs:
   verifier:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Tout l'historique : le contrôle des migrations compare avec le commit de départ.
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
+      - name: Aucune migration déjà livrée ne change
+        run: node scripts/controle-migrations.mjs "$REFERENCE"
+        env:
+          # Sur une PR : le main qu'elle vise. Sur main : le commit d'avant le push.
+          REFERENCE: ${{ github.event.pull_request.base.sha || github.event.before }}
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - run: npm run build-storybook

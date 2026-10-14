@@ -896,3 +896,49 @@ d'usage de Next.js ne sont pas désactivées sur le PC (réglage d'origine) : d'
 événement part vers `telemetry.nextjs.org` à l'arrêt du serveur de développement ; lu, pas mesuré.
 Si l'application prend un jour une police à elle, ses fichiers se rangent dans le dépôt
 (`next/font/local`), sans téléchargement.
+
+## 2026-10-12 — CI : deux contrôles propres au projet, aucun déploiement
+
+**Décision.** Christophe a demandé une CI-CD propre à la technologie du projet. La CI existait
+déjà (`typecheck`, `lint`, `test`, `build`). Les réglages qui suivent lui ont été proposés avec
+la PR.
+
+1. Une migration déjà livrée ne change plus, et la CI le vérifie.
+   `scripts/controle-migrations.mjs` compare le dossier des migrations à ce qu'il était au commit
+   de départ : sur une PR, le `main` qu'elle vise ; sur `main`, le commit d'avant le push. Un
+   fichier ajouté passe ; un fichier modifié, renommé ou retiré arrête la CI.
+2. La CI construit Storybook (`npm run build-storybook`). Le point 6 de l'entrée « Storybook » du
+   même jour est renversé.
+3. Le jeton d'accès que GitHub remet aux étapes de la CI ne sert qu'à lire le dépôt, et une
+   vérification s'arrête au bout de 15 minutes.
+4. Aucun déploiement automatique. L'application ne tourne que sur le PC : une version y arrive par
+   le `git pull` de `main`, aux conditions du `CLAUDE.md` (accord de Christophe et serveur arrêté
+   quand la PR apporte une migration).
+
+**Pourquoi.** Point 1 : une migration s'applique une seule fois à la base réelle. Si son fichier
+change ensuite, la base réelle garde l'ancien schéma, et les tests, qui repartent d'une base
+neuve, passent sur le nouveau. Essayé le 2026-10-12 sur une copie du dépôt : une ligne ajoutée à
+`003_statut_ligne.sql` laisse verts les tests de la base, et le contrôle s'arrête. La règle était
+écrite (`client.ts`, `CLAUDE.md`) sans rien pour la tenir. Point 2 : un import qui casse l'atelier
+ne se voyait qu'à son lancement ; la construction prend 13 secondes sur le PC. Point 3 : le dépôt
+est public. Son réglage donne déjà un jeton en lecture seule (lu le 2026-10-12) ; l'écrire dans
+`ci.yml` le fait tenir si ce réglage change. Point 4 : déployer suppose une machine qui reçoit la
+version. Un hébergeur contredit la décision du 2026-10-01, et l'application n'a pas
+d'authentification. Un agent de GitHub installé sur le PC (« self-hosted runner ») exécuterait
+sur le PC, à côté de la base, le code de toute PR ouverte sur le dépôt ; la documentation de
+GitHub, lue le 2026-10-12, dit de ne presque jamais en utiliser sur un dépôt public.
+
+**Conséquences.** `ci.yml` récupère tout l'historique git et joue deux étapes de plus.
+`scripts/controle-migrations.mjs` se lance aussi à la main, avant une PR. Un test le joue sur un
+dépôt git jetable (`tests/outillage/migrations.test.ts`) : environ 7 secondes de plus sur
+`npm test` sous Windows. Deux migrations de même numéro n'ont pas de contrôle à elles : les tests
+échouent déjà, à la création de la base (essayé le même jour). L'entrée du 2026-10-10 tient : ni
+specs à statut, ni exigences numérotées. Pas de migration. Rien ne change dans l'application.
+
+**Ce qui n'est pas tranché.** `main` n'est pas protégée : la CI dit qu'une PR est rouge, GitHub
+laisse quand même la fusionner. La détection des secrets poussés par erreur et les alertes sur
+les dépendances vulnérables sont désactivées sur le dépôt (lu le 2026-10-12). La CI tourne sous
+Linux avec Node 24, le PC sous Windows avec Node 26 : seuls les tests lancés sur le PC couvrent
+l'écart. Le contrôle ne couvre que ce qui est sur `main` : une migration encore en cours
+d'écriture, appliquée à la base réelle par un `npm run dev` lancé sur sa branche, peut encore
+changer sans qu'il le voie.
