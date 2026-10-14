@@ -897,6 +897,41 @@ d'usage de Next.js ne sont pas désactivées sur le PC (réglage d'origine) : d'
 Si l'application prend un jour une police à elle, ses fichiers se rangent dans le dépôt
 (`next/font/local`), sans téléchargement.
 
+## 2026-10-12 — Charte graphique : l'existant est nommé, quatre choix sont faits
+
+**Décision.** Christophe a demandé un relevé de l'apparence de l'application qui ne change rien au
+rendu, puis a tranché quatre points le même jour.
+
+1. Le dossier `charte-graphique/` décrit l'existant : `CHARTE.md` (rôles, valeurs, règles d'usage,
+   contrastes) et `jetons.md` (pour chaque rôle, la classe Tailwind qui le tient aujourd'hui). Ses
+   noms sont en français, comme le reste du dépôt.
+2. Arial reste la police de l'application : la décision du même jour sur la police est confirmée.
+3. L'application aura une couleur d'accent : une teinte réservée à l'action à faire.
+4. Le texte garde deux niveaux sous le texte secondaire, « aide » et « discret ». Chacun atteint
+   4,5:1 avec son fond.
+5. La bordure d'un champ de saisie se fonce jusqu'à atteindre 3:1 avec son fond.
+
+**Pourquoi.** Le relevé du 2026-10-12 (commit `22d2300`) compte 43 classes de couleur de Tailwind,
+écrites 254 fois dans les pages et les composants, et aucun jeton de couleur : changer une teinte
+demande aujourd'hui de la chercher partout. Deux écarts au niveau AA de WCAG 2.2 y sont calculés.
+`text-neutral-400`, employé 14 fois sur du texte, atteint 2,36:1 à 2,58:1 pour 4,5:1 demandé. La
+bordure des champs (`border-neutral-300` sur blanc) atteint 1,48:1 pour 3:1 demandé. Aucune teinte
+ne signale l'action à faire : le bouton principal est un contour gris foncé.
+
+**Conséquences.** Deux fichiers de documentation. Aucune page, aucun composant, aucune feuille de
+style n'est modifié : les points 3 à 5 sont décidés, pas appliqués, et l'écran d'aujourd'hui garde
+ses écarts de contraste. Pas de migration.
+
+**Ce qui n'est pas tranché.** La teinte de la couleur d'accent, et ce qu'elle marque : le bouton
+principal seul, ou aussi les liens et l'onglet courant. La façon de tenir les deux niveaux de
+texte : sur le fond de page, `neutral-500` est déjà le gris le plus clair qui atteint 4,5:1, donc
+le niveau « discret » ne peut pas être plus clair que le niveau « aide » d'aujourd'hui. La valeur
+de la bordure des champs : dans la palette de Tailwind, `neutral-500` atteint 3:1, `neutral-400`
+non. Les quatre interdits proposés au § 7 de la charte. Le public que vise la charte : « des
+professionnels » dans la demande, « un particulier » dans `docs/01-cadrage.md`. Les autres écarts
+de contraste relevés au § 8 de la charte n'ont pas de décision. `README.md` et `docs/` ne citent
+pas encore la charte. Rien n'a été vérifié à l'écran : les ratios sont calculés à partir du code.
+
 ## 2026-10-14 — CI : deux contrôles propres au projet, aucun déploiement
 
 **Décision.** Christophe a demandé une CI-CD propre à la technologie du projet. La CI existait
