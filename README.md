@@ -214,5 +214,6 @@ d'autres.
 - [Cadrage initial](Assistant_immobilier_cadrage_initial.md) · [Journal des décisions](DECISIONS.md)
 - [docs/](docs/) : note de cadrage V1, choix techniques, architecture, modèle de données, sécurité et
   RGPD, plan de test pilote, sauvegarde, synthèse et décisions ouvertes.
-- Les adresses, documents personnels, factures et montants réels ne doivent pas être copiés dans
-  les issues GitHub.
+- Le dépôt est public : le code, tout l'historique git, les issues et les PR se lisent sans compte.
+  Les adresses, documents personnels, factures et montants réels ne se copient ni dans une issue,
+  ni dans une PR, ni dans un commit.

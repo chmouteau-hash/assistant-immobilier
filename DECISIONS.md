@@ -897,6 +897,41 @@ d'usage de Next.js ne sont pas désactivées sur le PC (réglage d'origine) : d'
 Si l'application prend un jour une police à elle, ses fichiers se rangent dans le dépôt
 (`next/font/local`), sans téléchargement.
 
+## 2026-10-12 — Charte graphique : l'existant est nommé, quatre choix sont faits
+
+**Décision.** Christophe a demandé un relevé de l'apparence de l'application qui ne change rien au
+rendu, puis a tranché quatre points le même jour.
+
+1. Le dossier `charte-graphique/` décrit l'existant : `CHARTE.md` (rôles, valeurs, règles d'usage,
+   contrastes) et `jetons.md` (pour chaque rôle, la classe Tailwind qui le tient aujourd'hui). Ses
+   noms sont en français, comme le reste du dépôt.
+2. Arial reste la police de l'application : la décision du même jour sur la police est confirmée.
+3. L'application aura une couleur d'accent : une teinte réservée à l'action à faire.
+4. Le texte garde deux niveaux sous le texte secondaire, « aide » et « discret ». Chacun atteint
+   4,5:1 avec son fond.
+5. La bordure d'un champ de saisie se fonce jusqu'à atteindre 3:1 avec son fond.
+
+**Pourquoi.** Le relevé du 2026-10-12 (commit `22d2300`) compte 43 classes de couleur de Tailwind,
+écrites 254 fois dans les pages et les composants, et aucun jeton de couleur : changer une teinte
+demande aujourd'hui de la chercher partout. Deux écarts au niveau AA de WCAG 2.2 y sont calculés.
+`text-neutral-400`, employé 14 fois sur du texte, atteint 2,36:1 à 2,58:1 pour 4,5:1 demandé. La
+bordure des champs (`border-neutral-300` sur blanc) atteint 1,48:1 pour 3:1 demandé. Aucune teinte
+ne signale l'action à faire : le bouton principal est un contour gris foncé.
+
+**Conséquences.** Deux fichiers de documentation. Aucune page, aucun composant, aucune feuille de
+style n'est modifié : les points 3 à 5 sont décidés, pas appliqués, et l'écran d'aujourd'hui garde
+ses écarts de contraste. Pas de migration.
+
+**Ce qui n'est pas tranché.** La teinte de la couleur d'accent, et ce qu'elle marque : le bouton
+principal seul, ou aussi les liens et l'onglet courant. La façon de tenir les deux niveaux de
+texte : sur le fond de page, `neutral-500` est déjà le gris le plus clair qui atteint 4,5:1, donc
+le niveau « discret » ne peut pas être plus clair que le niveau « aide » d'aujourd'hui. La valeur
+de la bordure des champs : dans la palette de Tailwind, `neutral-500` atteint 3:1, `neutral-400`
+non. Les quatre interdits proposés au § 7 de la charte. Le public que vise la charte : « des
+professionnels » dans la demande, « un particulier » dans `docs/01-cadrage.md`. Les autres écarts
+de contraste relevés au § 8 de la charte n'ont pas de décision. `README.md` et `docs/` ne citent
+pas encore la charte. Rien n'a été vérifié à l'écran : les ratios sont calculés à partir du code.
+
 ## 2026-10-14 — CI : deux contrôles propres au projet, aucun déploiement
 
 **Décision.** Christophe a demandé une CI-CD propre à la technologie du projet. La CI existait
@@ -984,3 +1019,28 @@ de migration.
 L'état du blocage par compte de Christophe ne se lit pas par l'API. Pour revenir en arrière, il
 suffit de désactiver le ruleset (Settings → Rules) ou de décocher un réglage (Settings →
 Advanced Security).
+
+## 2026-10-14 — Dépôt : public depuis sa création, pour être lu de l'extérieur
+
+**Décision.** Le dépôt est public depuis sa création, le 2026-09-29 : le journal des événements de
+GitHub, lu le 2026-10-14, date sa création et son ouverture de la même seconde. Christophe l'a
+ouvert pour qu'une personne extérieure au projet puisse le regarder. Cette entrée l'écrit après
+coup. Elle corrige l'entrée du 2026-10-01, qui parle d'un « dépôt GitHub privé », écrite alors
+que le dépôt était déjà public. Le cadrage initial dit aussi « privé » (lignes 5, 61 et 82) : il
+reste tel qu'il a été écrit.
+
+**Pourquoi.** Le dépôt se lit sans compte ni invitation. Le principe du 2026-10-01 ne change pas :
+les données du dossier ne quittent pas le PC, ni vers le dépôt. `data/` et `sauvegardes/` sont
+ignorés par git ; dans tout l'historique, le seul fichier jamais suivi sous ces dossiers est
+`data/.gitkeep` (lu le 2026-10-14).
+
+**Conséquences.** Le code, tout l'historique git, les issues, les PR et leurs commentaires se
+lisent sans compte. Une adresse, un document personnel, une facture ou un montant réel ne se copie
+ni dans une issue, ni dans une PR, ni dans un commit (`README.md`). Les réglages GitHub du
+2026-10-14 en découlent, et un agent GitHub installé sur le PC reste exclu (entrée « CI » du même
+jour).
+
+**Ce qui n'est pas tranché.** Laisser le dépôt public, ou le repasser en privé une fois la lecture
+faite : une partie des réglages du 2026-10-14 n'est gratuite que sur un dépôt public, à vérifier
+avant. Aucun relevé de l'historique complet à la recherche d'une donnée personnelle n'est
+consigné : seuls les chemins des fichiers ont été contrôlés.
