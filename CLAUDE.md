@@ -19,9 +19,10 @@ npm run build
 node scripts/sauvegarde.mjs   # copie la base et les fichiers déposés dans sauvegardes/<horodatage>/
 npm run storybook    # atelier des composants, http://127.0.0.1:6006
 npm run build-storybook   # le même atelier en site statique, dans storybook-static/ (ignoré par git)
+node scripts/controle-migrations.mjs   # s'arrête si une migration déjà sur main a changé (ne modifie rien)
 ```
 
-La CI (`.github/workflows/ci.yml`) joue `typecheck`, `lint`, `test` puis `build` sur chaque PR et sur `main`. Elle ne construit pas Storybook.
+La CI (`.github/workflows/ci.yml`) joue, sur chaque PR et sur `main`, le contrôle des migrations, puis `typecheck`, `lint`, `test`, `build` et `build-storybook`. Elle ne déploie rien : l'application ne tourne que sur le PC, et se met à jour par le `git pull` de `main`.
 
 ## Architecture
 
@@ -61,7 +62,7 @@ Application Next.js (App Router) locale, mono-poste, sans authentification. Troi
 ### Base de données
 
 - Un fichier SQLite, `data/dossier.sqlite`, ouvert par `obtenirBase()` (`lib/db/client.ts`). Variables facultatives dans `.env.example` ; aucune n'est obligatoire.
-- Migrations `src/lib/db/migrations/NNN_nom.sql`, appliquées une fois, dans l'ordre. Une migration nouvelle s'applique à la base réelle dès le prochain accès (`npm run dev`). Un fichier appliqué ne se modifie plus : on en ajoute un.
+- Migrations `src/lib/db/migrations/NNN_nom.sql`, appliquées une fois, dans l'ordre. Une migration nouvelle s'applique à la base réelle dès le prochain accès (`npm run dev`). Un fichier appliqué ne se modifie plus : on en ajoute un. La CI arrête une PR qui modifie, renomme ou retire une migration présente sur `main` (`scripts/controle-migrations.mjs`) : les tests ne le verraient pas, ils repartent d'une base neuve.
 - `node:sqlite` rend des lignes à prototype nul, que React refuse de passer à un composant client. Une ligne renvoyée vers l'interface passe par `versObjet` / `versObjets`, qui convertissent aussi `snake_case` en `camelCase`.
 - Les fichiers déposés vivent sous `data/fichiers/`, hors de `public/`, et ne sont servis que par `api/fichiers/[id]`, après contrôle des droits.
 
@@ -71,6 +72,7 @@ Application Next.js (App Router) locale, mono-poste, sans authentification. Troi
 - `next/headers` et `next/navigation` n'existent que pendant une requête : un test qui en dépend les remplace (modèle : `tests/lib/sections-interdites.test.ts`).
 - Deux tests lisent le code source et échouent sur un oubli. Un `<select>` dont `defaultValue` est calculé doit porter une `key` (issue #16). Une page de section doit appeler `obtenirActeurPourSection` (issue #20).
 - Un troisième garde Storybook (`tests/outillage/storybook.test.ts`) : écoute sur le PC seul, rien vers son éditeur, données privées refusées par son serveur.
+- Un quatrième garde le contrôle des migrations (`tests/outillage/migrations.test.ts`) : il joue `scripts/controle-migrations.mjs` sur un dépôt git jetable, hors du projet.
 
 ### Storybook
 
