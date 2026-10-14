@@ -942,3 +942,45 @@ Linux avec Node 24, le PC sous Windows avec Node 26 : seuls les tests lancés su
 l'écart. Le contrôle ne couvre que ce qui est sur `main` : une migration encore en cours
 d'écriture, appliquée à la base réelle par un `npm run dev` lancé sur sa branche, peut encore
 changer sans qu'il le voie.
+
+## 2026-10-14 — GitHub : `main` protégée, secrets et dépendances surveillés
+
+**Décision.** Christophe a accepté les trois réglages proposés pour le dépôt public, laissés
+ouverts par l'entrée « CI » du même jour. Ils sont actifs depuis le 2026-10-14.
+
+1. Un ruleset, « Protection de main », s'applique à `main`, sans exception, administrateur
+   compris : pas de fusion sans PR (aucune approbation exigée) ; le contrôle `verifier` doit être
+   vert, sur une branche à jour de `main` ; fusion par commit de fusion seulement ; ni force push,
+   ni suppression de `main`.
+2. La détection des secrets et leur blocage à l'envoi sont actifs sur le dépôt. Les motifs
+   génériques (clés privées, chaînes de connexion) ne le sont pas.
+3. Les alertes de Dependabot et ses correctifs de sécurité sont actifs : une PR s'ouvre quand une
+   dépendance a une faille connue et un correctif. Les mises à jour de version courantes ne sont
+   pas demandées.
+
+**Pourquoi.** Point 1 : la CI disait qu'une PR était rouge sans l'empêcher d'être fusionnée ; la
+règle ne tenait que par la lecture de `gh pr checks`. Aucune approbation n'est exigée, parce que
+GitHub ne laisse pas approuver sa propre PR. La branche doit être à jour parce que deux fenêtres
+peuvent préparer deux PR en même temps : deux migrations de même numéro, vertes chacune de son
+côté, empêcheraient d'ouvrir la base une fois fusionnées ; à jour, la seconde PR rejoue les tests
+avec la première, et ils échouent. Depuis le 2026-10-01, tout arrivait déjà sur `main` par une
+PR (lu dans l'historique) : rien ne change à l'usage. Point 2 : le seul secret du projet est la
+clé Anthropic, que GitHub reconnaît, blocage à l'envoi compris (liste de GitHub lue le
+2026-10-14). Le blocage par compte, actif par défaut, ne laisse aucune trace quand on le
+contourne ; celui du dépôt lève une alerte. Point 3 : `npm run dev:reseau` ouvre le serveur
+Next.js au réseau local, où une faille de Next.js n'est pas théorique. Les mises à jour courantes
+feraient une PR par version, sans lien avec la sécurité.
+
+**Conséquences.** GitHub a ajouté de lui-même à la règle des PR un paramètre que sa documentation
+ne décrit pas, `require_extra_approval_for_unattributed_changes`, réglé sur oui. D'après des
+signalements d'utilisateurs, il exige une approbation de plus quand l'auteur d'un commit n'est
+relié à aucun compte, et bloquait des PR ouvertes par des robots : il est réglé sur non. Une PR de
+Dependabot attend l'accord de Christophe, comme toute PR dont il n'a pas vu le contenu.
+`CLAUDE.md` et `docs/05-securite-rgpd.md` sont mis à jour. Rien ne change dans l'application. Pas
+de migration.
+
+**Ce qui n'est pas tranché.** La détection des secrets ne reconnaît pas une donnée personnelle
+(adresse, montant) ; le contrôle de confidentialité qui s'en charge n'est pas dans le dépôt.
+L'état du blocage par compte de Christophe ne se lit pas par l'API. Pour revenir en arrière, il
+suffit de désactiver le ruleset (Settings → Rules) ou de décocher un réglage (Settings →
+Advanced Security).
