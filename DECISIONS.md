@@ -1019,3 +1019,28 @@ de migration.
 L'état du blocage par compte de Christophe ne se lit pas par l'API. Pour revenir en arrière, il
 suffit de désactiver le ruleset (Settings → Rules) ou de décocher un réglage (Settings →
 Advanced Security).
+
+## 2026-10-14 — Dépôt : public depuis sa création, pour être lu de l'extérieur
+
+**Décision.** Le dépôt est public depuis sa création, le 2026-09-29 : le journal des événements de
+GitHub, lu le 2026-10-14, date sa création et son ouverture de la même seconde. Christophe l'a
+ouvert pour qu'une personne extérieure au projet puisse le regarder. Cette entrée l'écrit après
+coup. Elle corrige l'entrée du 2026-10-01, qui parle d'un « dépôt GitHub privé », écrite alors
+que le dépôt était déjà public. Le cadrage initial dit aussi « privé » (lignes 5, 61 et 82) : il
+reste tel qu'il a été écrit.
+
+**Pourquoi.** Le dépôt se lit sans compte ni invitation. Le principe du 2026-10-01 ne change pas :
+les données du dossier ne quittent pas le PC, ni vers le dépôt. `data/` et `sauvegardes/` sont
+ignorés par git ; dans tout l'historique, le seul fichier jamais suivi sous ces dossiers est
+`data/.gitkeep` (lu le 2026-10-14).
+
+**Conséquences.** Le code, tout l'historique git, les issues, les PR et leurs commentaires se
+lisent sans compte. Une adresse, un document personnel, une facture ou un montant réel ne se copie
+ni dans une issue, ni dans une PR, ni dans un commit (`README.md`). Les réglages GitHub du
+2026-10-14 en découlent, et un agent GitHub installé sur le PC reste exclu (entrée « CI » du même
+jour).
+
+**Ce qui n'est pas tranché.** Laisser le dépôt public, ou le repasser en privé une fois la lecture
+faite : une partie des réglages du 2026-10-14 n'est gratuite que sur un dépôt public, à vérifier
+avant. Aucun relevé de l'historique complet à la recherche d'une donnée personnelle n'est
+consigné : seuls les chemins des fichiers ont été contrôlés.
