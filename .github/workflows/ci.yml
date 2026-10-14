@@ -7,7 +7,7 @@ name: CI
 # pour un dossier personnel à un seul utilisateur, voir DECISIONS.md, entrée du 2026-10-10.
 #
 # Pas de déploiement : l'application ne tourne que sur le PC, et aucune machine de GitHub ne voit
-# la base. Voir DECISIONS.md, entrée du 2026-10-12 sur la CI.
+# la base. Voir DECISIONS.md, entrée du 2026-10-14 sur la CI.
 
 on:
   push:

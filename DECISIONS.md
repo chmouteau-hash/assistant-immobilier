@@ -897,7 +897,7 @@ d'usage de Next.js ne sont pas désactivées sur le PC (réglage d'origine) : d'
 Si l'application prend un jour une police à elle, ses fichiers se rangent dans le dépôt
 (`next/font/local`), sans téléchargement.
 
-## 2026-10-12 — CI : deux contrôles propres au projet, aucun déploiement
+## 2026-10-14 — CI : deux contrôles propres au projet, aucun déploiement
 
 **Décision.** Christophe a demandé une CI-CD propre à la technologie du projet. La CI existait
 déjà (`typecheck`, `lint`, `test`, `build`). Les réglages qui suivent lui ont été proposés avec
@@ -908,7 +908,7 @@ la PR.
    de départ : sur une PR, le `main` qu'elle vise ; sur `main`, le commit d'avant le push. Un
    fichier ajouté passe ; un fichier modifié, renommé ou retiré arrête la CI.
 2. La CI construit Storybook (`npm run build-storybook`). Le point 6 de l'entrée « Storybook » du
-   même jour est renversé.
+   2026-10-12 est renversé.
 3. Le jeton d'accès que GitHub remet aux étapes de la CI ne sert qu'à lire le dépôt, et une
    vérification s'arrête au bout de 15 minutes.
 4. Aucun déploiement automatique. L'application ne tourne que sur le PC : une version y arrive par
@@ -932,7 +932,7 @@ GitHub, lue le 2026-10-12, dit de ne presque jamais en utiliser sur un dépôt p
 `scripts/controle-migrations.mjs` se lance aussi à la main, avant une PR. Un test le joue sur un
 dépôt git jetable (`tests/outillage/migrations.test.ts`) : environ 7 secondes de plus sur
 `npm test` sous Windows. Deux migrations de même numéro n'ont pas de contrôle à elles : les tests
-échouent déjà, à la création de la base (essayé le même jour). L'entrée du 2026-10-10 tient : ni
+échouent déjà, à la création de la base (essayé le 2026-10-12). L'entrée du 2026-10-10 tient : ni
 specs à statut, ni exigences numérotées. Pas de migration. Rien ne change dans l'application.
 
 **Ce qui n'est pas tranché.** `main` n'est pas protégée : la CI dit qu'une PR est rouge, GitHub
