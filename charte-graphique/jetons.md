@@ -9,6 +9,11 @@ rôle, quelle classe Tailwind le tient aujourd'hui, et dans quel fichier le voir
   `src/app/globals.css` (ligne 9). Tout le reste est une classe de la palette par défaut de
   Tailwind, écrite dans les pages et les composants.
 - **Les noms de rôle de la première colonne sont des propositions.** Aucun n'existe dans le code.
+- **Quatre jetons sont décidés le 2026-10-28** (`DECISIONS.md`, CHARTE.md § 9), pas encore
+  déclarés : `accent` (`cyan-800`, `#005f78`) et `accent-survol` (`cyan-900`, `#104e64`), pour le
+  bouton principal et l'onglet courant ; `texte-discret` (`neutral-500`, `#737373`, en italique) ;
+  `bordure-champ` (`#8e8e8e`, hors palette), pour les champs de saisie seulement. Les autres rôles
+  gardent leurs classes.
 - Les valeurs hexadécimales sont calculées à partir de `node_modules/tailwindcss/theme.css`
   (Tailwind 4.3.3) : méthode et contrôle dans [CHARTE.md](CHARTE.md), § 8.
 - « Emplois » compte chaque écriture de la classe, variantes comprises (`hover:`, `disabled:`).
