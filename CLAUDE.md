@@ -28,7 +28,7 @@ La CI (`.github/workflows/ci.yml`) joue, sur chaque PR et sur `main`, le contrô
 
 Application Next.js (App Router) locale, mono-poste, sans authentification. Trois couches, dépendance à sens unique `app → lib → domain` ; aucune requête SQL hors de `src/lib`.
 
-- `src/domain/` : fonctions pures (provenance, budget, comparaison, droits, planning, mesure, positions, contrat de l'IA). Ni base, ni Next.js, ni React.
+- `src/domain/` : fonctions pures (provenance, budget, comparaison, droits, planning, mesure, positions, statut des biens, contrat de l'IA). Ni base, ni Next.js, ni React.
 - `src/lib/` : accès aux données et application des droits. Une fonction qui lit ou écrit un dossier reçoit l'`Acteur` en premier paramètre et commence par `exiger(acteur, dossierId, action, section)`. Elle lève une `ErreurApplicative` (`invalide()`, `interdit()`, `introuvable()` dans `erreurs.ts`) et renvoie des objets plats.
 - `src/app/` : pages serveur pour la lecture ; toutes les écritures passent par les Server Actions d'un seul fichier, `src/app/dossiers/actions.ts`. Pages et routes déclarent `export const dynamic = "force-dynamic"`.
 

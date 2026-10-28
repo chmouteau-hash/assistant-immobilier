@@ -3,7 +3,9 @@ import { obtenirActeurPourSection } from "@/lib/acteur-courant";
 import { autorise } from "@/lib/acces";
 import { listerLieux, listerLieuxVoisins, listerBatiments, listerPieces, objetsNonVides, type Batiment } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
+import { formaterMontant } from "@/lib/montant";
 import { formaterSurface } from "@/domain/mesure";
+import { TYPE_BIEN_ACQUIS, TYPE_BIEN_CANDIDAT } from "@/domain/bien";
 import { formaterAdresseComplete, formaterCommune, formaterCoordonnee, formaterPosition } from "@/domain/geo";
 import { NOM_SERVICE_GEOCODAGE } from "@/lib/geocodage";
 import {
@@ -20,6 +22,8 @@ import {
   actionSituerParClic,
   actionRattacherBatiment,
   actionModifierLieu,
+  actionModifierPrixDemande,
+  actionChangerStatutBien,
   actionModifierBatiment,
   actionModifierPiece,
   actionRetirerLieu,
@@ -63,6 +67,11 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // La carte montre aussi, d'une autre couleur, les lieux situés des autres dossiers que l'acteur
 // peut lire (issue #50) : plusieurs biens étudiés dans un même secteur se voient ensemble. Un clic
 // sur un repère mène à la fiche du lieu, ici ou dans son dossier : chaque fiche porte une ancre.
+//
+// Un bien a un statut (repéré, visité, offre faite, écarté, acquis) et un prix demandé (issue #2).
+// Le statut a son formulaire, avec un motif pour écarter ou acquérir ; le prix a le sien, parce
+// qu'il porte une provenance. Acquérir un bien candidat le range en « Bien acquis » : le formulaire
+// le dit avant l'envoi (domain/bien.ts).
 
 // Comment vider un objet, dit sous la phrase de refus : chaque rattachement se change sur l'écran
 // de ce qui est rattaché.
@@ -80,6 +89,7 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
   const batiments = listerBatiments(acteur, id);
   const pieces = listerPieces(acteur, id);
   const typesLieu = listerReference("ref_type_lieu");
+  const statutsBien = listerReference("ref_statut_bien");
   const sources = listerReference("ref_source_donnee").filter((s) => s.code !== "suggestion_ia");
   const confiances = listerReference("ref_confiance").filter((c) => c.code !== "a_renseigner");
   const peutEcrire = autorise(acteur, id, "ecrire", "lieux");
@@ -334,6 +344,12 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
                   <span className={classeNiveau}>Lieu</span> <span className="font-medium">{l.nom}</span> <span className="text-neutral-500">· {libelle(typesLieu, l.typeLieu)}</span>
                 </p>
                 <p>
+                  Statut : {l.statutBien ? <Pastille>{libelle(statutsBien, l.statutBien)}</Pastille> : <Pastille ton="attention">À renseigner</Pastille>}
+                </p>
+                <p>
+                  Prix demandé : <Provenance valeur={l.prixDemande} formater={formaterMontant} />
+                </p>
+                <p>
                   Adresse : <Provenance valeur={l.adresse} formater={(v) => v} />
                   {l.parcelle && <span className="ml-2 text-neutral-500">parcelle {l.parcelle}</span>}
                 </p>
@@ -371,6 +387,39 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
                       </Champ>
                       <Champ label="Description libre" large>
                         <textarea name="description" defaultValue={l.description ?? ""} className={classeSaisie} rows={2} />
+                      </Champ>
+                    </FormulaireAction>
+                  </details>
+                )}
+                {peutEcrire && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs text-neutral-500">Changer le statut</summary>
+                    <FormulaireAction action={actionChangerStatutBien} bouton="Enregistrer" compact className="mt-2">
+                      <input type="hidden" name="dossierId" value={id} />
+                      <input type="hidden" name="lieuId" value={l.id} />
+                      <Champ label="Statut">
+                        <Select name="statut" options={statutsBien} defaultValue={l.statutBien ?? undefined} vide={l.statutBien ? undefined : "— à choisir —"} required />
+                      </Champ>
+                      <Champ label="Motif (obligatoire pour « Écarté » et « Acquis »)" large>
+                        <input name="motif" className={classeSaisie} />
+                      </Champ>
+                      {l.typeLieu === TYPE_BIEN_CANDIDAT && <p className="w-full text-xs text-neutral-600">Au statut « Acquis », ce lieu passe du type « Bien candidat » au type « Bien acquis ».</p>}
+                      {l.typeLieu === TYPE_BIEN_ACQUIS && <p className="w-full text-xs text-neutral-600">Quitter le statut « Acquis » remet ce lieu au type « Bien candidat ».</p>}
+                    </FormulaireAction>
+                  </details>
+                )}
+                {peutEcrire && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs text-neutral-500">Prix demandé</summary>
+                    <FormulaireAction action={actionModifierPrixDemande} bouton="Enregistrer" compact className="group mt-2">
+                      <input type="hidden" name="dossierId" value={id} />
+                      <input type="hidden" name="lieuId" value={l.id} />
+                      <Champ label="Prix demandé en € (vide = à renseigner)">
+                        <input name="prix" inputMode="decimal" autoComplete="off" className={`${classeSaisie} valeur-tracee w-36`} placeholder="245 000" />
+                      </Champ>
+                      {champsProvenance("prix")}
+                      <Champ label="Motif">
+                        <input name="motif" className={classeSaisie} />
                       </Champ>
                     </FormulaireAction>
                   </details>

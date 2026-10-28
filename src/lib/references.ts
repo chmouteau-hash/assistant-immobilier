@@ -15,6 +15,7 @@ const TABLES = [
   "ref_type_projet",
   "ref_stade",
   "ref_type_lieu",
+  "ref_statut_bien",
   "ref_statut_idee",
   "ref_type_document",
   "ref_statut_hypothese",

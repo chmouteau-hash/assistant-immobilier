@@ -151,6 +151,21 @@ export async function actionModifierLieu(_e: EtatFormulaire, fd: FormData): Prom
   });
 }
 
+export async function actionModifierPrixDemande(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    const brut = texte(fd, "prix");
+    const prixCentimes = brut === "" ? null : parserMontant(brut);
+    if (brut !== "" && prixCentimes === null) throw new ErreurApplicative("VALIDATION", `Montant invalide : « ${brut} ». Exemple attendu : 245000`);
+    structure.modifierPrixDemandeLieu(acteur, { lieuId: texte(fd, "lieuId"), prixCentimes, prixSource: texte(fd, "prixSource"), prixConfiance: texte(fd, "prixConfiance"), motif: texte(fd, "motif") });
+  });
+}
+
+export async function actionChangerStatutBien(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.changerStatutBien(acteur, { lieuId: texte(fd, "lieuId"), statut: texte(fd, "statut"), motif: texte(fd, "motif") });
+  });
+}
+
 export async function actionModifierAdresse(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     structure.modifierAdresseLieu(acteur, {
