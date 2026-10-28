@@ -112,15 +112,16 @@ describe("parcours pilote", () => {
         .filter((e) => e.nomEntite === entite && e.action === "modification")
         .flatMap((e) => e.changements ?? []);
 
-    // Lieu : un champ absent ne change pas, un champ vidé redevient inconnu.
-    const lieuCorrige = modifierLieu(moi, { lieuId: lieu.id, nom: "Bien candidat", typeLieu: "bien_acquis", parcelle: "" });
-    expect(lieuCorrige).toMatchObject({ nom: "Bien candidat", typeLieu: "bien_acquis", parcelle: null, description: "à visiter" });
+    // Lieu : un champ absent ne change pas, un champ vidé redevient inconnu. « Bien acquis » ne se
+    // choisit pas ici : il suit le statut « Acquis » (tests/lib/bien.test.ts).
+    const lieuCorrige = modifierLieu(moi, { lieuId: lieu.id, nom: "Bien candidat", typeLieu: "terrain", parcelle: "" });
+    expect(lieuCorrige).toMatchObject({ nom: "Bien candidat", typeLieu: "terrain", parcelle: null, description: "à visiter" });
     expect(lieuCorrige.adresse).toEqual(lieu.adresse); // l'adresse porte une provenance : elle garde son propre formulaire
     expect(changements("lieu")).toHaveLength(3);
     expect(changements("lieu")).toEqual(
       expect.arrayContaining([
         { champ: "nom", avant: "Bien candidta", apres: "Bien candidat" },
-        { champ: "type_lieu", avant: "bien_candidat", apres: "bien_acquis" },
+        { champ: "type_lieu", avant: "bien_candidat", apres: "terrain" },
         { champ: "parcelle", avant: "AB 12", apres: null },
       ]),
     );

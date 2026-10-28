@@ -1044,3 +1044,45 @@ jour).
 faite : une partie des réglages du 2026-10-14 n'est gratuite que sur un dépôt public, à vérifier
 avant. Aucun relevé de l'historique complet à la recherche d'une donnée personnelle n'est
 consigné : seuls les chemins des fichiers ont été contrôlés.
+
+## 2026-10-28 — Bien : un prix demandé et un statut, et l'achat range le bien
+
+**Décision.** Premier bloc de #2 : un lieu porte un prix demandé et un statut. Christophe a tranché
+les points 3 et 4 le même jour.
+
+1. Le prix demandé est une valeur tracée : centimes entiers, source et confiance, « à renseigner »
+   tant qu'il n'est pas connu. Un prix lu sur une annonce est une source externe, donc au mieux
+   « à confirmer ».
+2. Le statut d'un bien vaut repéré, visité, offre faite, écarté ou acquis (`ref_statut_bien`). Il
+   est « à renseigner » tant qu'on ne l'a pas dit. Un lieu du type « Bien acquis » a le statut
+   « acquis ».
+3. Le statut « acquis » et le type « Bien acquis » ne se contredisent jamais. Passer un bien
+   candidat au statut « acquis » le range en « Bien acquis », dans la même écriture ; quitter ce
+   statut le remet en « Bien candidat ». Un terrain garde son type, quel que soit son statut. Le
+   type se corrige toujours dans « Corriger le lieu », sauf vers « Bien acquis » pour un bien qui
+   n'est pas acquis, ou vers « Bien candidat » pour un bien qui l'est.
+4. Écarter ou acquérir un bien demande un motif. Repéré, visité et offre faite n'en demandent pas.
+   Chaque changement de statut s'inscrit au journal d'audit, avec le changement de type s'il y en
+   a un.
+
+**Pourquoi.** Point 3 : deux champs indépendants auraient laissé un « Bien candidat » au statut
+« acquis » ; retirer « acquis » des statuts aurait caché l'achat dans le type. Point 4 : écarter et
+acquérir tranchent, comme retenir ou écarter un scénario ; les étapes de la recherche se suivent
+sans justification. Point 2 : on ne devine pas si un bien déjà saisi a été visité.
+
+**Conséquences.** Migration 007 : la table `ref_statut_bien`, quatre colonnes sur `lieu` et deux
+déclencheurs. La règle du point 3 est dans `domain/bien.ts`, redite par ces déclencheurs plutôt que
+par un `CHECK` : SQLite 3.53 vérifie le `CHECK` d'une colonne ajoutée sur toutes les lignes
+existantes, avant que la migration ait pu donner le statut « acquis » aux biens acquis déjà saisis
+(essayé le 2026-10-28). Un test rejoue la migration sur une base qui a déjà des lieux
+(`tests/lib/migration-007.test.ts`). L'écran Lieux montre le statut et le prix de chaque lieu,
+chacun avec son formulaire. Un test plus ancien (`tests/lib/parcours.test.ts`) corrigeait un type
+vers « Bien acquis » : il corrige maintenant vers « Terrain ». L'export complet emporte le prix et
+le statut.
+
+**Ce qui n'est pas tranché.** L'assistant ne reçoit ni le prix ni le statut : les lui envoyer
+serait un choix, qui n'est pas fait ici. Écarter ou acquérir un bien n'écrit rien au journal des
+décisions : une décision ne se rattache aujourd'hui qu'à un scénario ou à une idée (bloc 1 de #4).
+Le statut ne paraît ni dans la vue d'ensemble, ni dans « Mes dossiers », ni sur la carte. Le prix
+ne se saisit pas à la création du lieu, seulement ensuite. Quitter le statut « acquis » ne demande
+pas de motif.

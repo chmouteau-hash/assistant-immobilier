@@ -1,9 +1,12 @@
 // Lieux (biens, terrains), bâtiments, pièces — priorité 1 (« ajouter… lieux, bâtiments, pièces »)
 // et priorité 2 (saisie structurée avec statuts connu / estimé / à confirmer / à renseigner).
 //
-// Les surfaces, les adresses, les communes (code postal et ville) et les positions sont des
-// `ValeurTracee` : valeur + source + confiance, validées par le domaine AVANT d'être écrites, et
-// re-vérifiées par les CHECK de la base.
+// Les surfaces, les adresses, les communes (code postal et ville), les positions et le prix demandé
+// d'un bien sont des `ValeurTracee` : valeur + source + confiance, validées par le domaine AVANT
+// d'être écrites, et re-vérifiées par les CHECK de la base.
+//
+// Le statut d'un bien (repéré… acquis) et son type vont ensemble : les règles sont dans
+// `domain/bien.ts`, redites par des déclencheurs de la base (migration 007).
 
 import { randomUUID } from "node:crypto";
 import { obtenirBase, transaction, versObjet, versObjets } from "./db/client";
@@ -21,12 +24,17 @@ import {
   type ValeurTracee,
 } from "../domain/provenance";
 import { lireCommune, validerPosition, type Commune, type Position } from "../domain/geo";
+import { estStatutBien, motifExige, statutInitial, typeApresStatut, verifierTypeEtStatut, type StatutBien } from "../domain/bien";
 
 export type Lieu = {
   id: string;
   dossierId: string;
   nom: string;
   typeLieu: string;
+  /** Repéré, visité, offre faite, écarté, acquis ; `null` = à renseigner. */
+  statutBien: StatutBien | null;
+  /** Le prix demandé par le vendeur, en centimes : celui de l'annonce, pas un prix d'achat. */
+  prixDemande: ValeurTracee<number>;
   /** La voie : « 12 rue des Tilleuls ». Une adresse saisie avant l'issue #52 y tient tout entière. */
   adresse: ValeurTracee<string>;
   /** Le code postal et la ville : une valeur tracée à part, connue souvent avant la voie. */
@@ -114,6 +122,10 @@ type LieuBrut = {
   dossierId: string;
   nom: string;
   typeLieu: string;
+  statutBien: StatutBien | null;
+  prixDemandeCentimes: number | null;
+  prixDemandeSource: Source | null;
+  prixDemandeConfiance: Confiance;
   adresse: string | null;
   adresseSource: Source | null;
   adresseConfiance: Confiance;
@@ -131,8 +143,8 @@ type LieuBrut = {
   source: string;
   createdAt: string;
 };
-const COLONNES_LIEU = `id, dossier_id, nom, type_lieu, adresse, adresse_source, adresse_confiance,
-  code_postal, ville, commune_source, commune_confiance,
+const COLONNES_LIEU = `id, dossier_id, nom, type_lieu, statut_bien, prix_demande_centimes, prix_demande_source, prix_demande_confiance,
+  adresse, adresse_source, adresse_confiance, code_postal, ville, commune_source, commune_confiance,
   latitude_microdeg, longitude_microdeg, position_source, position_confiance, position_note, parcelle, description, source, created_at`;
 
 /** Lit et valide la saisie d'un code postal et d'une ville ; lève `VALIDATION` si elle est mal formée. */
@@ -150,6 +162,8 @@ function hydraterLieu(ligne: unknown): Lieu {
     dossierId: b.dossierId,
     nom: b.nom,
     typeLieu: b.typeLieu,
+    statutBien: b.statutBien,
+    prixDemande: { valeur: b.prixDemandeCentimes, source: b.prixDemandeSource, confiance: b.prixDemandeConfiance },
     adresse: { valeur: b.adresse, source: b.adresseSource, confiance: b.adresseConfiance },
     commune: { valeur: b.codePostal === null && b.ville === null ? null : { codePostal: b.codePostal, ville: b.ville }, source: b.communeSource, confiance: b.communeConfiance },
     position: { valeur: position, source: b.positionSource, confiance: b.positionConfiance, note: b.positionNote },
@@ -267,13 +281,14 @@ export function creerLieu(
   return transaction((db) => {
     const id = randomUUID();
     db.prepare(
-      `INSERT INTO lieu (id, dossier_id, nom, type_lieu, adresse, adresse_source, adresse_confiance, code_postal, ville, commune_source, commune_confiance, parcelle, description)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO lieu (id, dossier_id, nom, type_lieu, statut_bien, adresse, adresse_source, adresse_confiance, code_postal, ville, commune_source, commune_confiance, parcelle, description)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       params.dossierId,
       nom,
       params.typeLieu,
+      statutInitial(params.typeLieu),
       adresse.valeur,
       adresse.source,
       adresse.confiance,
@@ -414,9 +429,10 @@ export function modifierPositionLieu(
 
 /**
  * Corriger un lieu après sa création : nom, type, parcelle, description. Un champ absent ne change
- * pas, un champ facultatif vidé redevient inconnu, seuls les champs changés sont tracés. L'adresse
- * et la position portent une provenance : chacune garde son propre formulaire
- * (`modifierAdresseLieu`, `modifierPositionLieu`).
+ * pas, un champ facultatif vidé redevient inconnu, seuls les champs changés sont tracés. L'adresse,
+ * la position et le prix demandé portent une provenance : chacun garde son propre formulaire
+ * (`modifierAdresseLieu`, `modifierPositionLieu`, `modifierPrixDemandeLieu`). Le type ne peut pas
+ * contredire le statut : acquérir un bien passe par `changerStatutBien`, avec un motif.
  */
 export function modifierLieu(acteur: Acteur, params: { lieuId: string; nom?: string; typeLieu?: string; parcelle?: string; description?: string }): Lieu {
   const ligne = obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId);
@@ -429,7 +445,11 @@ export function modifierLieu(acteur: Acteur, params: { lieuId: string; nom?: str
     parcelle: texteFacultatif(params.parcelle, avant.parcelle),
     description: texteFacultatif(params.description, avant.description),
   };
-  if (apres.typeLieu !== avant.typeLieu) exigerTypeLieu(apres.typeLieu);
+  if (apres.typeLieu !== avant.typeLieu) {
+    exigerTypeLieu(apres.typeLieu);
+    const verdict = verifierTypeEtStatut(apres.typeLieu, avant.statutBien);
+    if (!verdict.valide) throw invalide(verdict.motif);
+  }
 
   const changements = [
     { champ: "nom", avant: avant.nom, apres: apres.nom },
@@ -442,6 +462,79 @@ export function modifierLieu(acteur: Acteur, params: { lieuId: string; nom?: str
   return transaction((db) => {
     db.prepare(`UPDATE lieu SET nom = ?, type_lieu = ?, parcelle = ?, description = ? WHERE id = ?`).run(apres.nom, apres.typeLieu, apres.parcelle, apres.description, params.lieuId);
     enregistrerEvenement(db, { nomEntite: "lieu", entiteId: params.lieuId, action: "modification", acteurId: acteur.personneId, dossierId: avant.dossierId, changements });
+    return hydraterLieu(db.prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId));
+  });
+}
+
+/**
+ * Renseigner, corriger ou effacer le prix demandé d'un bien (issue #2). Comme la surface d'une
+ * pièce, c'est une provenance : source et confiance obligatoires dès qu'un prix existe, tracé avec
+ * avant/après. Un prix lu sur une annonce est une source externe : au mieux « à confirmer ».
+ */
+export function modifierPrixDemandeLieu(
+  acteur: Acteur,
+  params: { lieuId: string; prixCentimes: number | null; prixSource?: string; prixConfiance?: string; motif?: string },
+): Lieu {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId);
+  if (!ligne) throw interdit();
+  const avant = hydraterLieu(ligne);
+  exiger(acteur, avant.dossierId, "ecrire", "lieux");
+  if (params.prixCentimes !== null && (!Number.isInteger(params.prixCentimes) || params.prixCentimes <= 0)) {
+    throw invalide("Le prix demandé doit être un montant positif, en euros (deux décimales au plus).");
+  }
+  const prix = construireValeurTracee<number>(params.prixCentimes, params.prixSource, params.prixConfiance);
+
+  return transaction((db) => {
+    db.prepare(`UPDATE lieu SET prix_demande_centimes = ?, prix_demande_source = ?, prix_demande_confiance = ? WHERE id = ?`).run(prix.valeur, prix.source, prix.confiance, params.lieuId);
+    enregistrerEvenement(db, {
+      nomEntite: "lieu",
+      entiteId: params.lieuId,
+      action: "modification",
+      acteurId: acteur.personneId,
+      dossierId: avant.dossierId,
+      motif: params.motif?.trim() || undefined,
+      changements: [
+        { champ: "prix_demande_centimes", avant: avant.prixDemande.valeur, apres: prix.valeur },
+        { champ: "prix_demande_source", avant: avant.prixDemande.source, apres: prix.source },
+        { champ: "prix_demande_confiance", avant: avant.prixDemande.confiance, apres: prix.confiance },
+      ],
+    });
+    return hydraterLieu(db.prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId));
+  });
+}
+
+/**
+ * Changer le statut d'un bien : repéré, visité, offre faite, écarté, acquis (issue #2). Écarter ou
+ * acquérir demande un motif (`domain/bien.ts`). Acquérir un bien candidat le range en « Bien
+ * acquis », et revenir sur ce statut le remet en « Bien candidat » : le type change dans la même
+ * écriture, et le journal d'audit porte les deux. Un terrain garde son type.
+ */
+export function changerStatutBien(acteur: Acteur, params: { lieuId: string; statut: string; motif?: string }): Lieu {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId);
+  if (!ligne) throw interdit();
+  const avant = hydraterLieu(ligne);
+  exiger(acteur, avant.dossierId, "ecrire", "lieux");
+  if (!estStatutBien(params.statut)) throw invalide("Statut de bien inconnu.");
+  const statut = params.statut;
+  const motif = params.motif?.trim() ?? "";
+  if (motifExige(statut) && motif === "") throw invalide(statut === "acquis" ? "Un motif est obligatoire pour dire qu'un bien est acquis." : "Un motif est obligatoire pour écarter un bien.");
+  if (statut === avant.statutBien) return avant;
+  const typeLieu = typeApresStatut(avant.typeLieu, statut);
+
+  return transaction((db) => {
+    db.prepare(`UPDATE lieu SET statut_bien = ?, type_lieu = ? WHERE id = ?`).run(statut, typeLieu, params.lieuId);
+    enregistrerEvenement(db, {
+      nomEntite: "lieu",
+      entiteId: params.lieuId,
+      action: "transition_statut",
+      acteurId: acteur.personneId,
+      dossierId: avant.dossierId,
+      motif: motif || undefined,
+      changements: [
+        { champ: "statut_bien", avant: avant.statutBien, apres: statut },
+        ...(typeLieu === avant.typeLieu ? [] : [{ champ: "type_lieu", avant: avant.typeLieu, apres: typeLieu }]),
+      ],
+    });
     return hydraterLieu(db.prepare(`SELECT ${COLONNES_LIEU} FROM lieu WHERE id = ?`).get(params.lieuId));
   });
 }
