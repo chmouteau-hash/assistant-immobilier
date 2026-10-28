@@ -1086,3 +1086,41 @@ décisions : une décision ne se rattache aujourd'hui qu'à un scénario ou à u
 Le statut ne paraît ni dans la vue d'ensemble, ni dans « Mes dossiers », ni sur la carte. Le prix
 ne se saisit pas à la création du lieu, seulement ensuite. Quitter le statut « acquis » ne demande
 pas de motif.
+
+## 2026-10-28 — Bâtiment : une surface à lui, et le total des pièces à côté
+
+**Décision.** Deuxième bloc de #2, demandé par Christophe le même jour. Un bâtiment porte sa propre
+surface. Le texte de l'issue fixait déjà la règle : « le total des pièces s'affiche à côté, sans
+remplacer la valeur du bâtiment ».
+
+1. La surface d'un bâtiment est une valeur tracée, comme celle d'une pièce : centièmes de m²
+   entiers, source et confiance, « à renseigner » tant qu'elle n'est pas connue. Elle est positive,
+   une estimation n'est jamais « connue », une source externe (une annonce) non plus.
+2. Elle ne se calcule pas à partir des pièces. L'écran montre, à côté, le total des surfaces
+   renseignées des pièces. Une pièce sans surface ne compte pas pour zéro : le total se dit
+   « partiel » et dit combien de pièces il compte. Il porte la confiance la plus faible de ses
+   pièces (« à confirmer » l'emporte sur « estimé »).
+3. Retirer un bâtiment garde sa surface au journal, avec le reste de ce qui avait été saisi.
+
+**Pourquoi.** Point 2 : la surface d'une annonce ou d'un plan n'est pas la somme des pièces qu'on a
+saisies, et un total qui remplacerait la valeur ferait passer un oubli de pièce pour une surface
+plus petite.
+
+**Conséquences.** Migration 008 : trois colonnes sur `batiment`, avec leurs `CHECK`. Les bâtiments
+déjà saisis restent « à renseigner ». Le total est calculé dans `domain/mesure.ts`. Un test rejoue la
+migration sur une base qui a déjà un bâtiment (`tests/lib/migration-008.test.ts`). L'export complet
+emporte la surface ; l'assistant ne la reçoit pas.
+
+**Correction de l'entrée « Bien » du même jour.** Retirer un lieu ne gardait au journal ni son statut
+ni son prix demandé, ajoutés par la PR #68 : ils y sont maintenant, comme le reste de sa fiche. Et
+un enregistrement du prix demandé, ou de la surface d'un bâtiment, qui ne change rien n'écrit plus
+rien au journal : un formulaire envoyé vide y laissait une ligne « — → — » (vu à l'écran).
+
+**Ce qui n'est pas tranché.** L'assistant reçoit la surface des pièces mais pas celle du bâtiment :
+la lui envoyer serait un choix, qui n'est pas fait ici. La surface ne se saisit pas à la création du
+bâtiment, seulement ensuite. Rien ne signale un total des pièces plus grand que la surface du
+bâtiment. La surface d'une pièce n'a pas, en base, le `CHECK` « une source externe n'est jamais
+connue » que le domaine applique déjà, et que les migrations 007 et 008 posent : l'ajouter
+demanderait de reconstruire la table `piece`, ou un déclencheur comme pour le statut d'un bien. La
+surface d'une pièce, l'adresse et la position d'un lieu écrivent encore une ligne au journal quand
+rien ne change.

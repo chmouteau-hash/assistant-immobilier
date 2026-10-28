@@ -4,7 +4,7 @@ import { autorise } from "@/lib/acces";
 import { listerLieux, listerLieuxVoisins, listerBatiments, listerPieces, objetsNonVides, type Batiment } from "@/lib/structure";
 import { listerReference, libelle } from "@/lib/references";
 import { formaterMontant } from "@/lib/montant";
-import { formaterSurface } from "@/domain/mesure";
+import { decrireTotalSurfaces, formaterSurface, totalSurfacesPieces } from "@/domain/mesure";
 import { TYPE_BIEN_ACQUIS, TYPE_BIEN_CANDIDAT } from "@/domain/bien";
 import { formaterAdresseComplete, formaterCommune, formaterCoordonnee, formaterPosition } from "@/domain/geo";
 import { NOM_SERVICE_GEOCODAGE } from "@/lib/geocodage";
@@ -13,6 +13,7 @@ import {
   actionCreerBatiment,
   actionCreerPiece,
   actionModifierSurface,
+  actionModifierSurfaceBatiment,
   actionModifierAdresse,
   actionModifierPosition,
   actionSituerDepuisAdresse,
@@ -72,6 +73,9 @@ const classeNiveau = "text-xs font-medium uppercase tracking-wide text-neutral-5
 // Le statut a son formulaire, avec un motif pour écarter ou acquérir ; le prix a le sien, parce
 // qu'il porte une provenance. Acquérir un bien candidat le range en « Bien acquis » : le formulaire
 // le dit avant l'envoi (domain/bien.ts).
+//
+// Un bâtiment a sa propre surface, avec sa provenance (issue #2). Le total de ses pièces s'affiche
+// à côté, sans la remplacer, et se dit partiel quand une pièce n'a pas de surface (domain/mesure.ts).
 
 // Comment vider un objet, dit sous la phrase de refus : chaque rattachement se change sur l'écran
 // de ce qui est rattaché.
@@ -201,6 +205,26 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
         <p className="text-neutral-600">
           {b.etat ? `État : ${b.etat}` : "État : à renseigner"} · usage actuel : {b.usageActuel ?? "à renseigner"} · usage envisagé : {b.usageEnvisage ?? "à renseigner"}
         </p>
+        <p>
+          Surface : <Provenance valeur={b.surface} formater={formaterSurface} />
+          <span className="text-neutral-500"> · total des pièces : {decrireTotalSurfaces(totalSurfacesPieces(siennes.map((p) => p.surface)))}</span>
+        </p>
+        {peutEcrire && (
+          <details className="mt-1">
+            <summary className="cursor-pointer text-xs text-neutral-500">Surface du bâtiment</summary>
+            <FormulaireAction action={actionModifierSurfaceBatiment} bouton="Enregistrer" compact className="group mt-1">
+              <input type="hidden" name="dossierId" value={id} />
+              <input type="hidden" name="batimentId" value={b.id} />
+              <Champ label="m² (vide = à renseigner)">
+                <input name="surface" inputMode="decimal" autoComplete="off" className={`${classeSaisie} valeur-tracee w-24`} placeholder="120,5" />
+              </Champ>
+              {champsProvenance("surface")}
+              <Champ label="Motif">
+                <input name="motif" className={classeSaisie} />
+              </Champ>
+            </FormulaireAction>
+          </details>
+        )}
         {peutEcrire && (
           <details className="mt-1">
             <summary className="cursor-pointer text-xs text-neutral-500">Corriger le bâtiment</summary>
