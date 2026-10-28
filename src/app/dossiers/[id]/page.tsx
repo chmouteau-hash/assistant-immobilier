@@ -173,7 +173,7 @@ export default async function PageVueEnsemble({ params }: { params: Promise<{ id
               <div key={cle} className="rounded border border-neutral-200 bg-white p-3">
                 <p className="font-medium">{{ aujourdhui: "Aujourd'hui", aDebloquer: "À débloquer", aExplorer: "À explorer" }[cle]}</p>
                 {classement[cle].length === 0 ? (
-                  <p className="text-neutral-400">Rien.</p>
+                  <p className="text-texte-discret italic">Rien.</p>
                 ) : (
                   <ul className="mt-1 list-disc pl-4">
                     {classement[cle].slice(0, 5).map((t) => (
@@ -227,7 +227,7 @@ export default async function PageVueEnsemble({ params }: { params: Promise<{ id
                 <li key={d.id} className="rounded border border-neutral-200 bg-white px-3 py-2">
                   <span className="font-medium">{d.choix}</span> — {d.motif}
                   {d.conditionsOuvertes && <span className="text-amber-800"> · conditions ouvertes : {d.conditionsOuvertes}</span>}
-                  <span className="ml-2 text-xs text-neutral-400">{formaterDateHeure(d.dateDecision)}</span>
+                  <span className="ml-2 text-xs text-texte-discret italic">{formaterDateHeure(d.dateDecision)}</span>
                 </li>
               ))}
             </ul>

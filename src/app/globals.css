@@ -4,9 +4,25 @@
  * Aucune police n'est téléchargée : le texte s'affiche avec une police du poste. `next/font/google`
  * faisait chercher Geist chez Google par le PC, à la première page compilée sans cache
  * (DECISIONS.md, 2026-10-12). La police se déclare ici, dans le thème, et nulle part ailleurs.
+ *
+ * Les quatre jetons de couleur de la charte graphique (DECISIONS.md, 2026-10-28 ;
+ * charte-graphique/CHARTE.md, § 9) : un rôle, une valeur, écrite ici une seule fois. Tailwind en
+ * tire les classes `bg-accent`, `text-texte-discret`, `border-bordure-champ`… Les valeurs de la
+ * palette sont recopiées de `tailwindcss/theme.css` (4.3.3) plutôt que renvoyées à leur variable,
+ * que Tailwind n'écrit pas dans la feuille quand aucune classe ne l'emploie.
+ * - `accent`, `accent-survol` : bouton principal et onglet courant (cyan-800, cyan-900 ; 7,22:1 et
+ *   9,14:1 avec le blanc).
+ * - `texte-discret` : neutral-500 (4,74:1 sur blanc), toujours en italique pour se distinguer du
+ *   texte d'aide, du même gris.
+ * - `bordure-champ` : hors palette, au seuil de 3:1 sur blanc, sur le fond de page et sur
+ *   neutral-100. Pour les champs de saisie seulement.
  */
 @theme {
   --font-sans: Arial, Helvetica, sans-serif;
+  --color-accent: oklch(45% 0.085 224.283);
+  --color-accent-survol: oklch(39.8% 0.07 227.392);
+  --color-texte-discret: oklch(55.6% 0 none);
+  --color-bordure-champ: #8e8e8e;
 }
 
 /*

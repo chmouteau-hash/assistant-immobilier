@@ -76,7 +76,7 @@ export function FormulaireAction({
         <button
           type="submit"
           disabled={enCours}
-          className="min-h-10 rounded border border-neutral-900 px-3 py-2 font-medium hover:bg-neutral-900 hover:text-white disabled:opacity-50"
+          className="min-h-10 rounded border border-accent bg-accent px-3 py-2 font-medium text-white hover:border-accent-survol hover:bg-accent-survol disabled:opacity-50"
         >
           {enCours ? "…" : bouton}
         </button>

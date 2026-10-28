@@ -259,7 +259,7 @@ export default async function PageLieux({ params, searchParams }: { params: Prom
         {peutEcrire && <div className="mt-1">{blocRetrait("batiment", actionRetirerBatiment, "batimentId", b.id, "Retirer le bâtiment")}</div>}
         <p className="mt-2 text-xs font-medium text-neutral-500">Pièces et espaces</p>
         {siennes.length === 0 ? (
-          <p className="text-xs text-neutral-400">Aucune pièce.</p>
+          <p className="text-xs text-texte-discret italic">Aucune pièce.</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {siennes.map((p) => (

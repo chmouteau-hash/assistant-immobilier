@@ -26,7 +26,7 @@ export function Champ({ label, children, large = false }: { label: string; child
 
 // `max-w-full` : une liste prend la largeur de son choix le plus long. Sans cette borne, une réponse
 // longue la faisait dépasser de l'écran sur un téléphone.
-export const classeSaisie = "min-h-10 max-w-full rounded border border-neutral-300 bg-white px-2 py-1.5";
+export const classeSaisie = "min-h-10 max-w-full rounded border border-bordure-champ bg-white px-2 py-1.5";
 
 // La `key` recrée la liste quand la valeur enregistrée change. Sans elle, React garde le choix de
 // départ du premier affichage puis remet le formulaire à zéro après chaque action : la liste

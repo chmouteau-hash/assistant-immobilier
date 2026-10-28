@@ -8,8 +8,9 @@ modifié pour l'écrire.
   commit : ils bougeront avec le code.
 - **Périmètre** : `src/` et `.storybook/`. Les feuilles de style de Leaflet (la carte) et le fichier
   `index.html` de la racine n'en font pas partie.
-- **Statut** : un relevé, et des choix faits le 2026-10-12 puis le 2026-10-28, pas encore
-  appliqués au code (§ 9). Une règle n'est décidée que lorsqu'elle est écrite dans `DECISIONS.md`.
+- **Statut** : un relevé, et des choix faits le 2026-10-12 puis le 2026-10-28, appliqués au code
+  le 2026-10-28 (§ 9). Le relevé décrit l'état d'avant ; ce qui a changé est signalé là où il
+  se lit. Une règle n'est décidée que lorsqu'elle est écrite dans `DECISIONS.md`.
   Leur application se suit dans l'issue #71.
 - La correspondance complète entre rôles et classes, et l'inventaire chiffré, sont dans
   [jetons.md](jetons.md).
@@ -65,24 +66,33 @@ la colonne « Hex » est **calculée**, puis vérifiée dans un navigateur (mét
 | Fond de carte et de champ | `bg-white` | `#fff` | `#ffffff` | `src/components/TacheItem.tsx:29`, `src/components/ui.tsx:29` |
 | Fond en retrait (synthèse, aperçu, code) | `bg-neutral-100` | `oklch(97% 0 none)` | `#f5f5f5` | `src/app/dossiers/[id]/budget/page.tsx:76` |
 | Fond d'une carte dans une carte | `bg-neutral-50` | `oklch(98.5% 0 none)` | `#fafafa` | `src/app/dossiers/[id]/lieux/page.tsx:180` |
-| Fond inversé (onglet courant, bouton survolé) | `bg-neutral-900` | `oklch(20.5% 0 none)` | `#171717` | `src/components/NavDossier.tsx:52` |
+| Fond inversé (repère d'un lieu sur la carte) | `bg-neutral-900` | `oklch(20.5% 0 none)` | `#171717` | `src/components/CarteLieux.tsx:232` ; l'onglet courant et le bouton principal prennent l'accent depuis le 2026-10-28 |
 | Texte principal | `text-neutral-900` | `oklch(20.5% 0 none)` | `#171717` | `src/app/layout.tsx:22` |
 | Titre de section | `text-neutral-800` | `oklch(26.9% 0 none)` | `#262626` | `src/components/ui.tsx:103` |
 | Texte de pastille neutre | `text-neutral-700` | `oklch(37.1% 0 none)` | `#404040` | `src/components/ui.tsx:91` |
 | Texte secondaire (libellé de champ) | `text-neutral-600` | `oklch(43.9% 0 none)` | `#525252` | `src/components/ui.tsx:21` |
 | Texte d'aide (sous-titre, état vide, métadonnée) | `text-neutral-500` | `oklch(55.6% 0 none)` | `#737373` | `src/components/ui.tsx:104` et `:117` |
-| Texte discret (date, « Rien. », valeur absente) | `text-neutral-400` | `oklch(70.8% 0 none)` | `#a1a1a1` | `src/components/TacheItem.tsx:36` |
-| Texte sur fond inversé | `text-white` | `#fff` | `#ffffff` | `src/components/NavDossier.tsx:52` |
+| Texte discret (date, « Rien. », valeur absente) | `text-texte-discret italic` (jeton) | `oklch(55.6% 0 none)` | `#737373` | `src/components/TacheItem.tsx:36` ; `text-neutral-400` (`#a1a1a1`) jusqu'au 2026-10-28 |
+| Texte sur l'accent | `text-white` | `#fff` | `#ffffff` | `src/components/NavDossier.tsx:52` |
 | Bordure de carte | `border-neutral-200` | `oklch(92.2% 0 none)` | `#e5e5e5` | `src/components/TacheItem.tsx:29` |
 | Séparateur léger | `border-neutral-100` | `oklch(97% 0 none)` | `#f5f5f5` | `src/app/dossiers/[id]/budget/page.tsx:141` |
-| Bordure de champ | `border-neutral-300` | `oklch(87% 0 none)` | `#d4d4d4` | `src/components/ui.tsx:29` |
-| Bordure du bouton principal | `border-neutral-900` | `oklch(20.5% 0 none)` | `#171717` | `src/components/FormulaireAction.tsx:79` |
+| Bordure de champ | `border-bordure-champ` (jeton) | `#8e8e8e` | `#8e8e8e` | `src/components/ui.tsx:29` ; `border-neutral-300` (`#d4d4d4`) jusqu'au 2026-10-28 |
+| Cadre en pointillé d'un formulaire, filet de la frise | `border-neutral-300` | `oklch(87% 0 none)` | `#d4d4d4` | `src/components/FormulaireAction.tsx:70`, `src/app/dossiers/[id]/actions/page.tsx:72` |
+
+### L'accent (depuis le 2026-10-28)
+
+| Rôle | Classe | Valeur | Hex | Emploi |
+| --- | --- | --- | --- | --- |
+| Bouton principal, onglet courant | `bg-accent`, `border-accent` (jeton) | `oklch(45% 0.085 224.283)` (`cyan-800`) | `#005f78` | `src/components/FormulaireAction.tsx:79`, `src/components/RechercheEndroit.tsx:59`, `src/components/NavDossier.tsx:52` |
+| Bouton principal survolé | `hover:bg-accent-survol` (jeton) | `oklch(39.8% 0.07 227.392)` (`cyan-900`) | `#104e64` | mêmes boutons |
 
 Deux remarques lues dans ce tableau :
 
 - `bg-neutral-50` tient deux rôles (la page, et une carte posée dans une carte blanche). C'est
   exactement ce qu'un jeton distingue.
-- `text-neutral-400` n'atteint pas le contraste demandé (§ 8).
+- Les jetons se déclarent dans le bloc `@theme` de `src/app/globals.css` ; un test lit le code
+  source et échoue si `text-neutral-400` revient, si un texte discret perd son italique ou si un
+  jeton disparaît (`tests/composants/charte-graphique.test.ts`).
 
 ### Couleurs d'état
 
@@ -112,9 +122,9 @@ calculées de `neutral-900` et `neutral-50`.
 
 ### Ce qui n'existe pas
 
-- **Pas de couleur d'accent** : aucune teinte ne signale « l'action à faire ». Le bouton principal
-  est un contour gris foncé qui se remplit au survol. Décidé le 2026-10-12 : l'application en aura
-  une ; choisie le 2026-10-28 : le bleu pétrole, `cyan-800` (§ 9). Rien n'est encore appliqué.
+- ~~Pas de couleur d'accent~~ : jusqu'au 2026-10-28, aucune teinte ne signalait « l'action à
+  faire » et le bouton principal était un contour gris foncé. Depuis, le bleu pétrole (`cyan-800`)
+  marque le bouton principal et l'onglet courant (voir « L'accent » ci-dessus, et § 9).
 - **Pas de thème sombre** : `color-scheme: light` (`src/app/globals.css`, lignes 13 à 20).
 
 ## 3. Typographie
@@ -178,8 +188,9 @@ Storybook (`npm run storybook`) montre chacun d'eux seul, dans ses états.
 
 Trois apparences de bouton existent :
 
-1. **Bouton principal** : `min-h-10 rounded border border-neutral-900 px-3 py-2 font-medium
-   hover:bg-neutral-900 hover:text-white disabled:opacity-50`. Écrit deux fois, à l'identique :
+1. **Bouton principal** : `min-h-10 rounded border border-accent bg-accent px-3 py-2 font-medium
+   text-white hover:border-accent-survol hover:bg-accent-survol disabled:opacity-50` depuis le
+   2026-10-28 (un contour `neutral-900` auparavant). Écrit deux fois, à l'identique :
    `src/components/FormulaireAction.tsx:79` et `src/components/RechercheEndroit.tsx:59`.
 2. **Petit bouton** : `rounded border border-neutral-400 px-2 py-1 text-xs hover:bg-neutral-100`
    (`src/app/page.tsx:67`, un seul emploi).
@@ -296,13 +307,16 @@ Critères 1.4.3 (texte) et 1.4.11 (éléments d'interface) de WCAG 2.2, niveau A
 | `red-600` sur `red-50` | `#e7000b` / `#fef2f2` | 4,36 | **non** | voir écarts |
 | `neutral-400` sur `neutral-100` | `#a1a1a1` / `#f5f5f5` | 2,36 | **non** | voir écarts |
 
-### Écarts connus, non corrigés
+### Écarts connus
 
-Deux de ces écarts ont une décision depuis le 2026-10-12, et leur valeur depuis le 2026-10-28
-(§ 9) : le texte discret (A) et la bordure des champs (première ligne de C). Aucun n'est encore
-corrigé dans le code.
+Deux de ces écarts sont **corrigés depuis le 2026-10-28** (§ 9) : le texte discret (A), passé à
+`neutral-500` en italique, 4,74:1 sur blanc et 4,54:1 sur le fond de page ; la bordure des champs
+(première ligne de C), passée à `#8e8e8e`, 3,27:1 sur blanc. Valeurs mesurées à l'écran, dans
+Chrome, le 2026-10-28. Les autres écarts restent sans décision.
 
-**A. `text-neutral-400` sur du texte : 14 emplois, tous sous 4,5:1.**
+**A. `text-neutral-400` sur du texte : 14 emplois, tous sous 4,5:1.** Corrigé le 2026-10-28 :
+les 14 emplois sont passés au texte discret. Sur `neutral-100` (tiret d'un montant absent dans la
+synthèse du budget), il n'atteint que 4,34:1 : voir B.
 
 | Fichier et ligne | Texte | Fond | Ratio |
 | --- | --- | --- | --- |
@@ -334,16 +348,16 @@ corrigé dans le code.
 
 | Fichier et ligne | Élément | Ratio | À noter |
 | --- | --- | --- | --- |
-| `src/components/ui.tsx:29` | bordure d'un champ, `border-neutral-300` sur `bg-white` | 1,48 | le champ ne se distingue de sa carte que par ce trait |
+| `src/components/ui.tsx:29` | bordure d'un champ, `border-neutral-300` sur `bg-white` | 1,48 | **corrigé le 2026-10-28** : `#8e8e8e`, 3,27 |
 | `src/app/page.tsx:67` | bordure du petit bouton, `border-neutral-400` sur `white` | 2,58 | son texte, lui, est conforme |
 | `src/app/dossiers/[id]/actions/page.tsx:75` | points de la frise sur la page : vert 2,12 ; ambre 2,04 ; gris 2,47 (le rouge, 3,64, est conforme) | 2,04 à 2,47 | « en retard » et « fait » sont aussi dits par une pastille (lignes 77 et 79) |
 
-**D. Conformes de justesse**, à surveiller si un fond change : `text-neutral-500` sur le fond de
-page (4,54 ; 78 emplois de cette classe au total) et `text-red-600` sur le fond de page (4,56).
+**D. Conformes de justesse**, à surveiller si un fond change : `text-neutral-500` et le texte
+discret, du même gris, sur le fond de page (4,54 ; 82 et 14 emplois au 2026-10-28) et `text-red-600` sur le fond de page (4,56).
 
 ## 9. Décisions
 
-### Prises le 2026-10-12, pas encore appliquées au code
+### Prises le 2026-10-12
 
 Elles sont écrites dans `DECISIONS.md`, à cette date.
 
@@ -355,10 +369,12 @@ Elles sont écrites dans `DECISIONS.md`, à cette date.
 5. **Noms en français** : ce dossier s'appelle `charte-graphique/`, son second fichier
    `jetons.md`.
 
-### Prises le 2026-10-28, pas encore appliquées au code
+### Prises le 2026-10-28, appliquées le même jour
 
 Elles sont écrites dans `DECISIONS.md`, à cette date, après comparaison des options dans Storybook.
-Leur application se suit dans l'issue #71.
+Elles sont appliquées par le bloc 2 de l'issue #71 : quatre jetons dans le bloc `@theme` de
+`src/app/globals.css`, employés par le bouton principal, l'onglet courant, les 14 textes discrets et
+la classe des champs.
 
 1. **Couleur d'accent : le bleu pétrole**, `cyan-800` (`#005f78`) : 7,22:1 sur blanc, 6,91:1 sur
    le fond de page, 6,62:1 sur `neutral-100`. Au survol : `cyan-900` (`#104e64`, 9,14:1 sur blanc).

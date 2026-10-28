@@ -70,9 +70,9 @@ Application Next.js (App Router) locale, mono-poste, sans authentification. Troi
 
 - Base SQLite en mémoire, une seule connexion partagée (`fileParallelism: false`). Un test qui touche la base appelle `reinitialiserBasePourTests()` dans `beforeEach`, puis appelle `lib` directement avec un `Acteur` écrit à la main : Next.js n'est pas nécessaire.
 - `next/headers` et `next/navigation` n'existent que pendant une requête : un test qui en dépend les remplace (modèle : `tests/lib/sections-interdites.test.ts`).
-- Deux tests lisent le code source et échouent sur un oubli. Un `<select>` dont `defaultValue` est calculé doit porter une `key` (issue #16). Une page de section doit appeler `obtenirActeurPourSection` (issue #20).
-- Un troisième garde Storybook (`tests/outillage/storybook.test.ts`) : écoute sur le PC seul, rien vers son éditeur, données privées refusées par son serveur.
-- Un quatrième garde le contrôle des migrations (`tests/outillage/migrations.test.ts`) : il joue `scripts/controle-migrations.mjs` sur un dépôt git jetable, hors du projet.
+- Trois tests lisent le code source et échouent sur un oubli. Un `<select>` dont `defaultValue` est calculé doit porter une `key` (issue #16). Une page de section doit appeler `obtenirActeurPourSection` (issue #20). La charte graphique (`tests/composants/charte-graphique.test.ts`, issue #71) : pas de `text-neutral-400`, un texte discret toujours en italique, les quatre jetons de couleur déclarés dans `@theme` (`src/app/globals.css`).
+- Un autre test garde Storybook (`tests/outillage/storybook.test.ts`) : écoute sur le PC seul, rien vers son éditeur, données privées refusées par son serveur.
+- Un dernier garde le contrôle des migrations (`tests/outillage/migrations.test.ts`) : il joue `scripts/controle-migrations.mjs` sur un dépôt git jetable, hors du projet.
 
 ### Storybook
 

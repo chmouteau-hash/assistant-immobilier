@@ -121,7 +121,7 @@ export default async function PageDocument({ params }: { params: Promise<{ id: s
               <li key={e.id} className="flex flex-wrap items-center gap-2">
                 <span className="w-56 text-neutral-600">{LIBELLES_CHAMP[e.champ]}</span>
                 <span className="font-medium">{e.valeurValidee ?? "—"}</span>
-                {e.statut === "corrigee" && <span className="text-xs text-neutral-400">(proposé : {e.valeurProposee})</span>}
+                {e.statut === "corrigee" && <span className="text-xs text-texte-discret italic">(proposé : {e.valeurProposee})</span>}
                 <EtiquetteSourceConfiance source={e.source} confiance={e.confiance} />
                 <Pastille ton={e.statut === "rejetee" ? "neutre" : "ok"}>{libelle(statutsExtraction, e.statut)}</Pastille>
               </li>

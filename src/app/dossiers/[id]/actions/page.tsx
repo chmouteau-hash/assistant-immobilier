@@ -42,7 +42,7 @@ export default async function PageActions({ params }: { params: Promise<{ id: st
             <div key={cle}>
               <p className="mb-1 text-sm font-medium">{titre}</p>
               {classement[cle].length === 0 ? (
-                <p className="text-xs text-neutral-400">Rien.</p>
+                <p className="text-xs text-texte-discret italic">Rien.</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {classement[cle].map((t) => (

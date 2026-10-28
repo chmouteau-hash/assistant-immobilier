@@ -5,12 +5,12 @@ charte, que le reste du code réutilise au lieu de réécrire la valeur. Ce fich
 rôle, quelle classe Tailwind le tient aujourd'hui, et dans quel fichier le voir.
 
 - **Relevé du 2026-10-12**, sur le commit `22d2300` de `main`, dans `src/` et `.storybook/`.
-- **Aujourd'hui, le projet n'a qu'un jeton** : `--font-sans`, dans le bloc `@theme` de
-  `src/app/globals.css` (ligne 9). Tout le reste est une classe de la palette par défaut de
-  Tailwind, écrite dans les pages et les composants.
+- **Au relevé, le projet n'avait qu'un jeton** : `--font-sans`, dans le bloc `@theme` de
+  `src/app/globals.css`. Tout le reste était une classe de la palette par défaut de Tailwind,
+  écrite dans les pages et les composants.
 - **Les noms de rôle de la première colonne sont des propositions.** Aucun n'existe dans le code.
-- **Quatre jetons sont décidés le 2026-10-28** (`DECISIONS.md`, CHARTE.md § 9), pas encore
-  déclarés : `accent` (`cyan-800`, `#005f78`) et `accent-survol` (`cyan-900`, `#104e64`), pour le
+- **Quatre jetons de couleur sont décidés et déclarés le 2026-10-28** (`DECISIONS.md`, CHARTE.md
+  § 9), dans le même bloc `@theme` : `accent` (`cyan-800`, `#005f78`) et `accent-survol` (`cyan-900`, `#104e64`), pour le
   bouton principal et l'onglet courant ; `texte-discret` (`neutral-500`, `#737373`, en italique) ;
   `bordure-champ` (`#8e8e8e`, hors palette), pour les champs de saisie seulement. Les autres rôles
   gardent leurs classes.
@@ -27,7 +27,7 @@ rôle, quelle classe Tailwind le tient aujourd'hui, et dans quel fichier le voir
 | `fond-carte-imbriquee` | `bg-neutral-50` | `#fafafa` | `src/app/dossiers/[id]/lieux/page.tsx:180` ; `src/components/CarteLieux.tsx:359` et `:382` | 3 |
 | `fond-retrait` | `bg-neutral-100` | `#f5f5f5` | `src/app/dossiers/[id]/budget/page.tsx:76` ; aussi `src/app/dossiers/[id]/assistant/page.tsx:85`, `src/app/page.tsx:49`, `src/components/CarteLieux.tsx:327` | 4 |
 | `fond-barre-onglets` | `bg-neutral-50/95` | `#fafafa` à 95 % | `src/components/NavDossier.tsx:40` | 1 |
-| `fond-inverse` | `bg-neutral-900` | `#171717` | `src/components/NavDossier.tsx:52` ; au survol : `src/components/FormulaireAction.tsx:79`, `src/components/RechercheEndroit.tsx:59` | 3 |
+| `fond-inverse` | `bg-neutral-900` | `#171717` | `src/components/CarteLieux.tsx:232` (repère d'un lieu) ; l'onglet courant et le bouton principal prennent le jeton `accent` depuis le 2026-10-28 | 3 |
 | `fond-survol` | `hover:bg-neutral-200`, `hover:bg-neutral-100` | `#e5e5e5`, `#f5f5f5` | `src/components/NavDossier.tsx:52` ; `src/app/page.tsx:67` | 1 + 1 |
 
 ## Textes
@@ -38,12 +38,12 @@ rôle, quelle classe Tailwind le tient aujourd'hui, et dans quel fichier le voir
 | `texte-titre-section` | `text-neutral-800` | `#262626` | `src/components/ui.tsx:103` | 3 |
 | `texte-secondaire` | `text-neutral-600` | `#525252` | `src/components/ui.tsx:21` (libellé de champ) | 34 |
 | `texte-aide` | `text-neutral-500` | `#737373` | `src/components/ui.tsx:104` (sous-titre) et `:117` (état vide) | 78 |
-| `texte-discret` | `text-neutral-400` | `#a1a1a1` | `src/components/TacheItem.tsx:36` | 14 |
+| `texte-discret` | `text-texte-discret italic` (jeton, depuis le 2026-10-28 ; `text-neutral-400` avant) | `#737373` | `src/components/TacheItem.tsx:36` | 14 |
 | `texte-inverse` | `text-white` | `#ffffff` | `src/components/NavDossier.tsx:52` | 3 |
 | `texte-case-a-cocher` | `text-neutral-700` | `#404040` | `src/components/RechercheEndroit.tsx:79`, `src/components/CarteLieux.tsx:394` | 2 |
 
-`texte-discret` n'atteint pas le contraste demandé (2,58:1 sur blanc pour 4,5:1 attendu) : ses 14
-emplois sont listés dans [CHARTE.md](CHARTE.md), § 8.
+`texte-discret` n'atteignait pas le contraste demandé (2,58:1 sur blanc pour 4,5:1 attendu) ; ses
+14 emplois, listés dans [CHARTE.md](CHARTE.md), § 8, sont à 4,74:1 sur blanc depuis le 2026-10-28.
 
 ## Bordures
 
@@ -51,8 +51,8 @@ emplois sont listés dans [CHARTE.md](CHARTE.md), § 8.
 | --- | --- | --- | --- | --- |
 | `bordure-carte` | `border-neutral-200` | `#e5e5e5` | `src/app/dossiers/[id]/page.tsx` et `src/app/dossiers/[id]/lieux/page.tsx` (4 emplois chacun) | 25 |
 | `bordure-separateur` | `border-neutral-100` | `#f5f5f5` | `src/app/dossiers/[id]/budget/page.tsx:141` et `:206` | 5 |
-| `bordure-champ` | `border-neutral-300` | `#d4d4d4` | `src/components/ui.tsx:29` ; aussi le cadre pointillé (`src/components/FormulaireAction.tsx:70`) et le filet de la frise (`src/app/dossiers/[id]/actions/page.tsx:72`) | 3 |
-| `bordure-bouton-principal` | `border-neutral-900` | `#171717` | `src/components/FormulaireAction.tsx:79`, `src/components/RechercheEndroit.tsx:59` | 2 |
+| `bordure-champ` | `border-bordure-champ` (jeton, depuis le 2026-10-28 ; `border-neutral-300` avant) | `#8e8e8e` | `src/components/ui.tsx:29` ; le cadre pointillé (`src/components/FormulaireAction.tsx:70`) et le filet de la frise (`src/app/dossiers/[id]/actions/page.tsx:72`) gardent `border-neutral-300` | 1 |
+| `bordure-bouton-principal` | `border-accent` (jeton `accent`, depuis le 2026-10-28 ; `border-neutral-900` avant) | `#005f78` | `src/components/FormulaireAction.tsx:79`, `src/components/RechercheEndroit.tsx:59` | 2 |
 | `bordure-bouton-secondaire` | `border-neutral-400` | `#a1a1a1` | `src/app/page.tsx:67` ; au survol d'un dossier : `src/app/dossiers/page.tsx:38` | 2 |
 
 ## États

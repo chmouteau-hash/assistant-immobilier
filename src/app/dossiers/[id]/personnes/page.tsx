@@ -42,7 +42,7 @@ export default async function PagePersonnes({ params }: { params: Promise<{ id: 
                 <p>
                   <span className="font-medium">{p.personneNom}</span>
                   {p.profession && <span className="text-neutral-500"> · {p.profession}</span>}
-                  {p.personneId === acteur.personneId && <span className="text-xs text-neutral-400"> (vous)</span>}
+                  {p.personneId === acteur.personneId && <span className="text-xs text-texte-discret italic"> (vous)</span>}
                 </p>
                 <Pastille ton={p.revoqueeLe ? "neutre" : p.role === "proprietaire" ? "ok" : "attention"}>
                   {p.revoqueeLe ? `révoqué le ${formaterDateHeure(p.revoqueeLe)}` : libelle(roles, p.role)}

@@ -15,10 +15,10 @@ function Colonne({ titre, sousTitre, taches, statuts }: { titre: string; sousTit
     <section className="flex flex-1 flex-col gap-2">
       <div>
         <h2 className="font-semibold">{titre}</h2>
-        <p className="text-xs text-neutral-400">{sousTitre}</p>
+        <p className="text-xs text-texte-discret italic">{sousTitre}</p>
       </div>
       {taches.length === 0 ? (
-        <p className="text-sm text-neutral-400">Rien ici.</p>
+        <p className="text-sm text-texte-discret italic">Rien ici.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {taches.map((t) => (
