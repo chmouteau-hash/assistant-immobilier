@@ -56,6 +56,8 @@ export type Batiment = {
   usageActuel: string | null;
   usageEnvisage: string | null;
   etat: string | null;
+  /** Centièmes de m² : la surface du bâtiment, pas la somme de ses pièces (issue #2). */
+  surface: ValeurTracee<number>;
   description: string | null;
   source: string;
   createdAt: string;
@@ -91,6 +93,11 @@ export function construireValeurTracee<T>(
   const verdict = validerValeurTracee(v);
   if (!verdict.valide) throw invalide(verdict.motif);
   return v;
+}
+
+/** Même valeur, même source, même confiance : rien ne change. */
+function memeValeurTracee<T>(a: ValeurTracee<T>, b: ValeurTracee<T>): boolean {
+  return a.valeur === b.valeur && a.source === b.source && a.confiance === b.confiance;
 }
 
 // --- Garde-fous partagés par la création et la correction ---------------------------------------------
@@ -483,6 +490,7 @@ export function modifierPrixDemandeLieu(
     throw invalide("Le prix demandé doit être un montant positif, en euros (deux décimales au plus).");
   }
   const prix = construireValeurTracee<number>(params.prixCentimes, params.prixSource, params.prixConfiance);
+  if (memeValeurTracee(prix, avant.prixDemande)) return avant;
 
   return transaction((db) => {
     db.prepare(`UPDATE lieu SET prix_demande_centimes = ?, prix_demande_source = ?, prix_demande_confiance = ? WHERE id = ?`).run(prix.valeur, prix.source, prix.confiance, params.lieuId);
@@ -541,13 +549,18 @@ export function changerStatutBien(acteur: Acteur, params: { lieuId: string; stat
 
 // --- Bâtiments -------------------------------------------------------------------------------------
 
-const COLONNES_BATIMENT = `id, dossier_id, lieu_id, nom, type, usage_actuel, usage_envisage, etat, description, source, created_at`;
+const COLONNES_BATIMENT = `id, dossier_id, lieu_id, nom, type, usage_actuel, usage_envisage, etat, surface_centiemes, surface_source, surface_confiance, description, source, created_at`;
+
+type BatimentBrut = Omit<Batiment, "surface"> & { surfaceCentiemes: number | null; surfaceSource: Source | null; surfaceConfiance: Confiance };
+
+function hydraterBatiment(ligne: unknown): Batiment {
+  const { surfaceCentiemes, surfaceSource, surfaceConfiance, ...reste } = versObjet<BatimentBrut>(ligne as Record<string, unknown>);
+  return { ...reste, surface: { valeur: surfaceCentiemes, source: surfaceSource, confiance: surfaceConfiance } };
+}
 
 export function listerBatiments(acteur: Acteur, dossierId: string): Batiment[] {
   exiger(acteur, dossierId, "lire", "lieux");
-  return versObjets<Batiment>(
-    obtenirBase().prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE dossier_id = ? ORDER BY created_at`).all(dossierId),
-  );
+  return (obtenirBase().prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE dossier_id = ? ORDER BY created_at`).all(dossierId) as unknown[]).map(hydraterBatiment);
 }
 
 export function creerBatiment(
@@ -587,7 +600,7 @@ export function creerBatiment(
       params.description?.trim() || null,
     );
     enregistrerEvenement(db, { nomEntite: "batiment", entiteId: id, action: "creation", acteurId: acteur.personneId, dossierId: params.dossierId });
-    return versObjet<Batiment>(db.prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(id) as Record<string, unknown>);
+    return hydraterBatiment(db.prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(id));
   });
 }
 
@@ -601,7 +614,7 @@ export function modifierBatiment(
 ): Batiment {
   const ligne = obtenirBase().prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId);
   if (!ligne) throw interdit();
-  const avant = versObjet<Batiment>(ligne as Record<string, unknown>);
+  const avant = hydraterBatiment(ligne);
   exiger(acteur, avant.dossierId, "ecrire", "lieux");
   const apres = {
     nom: params.nom === undefined ? avant.nom : nomExige(params.nom, "Le nom du bâtiment est obligatoire."),
@@ -630,7 +643,7 @@ export function modifierBatiment(
       params.batimentId,
     );
     enregistrerEvenement(db, { nomEntite: "batiment", entiteId: params.batimentId, action: "modification", acteurId: acteur.personneId, dossierId: avant.dossierId, changements });
-    return versObjet<Batiment>(db.prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId) as Record<string, unknown>);
+    return hydraterBatiment(db.prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId));
   });
 }
 
@@ -641,7 +654,7 @@ export function modifierBatiment(
 export function rattacherBatiment(acteur: Acteur, params: { batimentId: string; lieuId: string }): Batiment {
   const ligne = obtenirBase().prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId);
   if (!ligne) throw interdit();
-  const avant = versObjet<Batiment>(ligne as Record<string, unknown>);
+  const avant = hydraterBatiment(ligne);
   exiger(acteur, avant.dossierId, "ecrire", "lieux");
   if (params.lieuId === "") throw invalide("Choisissez le lieu auquel rattacher le bâtiment.");
   const lieu = obtenirBase().prepare(`SELECT dossier_id FROM lieu WHERE id = ?`).get(params.lieuId) as { dossier_id: string } | undefined;
@@ -658,7 +671,46 @@ export function rattacherBatiment(acteur: Acteur, params: { batimentId: string; 
       dossierId: avant.dossierId,
       changements: [{ champ: "lieu_id", avant: avant.lieuId, apres: params.lieuId }],
     });
-    return versObjet<Batiment>(db.prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId) as Record<string, unknown>);
+    return hydraterBatiment(db.prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId));
+  });
+}
+
+/**
+ * Renseigner, corriger ou effacer la surface d'un bâtiment (issue #2). Même règle que la surface
+ * d'une pièce : c'est une provenance, tracée avec avant/après. Elle ne dépend pas des pièces :
+ * l'écran montre leur total à côté, sans le substituer à cette valeur.
+ */
+export function modifierSurfaceBatiment(
+  acteur: Acteur,
+  params: { batimentId: string; surfaceCentiemes: number | null; surfaceSource?: string; surfaceConfiance?: string; motif?: string },
+): Batiment {
+  const ligne = obtenirBase().prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId);
+  if (!ligne) throw interdit();
+  const avant = hydraterBatiment(ligne);
+  exiger(acteur, avant.dossierId, "ecrire", "lieux");
+  if (params.surfaceCentiemes !== null && (!Number.isInteger(params.surfaceCentiemes) || params.surfaceCentiemes <= 0)) {
+    throw invalide("La surface doit être un nombre positif (en m², deux décimales au plus).");
+  }
+  const surface = construireValeurTracee<number>(params.surfaceCentiemes, params.surfaceSource, params.surfaceConfiance);
+  // Un enregistrement qui ne change rien n'écrit rien : le journal ne garde que des changements.
+  if (memeValeurTracee(surface, avant.surface)) return avant;
+
+  return transaction((db) => {
+    db.prepare(`UPDATE batiment SET surface_centiemes = ?, surface_source = ?, surface_confiance = ? WHERE id = ?`).run(surface.valeur, surface.source, surface.confiance, params.batimentId);
+    enregistrerEvenement(db, {
+      nomEntite: "batiment",
+      entiteId: params.batimentId,
+      action: "modification",
+      acteurId: acteur.personneId,
+      dossierId: avant.dossierId,
+      motif: params.motif?.trim() || undefined,
+      changements: [
+        { champ: "surface_centiemes", avant: avant.surface.valeur, apres: surface.valeur },
+        { champ: "surface_source", avant: avant.surface.source, apres: surface.source },
+        { champ: "surface_confiance", avant: avant.surface.confiance, apres: surface.confiance },
+      ],
+    });
+    return hydraterBatiment(db.prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId));
   });
 }
 
@@ -911,6 +963,10 @@ export function retirerLieu(acteur: Acteur, params: { lieuId: string }): void {
   retirer(acteur, "lieu", l, {
     nom: l.nom,
     type_lieu: l.typeLieu,
+    statut_bien: l.statutBien,
+    prix_demande_centimes: l.prixDemande.valeur,
+    prix_demande_source: l.prixDemande.source,
+    prix_demande_confiance: l.prixDemande.valeur === null ? null : l.prixDemande.confiance,
     adresse: l.adresse.valeur,
     adresse_source: l.adresse.source,
     adresse_confiance: l.adresse.valeur === null ? null : l.adresse.confiance,
@@ -931,7 +987,7 @@ export function retirerLieu(acteur: Acteur, params: { lieuId: string }): void {
 export function retirerBatiment(acteur: Acteur, params: { batimentId: string }): void {
   const ligne = obtenirBase().prepare(`SELECT ${COLONNES_BATIMENT} FROM batiment WHERE id = ?`).get(params.batimentId);
   if (!ligne) throw interdit();
-  const b = versObjet<Batiment>(ligne as Record<string, unknown>);
+  const b = hydraterBatiment(ligne);
   retirer(acteur, "batiment", b, {
     nom: b.nom,
     lieu_id: b.lieuId,
@@ -939,6 +995,9 @@ export function retirerBatiment(acteur: Acteur, params: { batimentId: string }):
     etat: b.etat,
     usage_actuel: b.usageActuel,
     usage_envisage: b.usageEnvisage,
+    surface_centiemes: b.surface.valeur,
+    surface_source: b.surface.source,
+    surface_confiance: b.surface.valeur === null ? null : b.surface.confiance,
     description: b.description,
   });
 }

@@ -326,6 +326,12 @@ export async function actionModifierSurface(_e: EtatFormulaire, fd: FormData): P
   });
 }
 
+export async function actionModifierSurfaceBatiment(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
+  return executer(texte(fd, "dossierId"), (acteur) => {
+    structure.modifierSurfaceBatiment(acteur, { batimentId: texte(fd, "batimentId"), surfaceCentiemes: surfaceDepuis(fd), surfaceSource: texte(fd, "surfaceSource"), surfaceConfiance: texte(fd, "surfaceConfiance"), motif: texte(fd, "motif") });
+  });
+}
+
 export async function actionRetirerLieu(_e: EtatFormulaire, fd: FormData): Promise<EtatFormulaire> {
   return executer(texte(fd, "dossierId"), (acteur) => {
     structure.retirerLieu(acteur, { lieuId: texte(fd, "lieuId") });
