@@ -1124,3 +1124,51 @@ connue » que le domaine applique déjà, et que les migrations 007 et 008 posen
 demanderait de reconstruire la table `piece`, ou un déclencheur comme pour le statut d'un bien. La
 surface d'une pièce, l'adresse et la position d'un lieu écrivent encore une ligne au journal quand
 rien ne change.
+
+## 2026-10-28 — Charte graphique : un accent bleu pétrole, et les points ouverts tranchés
+
+**Décision.** Christophe a pris les décisions du bloc 1 de #71 après avoir vu les options côte à
+côte dans Storybook, avec leur contraste calculé (méthode de `charte-graphique/CHARTE.md`, § 8).
+Elles complètent l'entrée « Charte graphique » du 2026-10-12 et ne sont pas encore appliquées.
+
+1. **Couleur d'accent : le bleu pétrole**, `cyan-800` de la palette Tailwind (`#005f78`) : 7,22:1
+   sur blanc, 6,91:1 sur le fond de page, 6,62:1 sur `neutral-100`. Au survol, `cyan-900`
+   (`#104e64`, 9,14:1 sur blanc). Écartés : la sarcelle (`teal-700`), trop proche du vert des
+   pastilles « connu » ; le bleu nuit (`blue-800`), qui aurait demandé de revoir la règle du bleu ;
+   l'ardoise (`slate-700`), à peine distincte du gris foncé actuel.
+2. **Elle marque le bouton principal et l'onglet courant.** Les liens restent de la couleur du
+   texte, soulignés.
+3. **Deux niveaux de texte, un même gris.** « Aide » et « discret » prennent `neutral-500`
+   (4,74:1 sur blanc, 4,54:1 sur le fond de page) ; le discret se distingue par l'italique. Seuls
+   les 14 emplois de `text-neutral-400` sur du texte changent.
+4. **Bordure des champs : `#8e8e8e`**, une valeur hors de la palette, juste au seuil de 3:1 sur les
+   trois fonds (3,27 sur blanc, 3,13 sur le fond de page, 3,00 sur `neutral-100`). Elle vaut pour
+   les champs de saisie (`classeSaisie`), pas pour le cadre en pointillé des formulaires ni pour le
+   filet de la frise, qui emploient aujourd'hui la même classe.
+5. **Méthode : des jetons pour ce qui change.** Quatre jetons dans le bloc `@theme` de
+   `src/app/globals.css` : `accent`, `accent-survol`, `texte-discret` et `bordure-champ` (noms
+   repris de `charte-graphique/jetons.md`). Les autres rôles gardent leurs classes jusqu'à ce
+   qu'ils changent à leur tour.
+6. **Les quatre interdits proposés sont retenus** : pas de `text-neutral-400` sur un texte qu'il
+   faut pouvoir lire ; pas de teinte nouvelle sans un rôle écrit dans la charte ; le violet reste à
+   l'assistant et le bleu clair (`sky`) aux biens des autres dossiers, le bleu pétrole de l'accent
+   étant un rôle à part ; jamais un état dit par la couleur seule, sans mot ni pastille.
+7. **Le public est celui du cadrage** : un particulier d'abord, des professionnels invités ensuite
+   (`docs/01-cadrage.md`). « Sérieux » et « sobriété » restent les intentions de la charte.
+
+**Pourquoi.** Point 1 : la teinte devait atteindre 4,5:1 sur les trois fonds et ne pas reprendre
+une couleur déjà réservée à un état. Point 3 : sur le fond de page, `neutral-500` est déjà le gris
+le plus clair qui atteint 4,5:1 ; foncer le niveau « aide » aurait changé 96 emplois et l'aurait
+confondu avec le texte secondaire. Point 4 : `neutral-500` (4,74:1) aurait nettement foncé tous les
+champs ; `#8e8e8e` garde l'apparence la plus proche de l'actuelle. Point 5 : un jeton est
+indispensable pour une valeur hors palette, et changer une teinte ne demandera qu'une ligne.
+
+**Conséquences.** `charte-graphique/CHARTE.md` (§ 1, 2, 7 et 9) et `jetons.md` sont mis à jour.
+Le bloc 2 de #71 peut commencer : déclarer les quatre jetons, puis les employer. L'interdit du gris
+pâle appelle le test-garde prévu au bloc « Transversal » de #71. Rien ne change encore à l'écran.
+Les planches de choix ne sont pas versées au dépôt.
+
+**Ce qui n'est pas tranché.** Sur `neutral-100` (synthèse du budget, aperçu de l'assistant),
+`neutral-500` n'atteint que 4,34:1 : le texte discret ou d'aide qui s'y trouve reste sous le seuil
+(écart déjà noté au § 8 B de la charte, bloc 3 de #71). Les autres écarts du § 8 restent sans
+décision. Le cadre en pointillé des formulaires et le filet de la frise gardent `neutral-300`.

@@ -8,8 +8,9 @@ modifié pour l'écrire.
   commit : ils bougeront avec le code.
 - **Périmètre** : `src/` et `.storybook/`. Les feuilles de style de Leaflet (la carte) et le fichier
   `index.html` de la racine n'en font pas partie.
-- **Statut** : un relevé, des choix faits le 2026-10-12 et pas encore appliqués au code (§ 9), et
-  des règles _proposées_. Une règle n'est décidée que lorsqu'elle est écrite dans `DECISIONS.md`.
+- **Statut** : un relevé, et des choix faits le 2026-10-12 puis le 2026-10-28, pas encore
+  appliqués au code (§ 9). Une règle n'est décidée que lorsqu'elle est écrite dans `DECISIONS.md`.
+  Leur application se suit dans l'issue #71.
 - La correspondance complète entre rôles et classes, et l'inventaire chiffré, sont dans
   [jetons.md](jetons.md).
 
@@ -41,9 +42,10 @@ professionnels**. Ce que le code fait déjà dans ce sens (lu) :
 - **Densité de lecture.** Le texte est petit : `text-xs` (82 emplois) et `text-sm` (58 emplois)
   dominent ; les titres ne dépassent pas `text-2xl`.
 
-**Point à confirmer.** La note de cadrage décrit d'abord « un particulier », les professionnels
-entrant « plus tard » sur un périmètre choisi (`docs/01-cadrage.md`, lignes 8 à 12). « Public de
-professionnels » ne dit pas la même chose : voir § 9.
+**Public : tranché le 2026-10-28.** C'est celui de la note de cadrage : un particulier d'abord,
+des professionnels invités ensuite sur un périmètre choisi (`docs/01-cadrage.md`, lignes 8 à 12).
+« Sérieux » et « sobriété » restent les intentions de la charte ; « public de professionnels », donné
+au départ, ne l'est plus.
 
 ## 2. Palette par rôle
 
@@ -112,7 +114,7 @@ calculées de `neutral-900` et `neutral-50`.
 
 - **Pas de couleur d'accent** : aucune teinte ne signale « l'action à faire ». Le bouton principal
   est un contour gris foncé qui se remplit au survol. Décidé le 2026-10-12 : l'application en aura
-  une (§ 9). La teinte n'est pas choisie, rien n'est appliqué.
+  une ; choisie le 2026-10-28 : le bleu pétrole, `cyan-800` (§ 9). Rien n'est encore appliqué.
 - **Pas de thème sombre** : `color-scheme: light` (`src/app/globals.css`, lignes 13 à 20).
 
 ## 3. Typographie
@@ -223,12 +225,15 @@ Déjà décidés, avec leur source :
 - **Mettre une donnée réelle dans une histoire Storybook** : données fictives seulement
   (`CLAUDE.md`).
 
-Proposés, à valider (ils découlent du relevé, personne ne les a encore décidés) :
+Proposés à partir du relevé, retenus le 2026-10-28 (`DECISIONS.md`) :
 
-- Employer `text-neutral-400` pour un texte qu'il faut pouvoir lire.
-- Introduire une teinte absente du § 2 sans lui donner un rôle dans ce document.
-- Employer le violet ou le bleu pour autre chose que leur rôle.
-- Dire un état par la couleur seule, sans mot ni pastille.
+- **Employer `text-neutral-400` pour un texte qu'il faut pouvoir lire.** Ses 14 emplois actuels
+  passent au texte discret (§ 9).
+- **Introduire une teinte absente du § 2 sans lui donner un rôle dans ce document.**
+- **Employer le violet ou le bleu clair pour autre chose que leur rôle** : le violet est à
+  l'assistant, le bleu clair (`sky`) aux biens des autres dossiers. Le bleu pétrole de l'accent est
+  un rôle à part.
+- **Dire un état par la couleur seule, sans mot ni pastille.**
 
 ## 8. Contrastes
 
@@ -293,8 +298,9 @@ Critères 1.4.3 (texte) et 1.4.11 (éléments d'interface) de WCAG 2.2, niveau A
 
 ### Écarts connus, non corrigés
 
-Deux de ces écarts ont une décision depuis le 2026-10-12 (§ 9) : le texte discret (A) et la bordure
-des champs (première ligne de C). Aucun n'est encore corrigé dans le code.
+Deux de ces écarts ont une décision depuis le 2026-10-12, et leur valeur depuis le 2026-10-28
+(§ 9) : le texte discret (A) et la bordure des champs (première ligne de C). Aucun n'est encore
+corrigé dans le code.
 
 **A. `text-neutral-400` sur du texte : 14 emplois, tous sous 4,5:1.**
 
@@ -349,6 +355,24 @@ Elles sont écrites dans `DECISIONS.md`, à cette date.
 5. **Noms en français** : ce dossier s'appelle `charte-graphique/`, son second fichier
    `jetons.md`.
 
+### Prises le 2026-10-28, pas encore appliquées au code
+
+Elles sont écrites dans `DECISIONS.md`, à cette date, après comparaison des options dans Storybook.
+Leur application se suit dans l'issue #71.
+
+1. **Couleur d'accent : le bleu pétrole**, `cyan-800` (`#005f78`) : 7,22:1 sur blanc, 6,91:1 sur
+   le fond de page, 6,62:1 sur `neutral-100`. Au survol : `cyan-900` (`#104e64`, 9,14:1 sur blanc).
+2. **Elle marque le bouton principal et l'onglet courant.** Les liens restent de la couleur du
+   texte, soulignés.
+3. **Texte : un même gris pour « aide » et « discret »**, `neutral-500` ; le discret se distingue
+   par l'italique. Les 14 emplois de `text-neutral-400` sur du texte changent, les autres non.
+4. **Bordure des champs : `#8e8e8e`**, au seuil de 3:1 sur les trois fonds (3,27 ; 3,13 ; 3,00).
+   Seulement pour les champs : le cadre en pointillé et le filet de la frise gardent `neutral-300`.
+5. **Quatre jetons** dans le bloc `@theme` : `accent`, `accent-survol`, `texte-discret`,
+   `bordure-champ`. Les autres rôles gardent leurs classes.
+6. **Les quatre interdits proposés au § 7 sont retenus.**
+7. **Le public est celui du cadrage** (§ 1).
+
 ### Repères pour les appliquer
 
 Calculés avec la méthode du § 8 : le gris le plus clair qui atteint le seuil, selon le fond.
@@ -367,13 +391,11 @@ Calculés avec la méthode du § 8 : le gris le plus clair qui atteint le seuil,
 
 ### Encore ouvertes
 
-1. **La teinte de la couleur d'accent**, et ce qu'elle marque : le bouton principal seul, ou aussi
-   les liens et l'onglet courant.
-2. **La façon de tenir les deux niveaux de texte** (voir les repères).
-3. **La valeur de la bordure des champs** (voir les repères).
-4. **Les quatre interdits proposés** au § 7.
-5. **Le public visé** : « professionnels » (cette charte) ou « un particulier, puis des
-   professionnels invités » (`docs/01-cadrage.md`).
-6. **Les autres écarts de contraste** du § 8 (B, et le reste de C) : aucun n'a de décision.
-7. **Où la charte est citée.** Les règles du projet sont redites dans `README.md` et `docs/`
+Les cinq premières questions ouvertes le 2026-10-12 sont tranchées le 2026-10-28 (ci-dessus).
+Restent :
+
+1. **Les autres écarts de contraste** du § 8 (B, et le reste de C) : aucun n'a de décision. Parmi
+   eux, le texte en `neutral-500` posé sur `neutral-100` (4,34:1) : la décision du 2026-10-28 sur
+   le texte ne le règle pas.
+2. **Où la charte est citée.** Les règles du projet sont redites dans `README.md` et `docs/`
    (01 à 08) ; ce dossier n'y est pas encore cité.
