@@ -56,7 +56,7 @@ export function RechercheEndroit({
         <Champ label="Situer sur la carte : chercher un code postal, une commune ou une adresse" large>
           <input name="recherche" value={saisie} onChange={(e) => setSaisie(e.target.value)} className={classeSaisie} placeholder="ex. 75002, ou Rennes" />
         </Champ>
-        <button type="submit" disabled={enCours} className="min-h-10 rounded border border-neutral-900 px-3 py-2 font-medium hover:bg-neutral-900 hover:text-white disabled:opacity-50">
+        <button type="submit" disabled={enCours} className="min-h-10 rounded border border-accent bg-accent px-3 py-2 font-medium text-white hover:border-accent-survol hover:bg-accent-survol disabled:opacity-50">
           {enCours ? "…" : "Chercher"}
         </button>
         <p className="w-full text-xs text-neutral-600">

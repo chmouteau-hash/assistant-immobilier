@@ -31,9 +31,9 @@ export function TacheItem({
         <div className="flex flex-col gap-0.5">
           <p>
             {tache.estJalon && <Pastille>jalon</Pastille>} {tache.description}
-            {dossierNom && <span className="ml-2 text-xs text-neutral-400">— {dossierNom}</span>}
+            {dossierNom && <span className="ml-2 text-xs text-texte-discret italic">— {dossierNom}</span>}
           </p>
-          <p className="text-xs text-neutral-400">
+          <p className="text-xs text-texte-discret italic">
             {tache.echeance ? `Échéance : ${formaterDate(tache.echeance)}` : "Échéance inconnue"}
             {tache.responsable ? ` · ${tache.responsable}` : " · responsable à désigner"}
             {bloquants.length > 0 && <span className="ml-2 text-amber-700">attend {bloquants.length} prérequis</span>}

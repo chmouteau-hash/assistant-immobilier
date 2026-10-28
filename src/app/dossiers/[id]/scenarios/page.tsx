@@ -96,7 +96,7 @@ export default async function PageScenarios({ params }: { params: Promise<{ id: 
                 <div>
                   <p className="text-xs font-medium text-neutral-500">Hypothèses</p>
                   {siennes.length === 0 ? (
-                    <p className="text-xs text-neutral-400">Aucune hypothèse notée.</p>
+                    <p className="text-xs text-texte-discret italic">Aucune hypothèse notée.</p>
                   ) : (
                     <ul className="flex flex-col gap-1">
                       {siennes.map((h) => (
@@ -181,7 +181,7 @@ export default async function PageScenarios({ params }: { params: Promise<{ id: 
                 <span className="font-medium">{d.choix}</span> — {d.motif}
                 {d.alternativesEcartees && <span className="text-neutral-500"> · écarté : {d.alternativesEcartees}</span>}
                 {d.conditionsOuvertes && <span className="text-amber-800"> · conditions ouvertes : {d.conditionsOuvertes}</span>}
-                <span className="ml-2 text-xs text-neutral-400">{formaterDateHeure(d.dateDecision)}</span>
+                <span className="ml-2 text-xs text-texte-discret italic">{formaterDateHeure(d.dateDecision)}</span>
               </li>
             ))}
           </ul>

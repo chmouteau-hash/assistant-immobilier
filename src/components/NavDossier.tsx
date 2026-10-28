@@ -49,7 +49,7 @@ export function NavDossier({ onglets }: { onglets: OngletDossier[] }) {
             ref={actif ? actifRef : undefined}
             aria-current={actif ? "page" : undefined}
             className={`shrink-0 whitespace-nowrap rounded px-3 py-2 ${
-              actif ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900"
+              actif ? "bg-accent text-white" : "text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900"
             }`}
           >
             {o.libelle}

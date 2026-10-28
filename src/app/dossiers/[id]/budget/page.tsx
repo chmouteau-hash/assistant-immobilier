@@ -23,7 +23,7 @@ const LIBELLES_STATUT_POSTE: Record<string, string> = {
 };
 
 function Montant({ centimes }: { centimes: number | null }) {
-  return centimes === null ? <span className="text-neutral-400">—</span> : <span>{formaterMontant(centimes)}</span>;
+  return centimes === null ? <span className="text-texte-discret italic">—</span> : <span>{formaterMontant(centimes)}</span>;
 }
 
 export default async function PageBudget({ params }: { params: Promise<{ id: string }> }) {
@@ -203,7 +203,7 @@ export default async function PageBudget({ params }: { params: Promise<{ id: str
                 {lignes
                   .filter((l) => l.scenarioId === s.id)
                   .map((l) => (
-                    <li key={l.id} className={`flex flex-col gap-1 border-t border-neutral-100 py-1 ${l.statut === "ecartee" ? "text-neutral-400" : ""}`}>
+                    <li key={l.id} className={`flex flex-col gap-1 border-t border-neutral-100 py-1 ${l.statut === "ecartee" ? "text-texte-discret italic" : ""}`}>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`w-40 font-medium ${l.statut === "ecartee" ? "line-through" : ""}`}>{l.poste}</span>
                         <span className="w-24">{libelle(types, l.typeMontant)}</span>
